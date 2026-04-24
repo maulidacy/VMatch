@@ -55,22 +55,22 @@ export type Testimonial = {
 
 export const heroThumbs: ImageAsset[] = [
   {
-    src: "/figma/hero-thumb-1.webp",
-    alt: "Compact custom kitchen inspiration",
-    width: 564,
-    height: 680,
+    src: "/inspirations/rumah-ruang-tamu.webp",
+    alt: "Modern home living room",
+    width: 1200,
+    height: 900,
   },
   {
-    src: "/figma/hero-thumb-2.webp",
-    alt: "Bright interior detail",
-    width: 564,
-    height: 680,
+    src: "/inspirations/rumah-kamar-tidur.webp",
+    alt: "Warm home bedroom interior",
+    width: 1200,
+    height: 900,
   },
   {
-    src: "/figma/hero-thumb-3.webp",
-    alt: "Warm kitchen storage detail",
-    width: 564,
-    height: 680,
+    src: "/inspirations/apartment-living-area.webp",
+    alt: "Clean home kitchen interior",
+    width: 1200,
+    height: 900,
   },
 ];
 
