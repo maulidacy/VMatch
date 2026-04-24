@@ -1,3 +1,4 @@
+import { AnimateIn } from "@/components/home/animate-in";
 import { FillImage } from "@/components/home/fill-image";
 import { offers } from "@/lib/home-content";
 
@@ -9,8 +10,10 @@ export function OffersSection() {
           const isPrimary = index === 0;
 
           return (
-            <article key={offer.title} className={`relative min-h-[278px] overflow-hidden text-white ${offer.className ?? ""}`}>
-              <FillImage image={offer.image} />
+            <AnimateIn key={offer.title} delay={0.1 + index * 0.15} direction="up" className={`relative min-h-[278px] overflow-hidden text-white group ${offer.className ?? ""}`}>
+              <div className="h-full w-full transition-transform duration-700 group-hover:scale-105">
+                <FillImage image={offer.image} />
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/24 to-transparent" />
               <div className={isPrimary ? "absolute inset-x-8 bottom-8 sm:inset-x-10 sm:bottom-10" : "absolute inset-x-8 bottom-7 sm:inset-x-10"}>
                 <p className={isPrimary ? "max-w-[330px] font-sans text-[22px] leading-[25px]" : "font-sans text-[18px] leading-6"}>
@@ -26,7 +29,7 @@ export function OffersSection() {
                   {offer.title}
                 </h3>
               </div>
-            </article>
+            </AnimateIn>
           );
         })}
       </div>
