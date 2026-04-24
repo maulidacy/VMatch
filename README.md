@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VMatch Interior
 
-## Getting Started
+Website landing page untuk layanan interior VMatch, dibangun dengan Next.js App Router dan Tailwind CSS v4.
 
-First, run the development server:
+## Ringkasan
+
+- Menampilkan halaman beranda dengan section: Hero, Projects, Inspiration, Process, Benefits, Philosophy, Testimonials, Offers, dan Footer.
+- Sudah dioptimasi untuk SEO dasar (metadata, Open Graph, Twitter card).
+- Seluruh aset gambar utama di `public/figma` menggunakan format `.webp` untuk performa yang lebih ringan.
+
+## Tech Stack
+
+- Next.js `16.2.4`
+- React `19.2.4`
+- Tailwind CSS `4`
+- TypeScript `5`
+
+## Menjalankan Project
+
+Prasyarat:
+
+- Node.js 20+
+- npm
+
+Install dependency:
+
+```bash
+npm install
+```
+
+Jalankan development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka `http://localhost:3000` di browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` menjalankan local development server.
+- `npm run build` build production.
+- `npm run start` menjalankan hasil build production.
+- `npm run lint` menjalankan ESLint.
 
-## Learn More
+## Struktur Folder Utama
 
-To learn more about Next.js, take a look at the following resources:
+```text
+src/
+  app/
+    layout.tsx
+    page.tsx
+    globals.css
+  components/home/
+    navbar.tsx
+    fill-image.tsx
+    sections/
+      hero-section.tsx
+      projects-section.tsx
+      inspiration-section.tsx
+      process-section.tsx
+      benefits-section.tsx
+      philosophy-section.tsx
+      testimonials-section.tsx
+      offers-section.tsx
+      footer.tsx
+  lib/
+    home-content.ts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+public/
+  figma/
+    *.webp
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Konfigurasi Environment
 
-## Deploy on Vercel
+Project membaca `NEXT_PUBLIC_SITE_URL` untuk `metadataBase` pada SEO metadata.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Contoh `.env.local`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+NEXT_PUBLIC_SITE_URL=https://vmatch-interior.com
+```
+
+Jika tidak diisi, default yang dipakai adalah `https://vmatch-interior.com`.
+
+## Panduan Aset Gambar
+
+- Simpan aset visual landing page di `public/figma`.
+- Gunakan format `.webp` (hindari `.png` untuk aset utama agar ukuran lebih kecil).
+- Pastikan path gambar di komponen/data mengarah ke `.webp`, terutama di `src/lib/home-content.ts` dan section terkait.
+
+## Deployment
+
+Build untuk production:
+
+```bash
+npm run build
+```
+
+Jalankan hasil build:
+
+```bash
+npm run start
+```
+
+Siap di-deploy ke platform yang mendukung Next.js (misalnya Vercel).
