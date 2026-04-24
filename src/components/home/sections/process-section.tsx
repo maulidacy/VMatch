@@ -5,18 +5,17 @@ import { steps } from "@/lib/home-content";
 
 export function ProcessSection() {
   return (
-    <section className="bg-[#fcfbf9] pb-20 text-center text-[#31332c] md:pb-28" id="cara-kerja">
+    <section className="bg-white pb-20 text-center text-[#31332c] md:pb-28" id="cara-kerja">
       <div className="relative min-h-[380px] overflow-hidden md:min-h-[460px]">
         <Image
-          src="/figma/process-bg.webp"
-          alt="Minimal modern kitchen backdrop"
-          width={736}
-          height={736}
+          src="/inspirations/rumah-ruang-keluarga.webp"
+          alt="Warm family room backdrop"
+          width={1400}
+          height={1000}
           sizes="100vw"
-          className="absolute inset-0 h-full w-full object-cover object-[center_35%]"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+        <div className="absolute inset-0 bg-black/40" />
         <div className="relative z-10 mx-auto flex h-full max-w-[1280px] flex-col items-center justify-center px-6 pt-24 pb-32 md:pt-32 md:pb-40">
           <AnimateIn delay={0.1}>
             <p className="font-sans text-[11px] uppercase tracking-[0.4em] text-white/90">cara kerja</p>
@@ -34,9 +33,9 @@ export function ProcessSection() {
           {steps.map((step, index) => (
             <AnimateIn key={step.number} delay={0.3 + index * 0.15} direction="up" className="h-full">
               <article 
-                className="flex h-full flex-col items-center rounded-2xl bg-white px-6 py-10 text-center shadow-xl shadow-black/5 ring-1 ring-black/[0.04] transition-transform duration-300 hover:-translate-y-1 sm:px-8"
+                className="group flex h-full flex-col items-center bg-white px-6 py-10 text-center shadow-[0_8px_30px_rgb(0,0,0,0.06)] ring-1 ring-black/[0.04] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] sm:px-8"
               >
-                <div className="grid h-16 w-16 place-items-center rounded-full bg-[#fcfbf9] shadow-inner ring-1 ring-[#e6e4de]">
+                <div className="grid h-16 w-16 place-items-center bg-[#fcfbf9] shadow-inner ring-1 ring-[#e6e4de] transition-transform duration-500 group-hover:scale-110">
                   <span className="font-serif text-xl italic text-[#6b5b52]">{step.number}</span>
                 </div>
                 <h3 className="mt-6 font-serif text-[19px] italic leading-snug text-[#31332C]">{step.title}</h3>
