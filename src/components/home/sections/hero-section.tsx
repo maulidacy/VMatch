@@ -13,8 +13,7 @@ export function HeroSection() {
         muted
         loop
         playsInline
-        preload="metadata"
-        poster="/figma/hero-kitchen.webp"
+        preload="auto"
       >
         <source src={heroVideoUrl} type="video/mp4" />
       </video>
