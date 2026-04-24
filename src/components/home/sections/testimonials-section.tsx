@@ -1,38 +1,52 @@
+import Image from "next/image";
+
 import { testimonials } from "@/lib/home-content";
 
 export function TestimonialsSection() {
   return (
-    <section className="bg-white py-[30px]">
-      <div className="mx-auto grid max-w-[1125px] grid-cols-1 gap-20 px-6 lg:grid-cols-[322px_1fr]">
-        <div>
-          <h2 className="font-serif text-5xl leading-none text-[#31332c]">Testimoni Klien</h2>
-          <p className="mt-8 font-sans text-base leading-[26px] text-[#5e6058]">
-            Hubungan antara pengrajin dan pemilik hunian dibangun atas dasar kepercayaan dan visi yang sejalan.
-          </p>
-          <div className="mt-8 flex items-end gap-4">
-            <div className="flex">
-              {[0, 1, 2].map((item) => (
-                <span
-                  key={item}
-                  className="-mr-3 grid h-12 w-12 place-items-center rounded-full border-2 border-white bg-[#d8d1c6]"
-                />
-              ))}
-            </div>
-            <span className="font-sans text-sm text-[#6b5b52]">Lebih dari 40 klien puas</span>
+    <section className="bg-white py-14 lg:py-[72px]">
+      <div className="mx-auto max-w-[1168px] px-6">
+        <div className="grid gap-5 lg:grid-cols-[360px_1fr] lg:items-end">
+          <div>
+            <p className="font-sans text-[11px] uppercase tracking-[0.3em] text-[#6B5B52]">Testimoni klien</p>
+            <h2 className="mt-4 max-w-[360px] font-serif text-[42px] leading-[42px] text-[#31332C] sm:text-[48px] sm:leading-[48px]">
+              Kata mereka setelah proyek selesai.
+            </h2>
           </div>
+          <p className="max-w-[520px] font-sans text-base leading-7 text-[#5E6058] lg:justify-self-end">
+            Review singkat dari klien yang memakai VMatch untuk desain, kurasi vendor, material, produksi, dan
+            instalasi interior.
+          </p>
         </div>
-        <div className="grid gap-8 md:grid-cols-2">
-          {testimonials.map((testimonial) => (
-            <article key={testimonial.author} className="border-l border-[#d6cfc3] bg-white px-11 py-10">
-              <div className="flex gap-1 text-[#6b5b52]" aria-label="Five star rating">
-                {"*****".split("").map((star, index) => (
-                  <span key={`${star}-${index}`}>*</span>
-                ))}
+
+        <div className="mt-10 grid border-t border-[#DED6CA] lg:grid-cols-3">
+          {testimonials.map((testimonial, index) => (
+            <article
+              key={testimonial.author}
+              className={`border-b border-[#DED6CA] py-7 lg:px-7 ${
+                index === 0 ? "lg:pl-0" : "lg:border-l lg:border-[#DED6CA]"
+              } ${index === testimonials.length - 1 ? "lg:pr-0" : ""}`}
+            >
+              <blockquote className="font-serif text-[25px] leading-[32px] text-[#31332C]">
+                &ldquo;{testimonial.quote}&rdquo;
+              </blockquote>
+
+              <div className="mt-8 flex items-center gap-4">
+                <Image
+                  src={testimonial.image.src}
+                  alt={testimonial.image.alt}
+                  width={testimonial.image.width}
+                  height={testimonial.image.height}
+                  sizes="52px"
+                  className="h-[52px] w-[52px] shrink-0 rounded-full object-cover"
+                />
+                <div className="min-w-0">
+                  <p className="font-sans text-xs font-semibold uppercase tracking-[0.12em] text-[#6B5B52]">
+                    {testimonial.author}
+                  </p>
+                  <p className="mt-1 font-sans text-xs leading-4 text-[#797C73]">{testimonial.project}</p>
+                </div>
               </div>
-              <p className="mt-6 font-sans text-base leading-7 text-[#3f413a]">&quot;{testimonial.quote}&quot;</p>
-              <p className="mt-6 border-t border-[#e4ded5] pt-4 font-sans text-xs uppercase tracking-[0.08em] text-[#6b5b52]">
-                {testimonial.author}
-              </p>
             </article>
           ))}
         </div>

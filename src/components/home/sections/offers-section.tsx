@@ -25,12 +25,6 @@ export function OffersSection() {
                 >
                   {offer.title}
                 </h3>
-                <a
-                  href="#kontak"
-                  className="mt-6 inline-flex h-12 max-w-full items-center justify-center bg-white px-6 font-sans text-[20px] leading-none text-[#4e453f] sm:px-7"
-                >
-                  Konsultasi GRATIS sekarang!
-                </a>
               </div>
             </article>
           );
