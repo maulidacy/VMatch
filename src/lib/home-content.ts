@@ -108,6 +108,76 @@ export const projects: Project[] = [
       className: "object-[center_9%]",
     },
   },
+  {
+    title: "Urban Minimalist",
+    location: "Jakarta Pusat - 2024",
+    image: {
+      src: "/inspirations/rumah-ruang-tamu.webp",
+      alt: "Minimalist living room",
+      width: 1200,
+      height: 900,
+    },
+  },
+  {
+    title: "Modern Culinary",
+    location: "Tangerang - 2023",
+    image: {
+      src: "/inspirations/rumah-dapur.webp",
+      alt: "Modern kitchen design",
+      width: 1200,
+      height: 900,
+    },
+  },
+  {
+    title: "Grand Lobby",
+    location: "Surabaya - 2024",
+    image: {
+      src: "/inspirations/hotel-lobby.webp",
+      alt: "Grand hotel lobby",
+      width: 1200,
+      height: 900,
+    },
+  },
+  {
+    title: "Compact Living",
+    location: "Bandung - 2024",
+    image: {
+      src: "/inspirations/apartment-living-area.webp",
+      alt: "Compact apartment living area",
+      width: 1200,
+      height: 900,
+    },
+  },
+  {
+    title: "Serene Sleep",
+    location: "Jakarta Barat - 2023",
+    image: {
+      src: "/inspirations/apartment-bedroom.webp",
+      alt: "Serene apartment bedroom",
+      width: 1200,
+      height: 900,
+    },
+  },
+  {
+    title: "Executive Suite",
+    location: "Bali - 2024",
+    image: {
+      src: "/inspirations/hotel-room.webp",
+      alt: "Executive hotel suite",
+      width: 1200,
+      height: 900,
+    },
+  },
+  {
+    title: "Communal Hub",
+    location: "Malang - 2023",
+    image: {
+      src: "/inspirations/boarding-common-area.webp",
+      alt: "Communal area for boarding house",
+      width: 1200,
+      height: 900,
+    },
+  },
 ];
 
 export const inspirations: InspirationCategory[] = [
