@@ -54,33 +54,44 @@ export const heroThumbs: ImageAsset[] = [
 
 export const projects: Project[] = [
   {
-    title: "Walnut Brutalism",
+    title: "Dapur Walnut Modern",
     location: "Jakarta Selatan - 2024",
     image: {
       src: "/figma/project-walnut.webp",
-      alt: "Walnut kitchen with marble island",
+      alt: "Dapur modern dengan kabinet walnut dan meja island marmer",
       width: 736,
       height: 1104,
       className: "object-[center_27%]",
     },
   },
   {
-    title: "The Nordic Loft",
+    title: "Loteng Nordik Hangat",
     location: "Bali - 2023",
     image: {
       src: "/figma/project-loft.webp",
-      alt: "Nordic loft interior with sofa and timber wall",
+      alt: "Interior loteng bergaya Nordik dengan sofa dan dinding kayu",
       width: 736,
       height: 1037,
       className: "object-[center_49%]",
     },
   },
   {
-    title: "Library of Silence",
+    title: "Perpustakaan Senyap",
     location: "Yogyakarta - 2023",
     image: {
       src: "/figma/project-library.webp",
-      alt: "Interior library wall with warm lighting",
+      alt: "Ruang perpustakaan dengan pencahayaan hangat dan rak dekoratif",
+      width: 736,
+      height: 736,
+      className: "object-[center_9%]",
+    },
+  },
+  {
+    title: "Ruang Koleksi Hangat",
+    location: "Bandung - 2024",
+    image: {
+      src: "/figma/project-library.webp",
+      alt: "Ruang koleksi interior dengan rak kayu dan pencahayaan hangat",
       width: 736,
       height: 736,
       className: "object-[center_9%]",
@@ -88,38 +99,65 @@ export const projects: Project[] = [
   },
 ];
 
-export const inspirations: Inspiration[] = [
+export const inspirations = [
   {
-    title: "Kitchen Set",
-    copy: "Inspirasi dapur custom yang fungsional, bersih, dan elegan.",
+    title: "Storage & Rak",
+    copy: "Solusi penyimpanan rapi dan efisien.",
     image: {
-      src: "/figma/inspiration-kitchen.webp",
-      alt: "Modern kitchen set with pendant lights",
+      src: "/figma/category-storage.webp",
+      alt: "Storage dan rak interior",
       width: 736,
       height: 1104,
-      className: "object-[center_top]",
+    },
+  },
+  {
+    title: "Kitchen Set",
+    copy: "Inspirasi dapur cantik yang fungsional, bersih, dan elegan.",
+    image: {
+      src: "/figma/category-kitchen.webp",
+      alt: "Kitchen set modern",
+      width: 736,
+      height: 1104,
     },
   },
   {
     title: "Lemari/Wardrobe",
     copy: "Penyimpanan rapi dan efisien yang menyesuaikan kebutuhan ruang.",
     image: {
-      src: "/figma/inspiration-wardrobe.webp",
-      alt: "Wardrobe with soft grey finish",
+      src: "/figma/category-wardrobe.webp",
+      alt: "Lemari wardrobe modern",
       width: 736,
-      height: 981,
-      className: "object-[center_top]",
+      height: 1104,
     },
   },
   {
     title: "Ruang Tamu",
-    copy: "Ruang santai yang nyaman dengan suasana yang hangat dan elegan.",
+    copy: "Ruang santai yang nyaman dengan suasana hangat dan elegan.",
     image: {
-      src: "/figma/inspiration-living.webp",
-      alt: "Warm living room ceiling and wall treatment",
+      src: "/figma/project-library.webp",
+      alt: "Ruang tamu modern",
+      width: 736,
+      height: 736,
+    },
+  },
+  {
+    title: "Ruang Kerja",
+    copy: "Ruang kerja yang nyaman dan mendukung produktivitas.",
+    image: {
+      src: "/figma/category-workspace.webp",
+      alt: "Ruang kerja interior",
       width: 736,
       height: 1104,
-      className: "object-[center_4%]",
+    },
+  },
+  {
+    title: "Kamar Tidur",
+    copy: "Ruang istirahat yang nyaman dan menenangkan.",
+    image: {
+      src: "/figma/category-bedroom.webp",
+      alt: "Kamar tidur modern",
+      width: 736,
+      height: 1104,
     },
   },
 ];

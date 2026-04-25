@@ -5,51 +5,62 @@ import { features } from "@/lib/home-content";
 
 export function BenefitsSection() {
   return (
-    <section className="relative overflow-hidden bg-white py-[72px] lg:min-h-[570px] lg:py-11">
-      <div className="absolute bottom-8 right-0 top-11 hidden w-[60vw] overflow-hidden lg:block">
-        <Image
-          src="/figma/benefits-kitchen.webp"
-          alt="Kitchen detail with warm cabinetry"
-          width={736}
-          height={1030}
-          sizes="(min-width: 1024px) 60vw, 100vw"
-          className="h-full w-full object-cover object-[center_31%]"
-        />
-        <div className="absolute inset-0 bg-[#2f241d]/30" />
-      </div>
+    <section className="overflow-hidden bg-white pt-6 pb-12 md:pt-8 md:pb-14">
+      <div className="mx-auto grid max-w-[1320px] items-center gap-10 px-6 lg:grid-cols-[0.92fr_1.08fr]">
+        <div className="relative z-10">
+          <p className="animate-[fadeUp_700ms_ease-out_both] text-[15px] uppercase tracking-[0.28em] text-[#6b5b52]">
+            Keunggulan Kami
+          </p>
 
-      <div className="relative z-10 mx-auto max-w-[1180px] px-6 lg:h-[482px]">
-        <h2 className="font-serif text-[38px] leading-none text-[#31332c] sm:text-5xl lg:absolute lg:left-6 lg:top-7 lg:text-[34px]">
-          Kenapa memilih kami
-        </h2>
+          <h2 className="mt-4 max-w-[520px] animate-[fadeUp_800ms_ease-out_120ms_both] font-serif text-[38px] leading-tight text-[#31332c] sm:text-5xl">
+            Kenapa memilih kami
+          </h2>
 
-        <div className="relative mt-9 h-[360px] overflow-hidden sm:h-[470px] lg:hidden">
+          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {features.map((feature, index) => (
+              <article
+                key={feature.title}
+                className="group bg-[#6b5b52] px-6 py-7 text-center shadow-[0_12px_30px_rgba(49,51,44,0.14)] transition-all duration-500 hover:-translate-y-2 hover:bg-[#5a4a42] hover:shadow-[0_22px_50px_rgba(49,51,44,0.22)]"
+                style={{
+                  animation: `fadeUp 700ms ease-out ${index * 120 + 200}ms both`,
+                }}
+              >
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/30 text-white transition-all duration-500 group-hover:scale-110 group-hover:bg-white/10">
+                  <IconMark type={feature.icon} className="text-white" />
+                </div>
+
+                <h3 className="mx-auto mt-5 max-w-[230px] font-sans text-[15px] font-bold leading-6 text-white">
+                  {feature.title}
+                </h3>
+
+                <p className="mx-auto mt-3 max-w-[235px] font-sans text-[13px] leading-6 text-white/75">
+                  {feature.copy}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative min-h-[340px] overflow-hidden shadow-[0_18px_50px_rgba(0,0,0,0.10)] sm:min-h-[420px] lg:min-h-[500px]">
           <Image
             src="/figma/benefits-kitchen.webp"
             alt="Kitchen detail with warm cabinetry"
-            width={736}
-            height={1030}
-            sizes="100vw"
-            className="h-full w-full object-cover object-[center_31%]"
+            fill
+            sizes="(min-width: 1024px) 52vw, 100vw"
+            className="object-cover object-[center_31%] transition-transform duration-700 hover:scale-105"
           />
-          <div className="absolute inset-0 bg-[#2f241d]/30" />
-        </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:absolute lg:left-6 lg:top-[102px] lg:mt-0 lg:w-[525px] lg:grid-cols-[255px_255px] lg:gap-4">
-          {features.map((feature) => (
-            <article
-              key={feature.title}
-              className="min-h-[136px] bg-[#F3F3F3] px-6 py-5 text-center shadow-[0_8px_24px_rgba(49,51,44,0.05)]"
-            >
-              <div className="mx-auto grid h-7 w-7 place-items-center">
-                <IconMark type={feature.icon} />
-              </div>
-              <h3 className="mx-auto mt-3 max-w-[210px] font-sans text-[13px] font-bold leading-5 text-[#31332C]">
-                {feature.title}
-              </h3>
-              <p className="mx-auto mt-2 max-w-[205px] font-sans text-[12px] leading-[18px] text-[#797C73]">{feature.copy}</p>
-            </article>
-          ))}
+          <div className="absolute inset-0 bg-[#2f241d]/25" />
+
+          <div className="absolute bottom-6 left-6 right-6 bg-white/85 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.14)] backdrop-blur-md sm:p-6">
+            <p className="text-[11px] uppercase tracking-[0.25em] text-[#6b5b52]">
+              Solusi Terarah
+            </p>
+
+            <p className="mt-3 font-serif text-[22px] italic leading-8 text-[#31332c] sm:text-[26px]">
+              Semua proses dibuat lebih rapi, terukur, dan mudah dipahami.
+            </p>
+          </div>
         </div>
       </div>
     </section>

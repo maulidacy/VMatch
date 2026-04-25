@@ -1,5 +1,10 @@
-export function IconMark({ type }: { type: string }) {
-  const common = "h-7 w-7 text-[#6b5b52]";
+type IconMarkProps = {
+  type: string;
+  className?: string;
+};
+
+export function IconMark({ type, className = "" }: IconMarkProps) {
+  const common = `h-7 w-7 ${className || "text-[#6b5b52]"}`;
 
   if (type === "seal") {
     return (
