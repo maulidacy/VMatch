@@ -110,7 +110,7 @@ export default async function PortfolioDetailPage({ params }: Props) {
                 <div className="absolute inset-x-0 bottom-[-190px] z-10 px-4 sm:px-6 md:bottom-[-150px]">
                     <div className="mx-auto max-w-[880px] bg-[#6b5b52] px-6 py-8 text-white shadow-[0_24px_60px_rgba(0,0,0,0.22)] sm:px-8 sm:py-10 md:px-20 md:py-14">
                         <p className="animate-[fadeUp_700ms_ease-out_both] text-[15px] uppercase tracking-[0.35em] text-white/75">
-                            Project Showcase
+                            Portfolio Proyek
                         </p>
 
                         <h1 className="mt-5 animate-[fadeUp_800ms_ease-out_120ms_both] font-serif text-[42px] leading-[0.95] sm:text-[52px] md:text-[68px]">
@@ -120,13 +120,13 @@ export default async function PortfolioDetailPage({ params }: Props) {
                         <div className="my-8 h-px w-full bg-white/45" />
 
                         <div className="grid gap-6 sm:grid-cols-3 md:gap-8">
-                            <InfoItem label="Category" value={detail.category} />
+                            <InfoItem label="Kategori" value={detail.category} />
                             <InfoItem
-                                label="Location"
+                                label="Lokasi"
                                 value={project.location.split("-")[0].trim()}
                             />
                             <InfoItem
-                                label="Year"
+                                label="Tahun"
                                 value={project.location.split("-")[1]?.trim() ?? "2024"}
                             />
                         </div>
