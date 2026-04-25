@@ -11,11 +11,12 @@ const navItems = [
   { label: "Kontak", href: "#kontak", id: "kontak" },
 ];
 
-export function Navbar() {
-  const [activeSection, setActiveSection] = useState("beranda");
+export function Navbar({ active = "beranda" }: { active?: string }) {
+  const [activeSection, setActiveSection] = useState(active);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    if (active !== "beranda") return;
     const handleScroll = () => {
       const sections = navItems
         .map((item) => document.getElementById(item.id))
