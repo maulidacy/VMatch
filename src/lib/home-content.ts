@@ -33,6 +33,12 @@ export type Step = {
   copy: string;
 };
 
+export type StatItem = {
+  icon: string;
+  value: string;
+  label: string;
+};
+
 export type Feature = {
   icon: string;
   title: string;
@@ -53,6 +59,13 @@ export type Testimonial = {
   image: ImageAsset;
 };
 
+export type ContactInfo = {
+  address: string;
+  phone: string;
+  email: string;
+  hours: string;
+};
+
 export const heroThumbs: ImageAsset[] = [
   {
     src: "/inspirations/rumah-ruang-tamu.webp",
@@ -71,6 +84,29 @@ export const heroThumbs: ImageAsset[] = [
     alt: "Clean home kitchen interior",
     width: 1200,
     height: 900,
+  },
+];
+
+export const stats: StatItem[] = [
+  {
+    icon: "spark",
+    value: "150+",
+    label: "Proyek interior selesai",
+  },
+  {
+    icon: "flow",
+    value: "120+",
+    label: "Klien rumah & bisnis",
+  },
+  {
+    icon: "seal",
+    value: "10+",
+    label: "Tahun pengalaman tim",
+  },
+  {
+    icon: "chart",
+    value: "4",
+    label: "Kategori properti utama",
   },
 ];
 
@@ -614,3 +650,10 @@ export const offers: Offer[] = [
     },
   },
 ];
+
+export const contactInfo: ContactInfo = {
+  address: "Universitas Dian Nuswantoro, Semarang, Jawa Tengah",
+  phone: "+62 812-3456-7890",
+  email: "support@interior.com",
+  hours: "Senin - Sabtu, 09.00 - 17.00 WIB",
+};

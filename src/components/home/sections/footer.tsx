@@ -1,3 +1,5 @@
+import { contactInfo } from "@/lib/home-content";
+
 const navigationLinks = [
   { label: "Beranda", href: "#beranda" },
   { label: "Inspirasi", href: "#inspirasi" },
@@ -17,27 +19,27 @@ const socialLinks = [
 
 export function Footer() {
   return (
-    <footer className="bg-[#6B5B52] text-[#F5EFE5]" id="kontak">
-      <div className="mx-auto max-w-[1220px] px-6 py-10 lg:py-12">
-        <div className="grid grid-cols-1 gap-10 border-b border-white/18 pb-8 lg:grid-cols-[1.25fr_0.75fr_0.75fr_0.9fr]">
+    <footer className="bg-[#191A17] text-[#F5EFE5]">
+      <div className="mx-auto max-w-[1180px] px-6 py-9 lg:py-10">
+        <div className="grid grid-cols-1 gap-8 border-b border-white/12 pb-8 lg:grid-cols-[1.2fr_0.72fr_0.72fr_0.92fr]">
           <div>
             <a href="#beranda" className="font-serif text-[34px] font-medium italic leading-none text-white">
               VMatch
             </a>
-            <p className="mt-6 max-w-[420px] font-sans text-[15px] leading-[26px] text-white/78">
+            <p className="mt-5 max-w-[370px] font-sans text-[14px] leading-[24px] text-white/72">
               Partner eksekusi interior yang membantu Anda mengelola kebutuhan desain, vendor, material, hingga instalasi dengan proses yang lebih rapi.
             </p>
 
-            <div className="mt-8 space-y-3 font-sans text-sm leading-6 text-white/80">
-              <p>Jl. Arsitektur No. 123, Kota Kreatif, Indonesia 12345</p>
+            <div className="mt-6 space-y-2 font-sans text-[13px] leading-6 text-white/72">
+              <p>{contactInfo.address}</p>
               <p>
-                <a href="mailto:support@interior.com" className="transition-colors hover:text-white">
-                  support@interior.com
+                <a href={`mailto:${contactInfo.email}`} className="transition-colors hover:text-white">
+                  {contactInfo.email}
                 </a>
               </p>
               <p>
                 <a href="https://wa.me/6281234567890" className="transition-colors hover:text-white">
-                  +62 812-3456-7890
+                  {contactInfo.phone}
                 </a>
               </p>
             </div>
@@ -64,8 +66,8 @@ export function Footer() {
           </FooterColumn>
 
           <div>
-            <h3 className="font-sans text-[12px] font-semibold uppercase tracking-[0.22em] text-white">Dukungan</h3>
-            <ul className="mt-6 space-y-3 font-sans text-sm leading-6 text-white/78">
+            <h3 className="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-white">Dukungan</h3>
+            <ul className="mt-5 space-y-2 font-sans text-[13px] leading-6 text-white/70">
               {supportLinks.map((link) => (
                 <li key={link}>
                   <a href="#kontak" className="transition-colors hover:text-white">
@@ -80,7 +82,7 @@ export function Footer() {
                 <a
                   key={social.label}
                   href="#kontak"
-                  className="grid h-10 w-10 place-items-center rounded-full border border-white/20 bg-white/8 text-white/82 transition-colors hover:bg-white hover:text-[#6B5B52]"
+                  className="grid h-9 w-9 place-items-center border border-white/16 bg-white/8 text-white/80 transition-colors hover:bg-white hover:text-[#6B5B52]"
                   aria-label={social.label}
                 >
                   {social.icon}
@@ -90,7 +92,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 pt-5 font-sans text-xs uppercase tracking-[0.14em] text-white/58 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 pt-5 font-sans text-[11px] uppercase tracking-[0.14em] text-white/50 md:flex-row md:items-center md:justify-between">
           <p>(c) 2026 VMatch Interior. All rights reserved.</p>
           <a href="#beranda" className="transition-colors hover:text-white">
             Kembali ke atas
@@ -104,8 +106,8 @@ export function Footer() {
 function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="font-sans text-[12px] font-semibold uppercase tracking-[0.22em] text-white">{title}</h3>
-      <ul className="mt-6 space-y-3 font-sans text-sm leading-6 text-white/78">{children}</ul>
+      <h3 className="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-white">{title}</h3>
+      <ul className="mt-5 space-y-2 font-sans text-[13px] leading-6 text-white/70">{children}</ul>
     </div>
   );
 }

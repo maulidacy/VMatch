@@ -3,7 +3,7 @@ const links = ["Beranda", "Inspirasi", "Cara Kerja", "Tentang", "Kontak"];
 export function Navbar() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-[#e7e1d8] bg-white shadow-[0_1px_2px_rgba(49,51,44,0.08)]">
-      <nav className="mx-auto flex h-[72px] w-full max-w-[1440px] items-center justify-between gap-8 px-5 font-sans text-[#6b5b52] sm:px-8 lg:px-10">
+      <nav className="relative mx-auto flex h-[72px] w-full max-w-[1440px] items-center justify-between gap-4 px-5 font-sans text-[#6b5b52] sm:gap-8 sm:px-8 lg:px-10">
         <a href="#beranda" className="shrink-0 font-serif text-[26px] font-medium italic leading-none text-[#31332c]">
           VMatch
         </a>
@@ -21,7 +21,7 @@ export function Navbar() {
           </div>
           <a
             href="#kontak"
-            className="inline-flex h-10 min-w-[126px] items-center justify-center bg-[#6B5B52] px-6 text-[13px] font-medium leading-none text-white transition-colors hover:bg-[#5b4c44]"
+            className="hidden h-10 min-w-[126px] items-center justify-center bg-[#6B5B52] px-6 text-[13px] font-medium leading-none text-white transition-colors hover:bg-[#5b4c44] sm:inline-flex"
           >
             Konsultasi
           </a>
