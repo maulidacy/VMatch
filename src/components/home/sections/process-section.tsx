@@ -19,7 +19,7 @@ export function ProcessSection() {
         <div
           className="absolute inset-0 bg-fixed bg-cover bg-center"
           style={{
-            backgroundImage: "url('/figma/process-bg.webp')",
+            backgroundImage: "url('https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777570945/kitcen_set_rw5fsv.png')",
           }}
         />
 

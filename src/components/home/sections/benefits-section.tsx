@@ -43,7 +43,7 @@ export function BenefitsSection() {
 
         <div className="relative min-h-[340px] overflow-hidden shadow-[0_18px_50px_rgba(0,0,0,0.10)] sm:min-h-[420px] lg:min-h-[500px]">
           <Image
-            src="/figma/benefits-kitchen.webp"
+            src="https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777571462/Kitchen_set_hpzioo.png"
             alt="Kitchen detail with warm cabinetry"
             fill
             sizes="(min-width: 1024px) 52vw, 100vw"
