@@ -231,8 +231,8 @@ export default function UserDashboard() {
     <main
       className={
         isMeetTab
-          ? "flex min-h-[100dvh] w-full flex-col bg-[#FCFBF9]"
-          : "flex h-[100dvh] min-h-0 w-full max-h-[100dvh] flex-col overflow-hidden bg-[#FCFBF9]"
+          ? "flex min-h-[100dvh] w-full max-w-full flex-col overflow-x-hidden bg-[#FCFBF9]"
+          : "flex h-[100dvh] min-h-0 w-full max-h-[100dvh] max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-[#FCFBF9]"
       }
     >
       <DashboardHeader activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -240,10 +240,10 @@ export default function UserDashboard() {
       <div
         className={
           isMeetTab
-            ? "w-full px-3 pb-3 pt-3 sm:px-4 lg:px-5"
+            ? "w-full max-w-full overflow-x-hidden px-3 pb-3 pt-3 sm:px-4 lg:px-5"
             : isAiTab
-              ? "flex min-h-0 w-full flex-1 flex-col overflow-hidden px-0 pb-0 pt-0 lg:px-5 lg:pb-3 lg:pt-3"
-              : "flex min-h-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain px-3 pb-3 pt-3 [-webkit-overflow-scrolling:touch] sm:px-4 lg:px-5"
+              ? "flex min-h-0 w-full max-w-full flex-1 flex-col overflow-x-hidden overflow-y-hidden px-0 pb-0 pt-0 lg:px-5 lg:pb-3 lg:pt-3"
+              : "flex min-h-0 w-full max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 pt-3 [-webkit-overflow-scrolling:touch] sm:px-4 lg:px-5"
         }
       >
         <section

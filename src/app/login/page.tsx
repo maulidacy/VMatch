@@ -26,7 +26,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#FCFBF9] font-sans text-[#31332C] supports-[min-height:100svh]:min-h-[100svh] lg:h-[100dvh] lg:flex-row lg:overflow-hidden">
+    <div className="flex min-h-[100dvh] w-full max-w-full flex-col overflow-x-hidden bg-[#FCFBF9] font-sans text-[#31332C] supports-[min-height:100svh]:min-h-[100svh] lg:h-[100dvh] lg:flex-row lg:overflow-hidden">
       <div className="relative h-[min(36vh,320px)] w-full max-w-full shrink-0 sm:h-[min(32vh,300px)] lg:h-full lg:min-h-0 lg:w-1/2">
         <Image
           src={LOGIN_IMAGE}

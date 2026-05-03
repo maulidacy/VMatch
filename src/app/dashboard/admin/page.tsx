@@ -225,10 +225,10 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTabId>("board");
 
   return (
-    <main className="flex min-h-[100dvh] w-full flex-col bg-[#FCFBF9]">
+    <main className="flex min-h-[100dvh] w-full max-w-full flex-col overflow-x-hidden bg-[#FCFBF9]">
       <DashboardHeader activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <div className="flex min-h-0 w-full flex-1 flex-col px-3 pb-3 pt-3 sm:px-4 lg:px-5">
+      <div className="flex min-h-0 w-full max-w-full flex-1 flex-col overflow-x-hidden px-3 pb-3 pt-3 sm:px-4 lg:px-5">
         <section className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col">
           {activeTab === "board" && <BoardTab />}
           {activeTab === "todos" && <TasksTab />}

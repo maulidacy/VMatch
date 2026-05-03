@@ -17,19 +17,26 @@
 }
 
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   scroll-padding-top: 72px;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   width: 100%;
   max-width: 100vw;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
+}
+
+main {
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* Cegah zoom otomatis iOS pada fokus input (min 16px) */
