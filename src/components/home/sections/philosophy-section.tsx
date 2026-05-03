@@ -40,7 +40,7 @@ export function PhilosophySection() {
           </ul>
           <AnimateIn delay={0.65}>
             <a
-              href="#kontak"
+              href="/login"
               className="mt-8 inline-flex h-11 items-center justify-center bg-[#6B5B52] px-7 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-[#5B4C44]"
             >
               Kenali kebutuhan proyek

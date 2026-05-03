@@ -17,7 +17,7 @@ export function ProjectsSection() {
           </AnimateIn>
           <AnimateIn delay={0.2} direction="left">
             <a
-              href="#kontak"
+              href="/login"
               className="hidden border border-[#D8CFC4]/30 px-5 py-3 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F5EFE5] transition-colors hover:border-[#F5EFE5] hover:bg-[#F5EFE5] hover:text-[#31332C] md:inline-flex"
             >
               Konsultasi proyek

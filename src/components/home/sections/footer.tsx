@@ -70,7 +70,7 @@ export function Footer() {
             <ul className="mt-5 space-y-2 font-sans text-[13px] leading-6 text-white/70">
               {supportLinks.map((link) => (
                 <li key={link}>
-                  <a href="#kontak" className="transition-colors hover:text-white">
+                  <a href="/login" className="transition-colors hover:text-white">
                     {link}
                   </a>
                 </li>
@@ -81,7 +81,7 @@ export function Footer() {
               {socialLinks.map((social) => (
                 <a
                   key={social.label}
-                  href="#kontak"
+                  href="/login"
                   className="grid h-9 w-9 place-items-center border border-white/16 bg-white/8 text-white/80 transition-colors hover:bg-white hover:text-[#6B5B52]"
                   aria-label={social.label}
                 >

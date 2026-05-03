@@ -36,7 +36,7 @@ export function HeroSection() {
             <AnimateIn delay={0.5} direction="up">
               <div className="mt-8 flex flex-col items-start gap-5 font-sans sm:flex-row sm:flex-wrap sm:items-center sm:gap-8">
                 <a
-                  href="#kontak"
+                  href="/login"
                   className="inline-flex h-[47px] min-w-[212px] items-center justify-center bg-white px-9 text-[12px] font-medium uppercase tracking-[0.08em] text-[#6b5b52] transition-colors hover:bg-gray-100"
                 >
                   MULAI PROYEK ANDA

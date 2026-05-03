@@ -17,7 +17,7 @@ export function SectionHeading({ eyebrow, title, cta }: SectionHeadingProps) {
       </div>
       {cta ? (
         <a
-          href="#kontak"
+          href="/login"
           className="hidden border-b border-[#6b5b52]/25 pb-1 font-sans text-base font-medium tracking-[0.025em] text-[#6b5b52] md:inline-flex"
         >
           {cta} <span className="ml-2">/</span>
