@@ -80,6 +80,41 @@ export function IconMark({ type }: { type: string }) {
     );
   }
 
+  if (type === "partner") {
+    return (
+      <svg viewBox="0 0 32 32" className={common} fill="none">
+        <path d="M16 14c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0 2c-4.42 0-8 3.58-8 8v3h16v-3c0-4.42-3.58-8-8-8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M22 14c1.66 0 3-1.34 3-3s-1.34-3-3-3M26 21c2 0 3.5 1.5 3.5 3.5V27h-2M10 14c-1.66 0-3-1.34-3-3S8.34 8 10 8M6 21c-2 0-3.5 1.5-3.5 3.5V27h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (type === "curated") {
+    return (
+      <svg viewBox="0 0 32 32" className={common} fill="none">
+        <path d="M16 4l3 9h9l-7.5 5.5 3 9L16 22l-7.5 5.5 3-9L4 13h9z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  if (type === "structured") {
+    return (
+      <svg viewBox="0 0 32 32" className={common} fill="none">
+        <path d="M10 8h16M10 16h16M10 24h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M6 8h.01M6 16h.01M6 24h.01" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (type === "transparent") {
+    return (
+      <svg viewBox="0 0 32 32" className={common} fill="none">
+        <path d="M16 9c-5.5 0-10 4.5-10 7s4.5 7 10 7 10-4.5 10-7-4.5-7-10-7zm0 11c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="16" cy="16" r="2" fill="currentColor" />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 32 32" className={common} fill="none">
       <path d="M16 4l2.8 8.2L27 15l-8.2 2.8L16 26l-2.8-8.2L5 15l8.2-2.8L16 4z" stroke="currentColor" strokeWidth="1.8" />

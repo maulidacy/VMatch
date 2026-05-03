@@ -15,22 +15,24 @@ export function BenefitsSection() {
           </h2>
         </AnimateIn>
 
-        <div className="mt-9 grid grid-cols-1 gap-y-8 border-t border-[#DED6CA] pt-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-y-0">
+        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature, index) => (
             <AnimateIn
               key={feature.title}
               delay={0.18 + index * 0.08}
               direction="up"
               as="article"
-              className={`px-5 ${index > 0 ? "lg:border-l lg:border-[#DED6CA]" : ""}`}
+              className="group relative flex flex-col justify-between overflow-hidden bg-white border border-[#DED6CA] p-8 text-left transition-all hover:border-[#6B5B52] hover:shadow-[0_8px_30px_rgb(49,51,44,0.06)]"
             >
-              <div className="mx-auto grid h-11 w-11 place-items-center text-[#6B5B52]">
+              <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-full bg-[#FCFBF9] text-[#6B5B52] ring-1 ring-[#DED6CA] transition-colors group-hover:bg-[#6B5B52] group-hover:text-white">
                 <IconMark type={feature.icon} />
               </div>
-              <h3 className="mx-auto mt-4 max-w-[210px] font-sans text-[13px] font-bold uppercase leading-5 tracking-[0.06em] text-[#31332C]">
-                {feature.title}
-              </h3>
-              <p className="mx-auto mt-3 max-w-[235px] font-sans text-[13px] leading-[22px] text-[#797C73]">{feature.copy}</p>
+              <div>
+                <h3 className="font-sans text-[14px] font-bold uppercase leading-[1.3] tracking-[0.06em] text-[#31332C]">
+                  {feature.title}
+                </h3>
+                <p className="mt-4 font-sans text-[13px] leading-[22px] text-[#797C73]">{feature.copy}</p>
+              </div>
             </AnimateIn>
           ))}
         </div>

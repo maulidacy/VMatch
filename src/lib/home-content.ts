@@ -555,22 +555,22 @@ export const steps: Step[] = [
 
 export const features: Feature[] = [
   {
-    icon: "spark",
+    icon: "partner",
     title: "Tidak perlu mencari vendor sendiri",
     copy: "Kami telah bermitra dengan pengrajin dan penyedia material terbaik yang sudah teruji.",
   },
   {
-    icon: "seal",
+    icon: "curated",
     title: "Solusi sudah dikurasi",
     copy: "Setiap pilihan material dan desain melewati filter estetika tim ahli kami.",
   },
   {
-    icon: "flow",
+    icon: "structured",
     title: "Proses lebih terstruktur",
     copy: "Dari desain hingga instalasi, semua memiliki linimasa yang jelas dan pasti.",
   },
   {
-    icon: "chart",
+    icon: "transparent",
     title: "Progres transparan",
     copy: "Anda akan mendapatkan laporan berkala secara rutin tanpa harus menanyakan.",
   },
