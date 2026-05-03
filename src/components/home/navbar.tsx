@@ -27,12 +27,6 @@ export function Navbar() {
           </div>
           <a
             href="/login"
-            className="font-sans text-[13px] font-bold uppercase tracking-[0.1em] text-[#6b5b52] hover:text-[#31332c] hidden sm:block"
-          >
-            Login
-          </a>
-          <a
-            href="/login"
             className="hidden h-10 min-w-[126px] items-center justify-center bg-[#6B5B52] px-6 text-[13px] font-medium leading-none text-white transition-colors hover:bg-[#5b4c44] sm:inline-flex"
           >
             Konsultasi
@@ -66,9 +60,6 @@ export function Navbar() {
               {link}
             </a>
           ))}
-          <a href="/login" onClick={() => setIsOpen(false)} className="text-[14px] font-bold uppercase tracking-[0.16em] text-[#6b5b52] hover:text-[#31332c] mt-2">
-            Login
-          </a>
           <a
             href="/login"
             onClick={() => setIsOpen(false)}

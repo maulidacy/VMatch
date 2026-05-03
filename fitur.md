@@ -669,3 +669,6 @@ Dokumen ini mencatat flow fitur yang sudah ada di UI saat ini dan kebutuhan data
 - AI tab harus full page: sidebar history kecil kiri, chat kanan, yang scroll hanya area chat.
 - Katalog boleh memanjang ke bawah di kategori awal.
 - Palette dashboard tetap mengikuti landing page.
+
+
+- user harus input nomer wa wajib ketika data dia belum ada di database ( habis login) 
