@@ -23,9 +23,6 @@ export function ProcessSection() {
               as="article"
               className="relative px-5"
             >
-              {index < steps.length - 1 ? (
-                <div className="absolute left-1/2 top-16 h-[calc(100%+2.25rem)] w-px -translate-x-1/2 bg-[#DED6CA] md:hidden" aria-hidden="true" />
-              ) : null}
               <div className="relative z-10 mx-auto grid h-16 w-16 place-items-center rounded-full border border-[#DED6CA] bg-[#6B5B52] text-white shadow-[0_0_0_8px_#FCFBF9]">
                 <IconMark type={index === 0 ? "chat" : index === 1 ? "plan" : "build"} />
               </div>

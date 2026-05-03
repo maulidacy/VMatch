@@ -3,10 +3,10 @@ import type { Project } from "@/lib/home-content";
 
 export function ProjectsStrip({ projects }: { projects: Project[] }) {
   return (
-    <div className="overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="grid min-w-[1080px] grid-cols-5 gap-5 lg:min-w-0">
+    <div className="overflow-x-auto pb-4 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex lg:grid lg:grid-cols-5 gap-4 lg:gap-5 w-max lg:w-full">
         {projects.slice(0, 5).map((project) => (
-          <article key={project.title} className="group min-w-0">
+          <article key={project.title} className="group w-[85vw] sm:w-[320px] lg:w-auto shrink-0 snap-start lg:min-w-0">
             <div className="relative aspect-[4/5] overflow-hidden bg-[#31332C]">
               <div className="h-full w-full transition-transform duration-700 group-hover:scale-105">
                 <FillImage image={project.image} sizes="(min-width: 1024px) 20vw, 220px" />
