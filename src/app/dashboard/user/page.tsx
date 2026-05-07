@@ -320,11 +320,10 @@ function DashboardHeader({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-[12px] font-semibold transition-all sm:h-11 sm:px-5 ${
-                  isActive
+                className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-[12px] font-semibold transition-all sm:h-11 sm:px-5 ${isActive
                     ? "border-[#F5EFE5] bg-[#F5EFE5] text-[#31332C]"
                     : "border-[#F5EFE5]/18 bg-[#F5EFE5]/8 text-[#F5EFE5]/76 hover:bg-[#F5EFE5]/14 hover:text-[#F5EFE5]"
-                }`}
+                  }`}
               >
                 <Icon size={15} />
                 <span className="sm:hidden">{tab.shortLabel}</span>
@@ -343,11 +342,10 @@ function DashboardHeader({
       </div>
 
       <div
-        className={`mx-auto grid w-full max-w-[1600px] overflow-hidden border-t border-[#F5EFE5]/12 transition-all duration-300 ease-out lg:hidden ${
-          isMobileMenuOpen
+        className={`mx-auto grid w-full max-w-[1600px] overflow-hidden border-t border-[#F5EFE5]/12 transition-all duration-300 ease-out lg:hidden ${isMobileMenuOpen
             ? "mt-3 max-h-[560px] translate-y-0 pb-4 pt-3 opacity-100"
             : "mt-0 max-h-0 -translate-y-1 pb-0 pt-0 opacity-0"
-        }`}
+          }`}
       >
         <div className="grid gap-2">
           {tabs.map((tab) => {
@@ -359,11 +357,10 @@ function DashboardHeader({
                 key={`mobile-${tab.id}`}
                 type="button"
                 onClick={() => handleTabClick(tab.id)}
-                className={`inline-flex h-12 w-full items-center justify-between gap-3 border px-4 text-left text-[12px] font-semibold transition-all ${
-                  isActive
+                className={`inline-flex h-12 w-full items-center justify-between gap-3 border px-4 text-left text-[12px] font-semibold transition-all ${isActive
                     ? "border-[#F5EFE5] bg-[#F5EFE5] text-[#31332C]"
                     : "border-[#F5EFE5]/18 bg-[#F5EFE5]/8 text-[#F5EFE5]/80 hover:bg-[#F5EFE5]/14 hover:text-[#F5EFE5]"
-                }`}
+                  }`}
               >
                 <span className="inline-flex items-center gap-2">
                   <Icon size={15} />
@@ -416,53 +413,53 @@ function ProjectHub({
       </div>
 
       <div className="grid grid-cols-1 justify-items-stretch gap-4 p-4 sm:grid-cols-[repeat(auto-fill,minmax(300px,340px))] sm:justify-start">
-          {projects.map((project) => (
-            <article
-              key={project.id}
-              className="flex aspect-square w-full max-w-full flex-col border border-[#DED6CA] bg-[#FCFBF9] p-4 sm:max-w-none"
-            >
-              <button type="button" onClick={() => onOpenProject(project.id)} className="block w-full min-w-0 text-left">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">Brief pengajuan</p>
-                <h2 className="mt-1 line-clamp-2 font-serif text-[21px] leading-6 text-[#31332C]">{project.title}</h2>
-                <div className="mt-3 grid gap-1 text-[12px] leading-5 text-[#797C73]">
-                  <span className="truncate">{project.property}</span>
-                  <span className="truncate">{project.location}</span>
-                  <span className="truncate">{project.budget}</span>
-                  <span className="truncate">{project.projectStart} - {project.projectEnd}</span>
-                </div>
-              </button>
-
-              <div className="mt-auto border-t border-[#DED6CA] pt-3">
-                {project.consultationDate ? (
-                  <div className="border border-[#DED6CA] bg-white px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">Jadwal meet</p>
-                    <p className="break-words text-[12px] leading-5 text-[#31332C]">{project.consultationDate}</p>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onScheduleMeet(project.id)}
-                    className="h-9 w-full border border-[#31332C] bg-white px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#31332C] transition-colors hover:bg-[#31332C] hover:text-[#F5EFE5]"
-                  >
-                    + Tambah jadwal meet
-                  </button>
-                )}
+        {projects.map((project) => (
+          <article
+            key={project.id}
+            className="flex aspect-square w-full max-w-full flex-col border border-[#DED6CA] bg-[#FCFBF9] p-4 sm:max-w-none"
+          >
+            <button type="button" onClick={() => onOpenProject(project.id)} className="block w-full min-w-0 text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">Brief pengajuan</p>
+              <h2 className="mt-1 line-clamp-2 font-serif text-[21px] leading-6 text-[#31332C]">{project.title}</h2>
+              <div className="mt-3 grid gap-1 text-[12px] leading-5 text-[#797C73]">
+                <span className="truncate">{project.property}</span>
+                <span className="truncate">{project.location}</span>
+                <span className="truncate">{project.budget}</span>
+                <span className="truncate">{project.projectStart} - {project.projectEnd}</span>
               </div>
+            </button>
 
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6B5B52]">
-                  Status sekarang: {project.status}
-                </p>
+            <div className="mt-auto border-t border-[#DED6CA] pt-3">
+              {project.consultationDate ? (
+                <div className="border border-[#DED6CA] bg-white px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">Jadwal meet</p>
+                  <p className="break-words text-[12px] leading-5 text-[#31332C]">{project.consultationDate}</p>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => onOpenProject(project.id)}
-                  className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#31332C] underline underline-offset-4"
+                  onClick={() => onScheduleMeet(project.id)}
+                  className="h-9 w-full border border-[#31332C] bg-white px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#31332C] transition-colors hover:bg-[#31332C] hover:text-[#F5EFE5]"
                 >
-                  Lihat detail
+                  + Tambah jadwal meet
                 </button>
-              </div>
-            </article>
-          ))}
+              )}
+            </div>
+
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <p className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6B5B52]">
+                Status sekarang: {project.status}
+              </p>
+              <button
+                type="button"
+                onClick={() => onOpenProject(project.id)}
+                className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#31332C] underline underline-offset-4"
+              >
+                Lihat detail
+              </button>
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );
@@ -631,21 +628,19 @@ function ProjectDetail({
                     className="relative z-10 w-[230px] shrink-0 sm:w-[255px]"
                   >
                     <div
-                      className={`grid h-11 w-11 place-items-center rounded-full border text-[12px] font-semibold ${
-                        isCurrent
+                      className={`grid h-11 w-11 place-items-center rounded-full border text-[12px] font-semibold ${isCurrent
                           ? "border-[#31332C] bg-[#31332C] text-[#F5EFE5]"
                           : isDone
                             ? "border-[#6B5B52] bg-[#6B5B52] text-white"
                             : "border-[#DED6CA] bg-[#FCFBF9] text-[#797C73]"
-                      }`}
+                        }`}
                     >
                       {isDone ? <CheckCircle2 size={16} /> : String(index + 1).padStart(2, "0")}
                     </div>
                     <div
-                      className={`mt-4 grid min-h-[310px] grid-rows-[128px_1fr_auto] border ${
-                      isCurrent ? "border-[#31332C] bg-white" : "border-[#DED6CA] bg-[#FCFBF9]"
-                    }`}
-                  >
+                      className={`mt-4 grid min-h-[310px] grid-rows-[128px_1fr_auto] border ${isCurrent ? "border-[#31332C] bg-white" : "border-[#DED6CA] bg-[#FCFBF9]"
+                        }`}
+                    >
                       <div className="relative h-32 w-full overflow-hidden bg-[#DED6CA]">
                         {item.image.startsWith("blob:") ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -1097,9 +1092,8 @@ function AiTab() {
           key={conversation.id}
           type="button"
           onClick={() => handleConversationSelect(conversation.id)}
-          className={`border p-2 text-left transition-colors ${
-            activeConversationId === conversation.id ? "border-[#31332C] bg-[#31332C] text-[#F5EFE5]" : "border-[#DED6CA] bg-[#FCFBF9] text-[#31332C] hover:border-[#31332C]"
-          }`}
+          className={`border p-2 text-left transition-colors ${activeConversationId === conversation.id ? "border-[#31332C] bg-[#31332C] text-[#F5EFE5]" : "border-[#DED6CA] bg-[#FCFBF9] text-[#31332C] hover:border-[#31332C]"
+            }`}
         >
           <p className="truncate font-serif text-[16px] leading-5">{conversation.title}</p>
           <p className={`mt-1 text-[11px] ${activeConversationId === conversation.id ? "text-[#F5EFE5]/70" : "text-[#797C73]"}`}>{conversation.meta}</p>
@@ -1128,9 +1122,8 @@ function AiTab() {
           className={`absolute inset-0 bg-[#191A17]/45 transition-opacity ${isHistoryOpen ? "opacity-100" : "opacity-0"}`}
         />
         <aside
-          className={`absolute inset-y-0 left-0 flex w-[280px] max-w-[82vw] flex-col border-r border-[#DED6CA] bg-white transition-transform duration-300 ease-out ${
-            isHistoryOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`absolute inset-y-0 left-0 flex w-[280px] max-w-[82vw] flex-col border-r border-[#DED6CA] bg-white transition-transform duration-300 ease-out ${isHistoryOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           <div className="flex items-start justify-between gap-3 border-b border-[#DED6CA] bg-[#FCFBF9] p-3">
             <div>
@@ -1311,13 +1304,12 @@ function MeetTab({ project, onSelectProject }: { project: ClientProject | null; 
                     <button
                       key={index}
                       type="button"
-                      className={`h-10 rounded-sm text-[12px] font-medium transition-colors sm:h-11 ${
-                        index === 15
+                      className={`h-10 rounded-sm text-[12px] font-medium transition-colors sm:h-11 ${index === 15
                           ? "bg-[#31332C] text-[#F5EFE5]"
                           : index < 12
                             ? "text-[#DED6CA]"
                             : "bg-white text-[#31332C] hover:bg-[#DED6CA]"
-                      }`}
+                        }`}
                     >
                       {index + 1}
                     </button>
@@ -1333,11 +1325,10 @@ function MeetTab({ project, onSelectProject }: { project: ClientProject | null; 
                   <button
                     key={time}
                     type="button"
-                    className={`border px-3 py-3 text-[12px] font-semibold transition-colors ${
-                      index === 1
+                    className={`border px-3 py-3 text-[12px] font-semibold transition-colors ${index === 1
                         ? "border-[#31332C] bg-[#31332C] text-[#F5EFE5]"
                         : "border-[#DED6CA] bg-white text-[#31332C] hover:border-[#31332C]"
-                    }`}
+                      }`}
                   >
                     {time}
                   </button>
@@ -1412,12 +1403,53 @@ function DocsTab({ project }: { project: ClientProject | null }) {
 
 function CatalogTab() {
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogKey | null>(null);
-  const activeInspiration = selectedCatalog ? inspirations.find((item) => item.slug === selectedCatalog) : null;
-  const catalogDetail =
-    selectedCatalog === "featured"
-      ? featuredProjects.slice(0, 8).map((project) => ({ title: project.title, copy: project.location, image: project.image }))
-      : activeInspiration?.areas.map((area) => ({ title: area.title, copy: area.description, image: area.image })) ?? [];
 
+  const inspirationMap: Partial<Record<CatalogKey, (typeof inspirations)[number]>> = {
+    apartment: inspirations[0],
+    rumah: inspirations[1],
+    hotel: inspirations[2],
+    "kos-boarding-house": inspirations[3],
+  };
+
+  type CatalogImage = {
+    src: string;
+    alt: string;
+    className?: string;
+  };
+
+  type CatalogArea = {
+    title: string;
+    description: string;
+    image: CatalogImage;
+  };
+
+  type InspirationWithAreas = {
+    areas: CatalogArea[];
+  };
+
+  type CatalogDetailItem = {
+    title: string;
+    copy: string;
+    image: CatalogImage;
+  };
+
+  const activeInspiration =
+    selectedCatalog && selectedCatalog !== "featured"
+      ? (inspirationMap[selectedCatalog] as InspirationWithAreas | undefined) ?? null
+      : null;
+
+  const catalogDetail: CatalogDetailItem[] =
+    selectedCatalog === "featured"
+      ? featuredProjects.slice(0, 8).map((project) => ({
+        title: project.title,
+        copy: project.location,
+        image: project.image,
+      }))
+      : activeInspiration?.areas.map((area) => ({
+        title: area.title,
+        copy: area.description,
+        image: area.image,
+      })) ?? [];
   return (
     <div className="fade-in">
       <section className="grid border border-[#DED6CA] bg-white p-4 sm:p-5">
@@ -1514,9 +1546,8 @@ function ChatBubble({ from, children }: { from: "bot" | "user"; children: React.
   return (
     <div className={`flex min-h-0 ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[76%] self-center px-5 py-4 text-[14px] leading-6 ${
-          isUser ? "bg-[#31332C] text-[#F5EFE5]" : "bg-[#FCFBF9] text-[#31332C]"
-        }`}
+        className={`max-w-[76%] self-center px-5 py-4 text-[14px] leading-6 ${isUser ? "bg-[#31332C] text-[#F5EFE5]" : "bg-[#FCFBF9] text-[#31332C]"
+          }`}
       >
         {children}
       </div>
