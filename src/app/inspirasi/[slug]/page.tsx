@@ -182,7 +182,7 @@ export default async function InspirationDetailPage({ params }: InspirationPageP
 
         {/* 2 Rows Grid Setup */}
         <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-10">
-          {category.areas.map((area, index) => (
+          {(category.areas ?? []).map((area, index) => (
             <AnimateIn key={area.title} delay={0.2 + index * 0.1} direction="up" className="h-full">
               <article className="group flex h-full flex-col border border-[#DED6CA] bg-white shadow-sm transition-shadow hover:shadow-xl">
                 <div className="relative h-[240px] w-full overflow-hidden border-b border-[#DED6CA] bg-[#F3F3F3] sm:h-[300px]">
@@ -204,7 +204,7 @@ export default async function InspirationDetailPage({ params }: InspirationPageP
                   <div className="mt-8 border-t border-[#DED6CA] pt-5">
                     <p className="mb-4 font-sans text-[11px] font-bold uppercase tracking-[0.15em] text-[#6B5B52]">Layanan Termasuk</p>
                     <ul className="grid gap-3 font-sans text-[13px] leading-5 text-[#5E6058]">
-                      {area.services.map((service) => (
+                      {(area.services ?? []).map((service) => (
                          <li key={service} className="flex items-start gap-3">
                            <span className="mt-2 h-[1px] w-4 shrink-0 bg-[#6B5B52]" aria-hidden="true" />
                            <span>{service}</span>
