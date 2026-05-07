@@ -14,13 +14,51 @@ type InspirationPageProps = {
   }>;
 };
 
+type InspirationArea = {
+  title: string;
+  description: string;
+  image: {
+    src: string;
+    alt: string;
+    width?: number;
+    height?: number;
+    className?: string;
+  };
+  services: string[];
+};
+
+type InspirationCategory = {
+  title: string;
+  copy: string;
+  image: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+  };
+  areas: InspirationArea[];
+};
+
+const inspirationBySlug = {
+  apartment: inspirations[0],
+  rumah: inspirations[1],
+  hotel: inspirations[2],
+  "kos-boarding-house": inspirations[3],
+} as unknown as Record<string, InspirationCategory>;
+
+type InspirationSlug = keyof typeof inspirationBySlug;
+
+function isInspirationSlug(slug: string): slug is InspirationSlug {
+  return slug in inspirationBySlug;
+}
+
 function getInspirationCategory(slug: string) {
-  return inspirations.find((category) => category.slug === slug);
+  return isInspirationSlug(slug) ? inspirationBySlug[slug] : null;
 }
 
 export function generateStaticParams() {
-  return inspirations.map((category) => ({
-    slug: category.slug,
+  return Object.keys(inspirationBySlug).map((slug) => ({
+    slug,
   }));
 }
 
@@ -36,7 +74,7 @@ export async function generateMetadata({ params }: InspirationPageProps): Promis
     title: `Inspirasi ${category.title}`,
     description: `${category.copy} Lihat referensi ruang dan layanan interior dari VMatch.`,
     alternates: {
-      canonical: `/inspirasi/${category.slug}`,
+      canonical: `/inspirasi/${slug}`,
     },
     openGraph: {
       title: `Inspirasi ${category.title} | VMatch Interior`,
