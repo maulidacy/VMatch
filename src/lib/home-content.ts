@@ -19,12 +19,17 @@ export type InspirationArea = {
   image: ImageAsset;
 };
 
-export type InspirationCategory = {
+export type Inspiration = {
   title: string;
-  slug: string;
   copy: string;
   image: ImageAsset;
-  areas: InspirationArea[];
+};
+
+export type Service = {
+  number: string;
+  title: string;
+  copy: string;
+  icon: "consultation" | "planning" | "monitoring" | "realization";
 };
 
 export type Step = {
@@ -65,6 +70,7 @@ export type ContactInfo = {
   email: string;
   hours: string;
 };
+
 
 export const heroThumbs: ImageAsset[] = [
   {
@@ -112,426 +118,138 @@ export const stats: StatItem[] = [
 
 export const projects: Project[] = [
   {
-    title: "Walnut Brutalism",
+    title: "Kitchen Set Walnut Modern",
     location: "Jakarta Selatan - 2024",
     image: {
-      src: "/figma/project-walnut.webp",
-      alt: "Walnut kitchen with marble island",
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777568553/Dapur_Walnut_Modern_g505wp.png",
+      alt: "Dapur modern dengan kabinet walnut dan meja island marmer",
       width: 736,
       height: 1104,
       className: "object-[center_27%]",
     },
   },
   {
-    title: "The Nordic Loft",
-    location: "Bali - 2023",
+    title: "Wardrobe Minimalis",
+    location: "Semarang - 2025",
     image: {
-      src: "/figma/project-loft.webp",
-      alt: "Nordic loft interior with sofa and timber wall",
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777570068/Wardrobe_Minimalis_b2nte7.png",
+      alt: "Interior loteng bergaya Nordik dengan sofa dan dinding kayu",
       width: 736,
       height: 1037,
       className: "object-[center_49%]",
     },
   },
   {
-    title: "Library of Silence",
-    location: "Yogyakarta - 2023",
+    title: "Lemari Display",
+    location: "Yogyakarta - 2025",
     image: {
-      src: "/figma/project-library.webp",
-      alt: "Interior library wall with warm lighting",
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777570214/Lemari_Display_quafgs.png",
+      alt: "Ruang perpustakaan dengan pencahayaan hangat dan rak dekoratif",
       width: 736,
       height: 736,
       className: "object-[center_9%]",
     },
   },
   {
-    title: "Urban Minimalist",
-    location: "Jakarta Pusat - 2024",
+    title: "Backdrop TV Modern",
+    location: "Bandung - 2026",
     image: {
-      src: "/inspirations/rumah-ruang-tamu.webp",
-      alt: "Minimalist living room",
-      width: 1200,
-      height: 900,
-    },
-  },
-  {
-    title: "Modern Culinary",
-    location: "Tangerang - 2023",
-    image: {
-      src: "/inspirations/rumah-dapur.webp",
-      alt: "Modern kitchen design",
-      width: 1200,
-      height: 900,
-    },
-  },
-  {
-    title: "Grand Lobby",
-    location: "Surabaya - 2024",
-    image: {
-      src: "/inspirations/hotel-lobby.webp",
-      alt: "Grand hotel lobby",
-      width: 1200,
-      height: 900,
-    },
-  },
-  {
-    title: "Compact Living",
-    location: "Bandung - 2024",
-    image: {
-      src: "/inspirations/apartment-living-area.webp",
-      alt: "Compact apartment living area",
-      width: 1200,
-      height: 900,
-    },
-  },
-  {
-    title: "Serene Sleep",
-    location: "Jakarta Barat - 2023",
-    image: {
-      src: "/inspirations/apartment-bedroom.webp",
-      alt: "Serene apartment bedroom",
-      width: 1200,
-      height: 900,
-    },
-  },
-  {
-    title: "Executive Suite",
-    location: "Bali - 2024",
-    image: {
-      src: "/inspirations/hotel-room.webp",
-      alt: "Executive hotel suite",
-      width: 1200,
-      height: 900,
-    },
-  },
-  {
-    title: "Communal Hub",
-    location: "Malang - 2023",
-    image: {
-      src: "/inspirations/boarding-common-area.webp",
-      alt: "Communal area for boarding house",
-      width: 1200,
-      height: 900,
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777570711/Backdrop_TV_modern_qwpq5j.png",
+      alt: "Ruang koleksi interior dengan rak kayu dan pencahayaan hangat",
+      width: 736,
+      height: 736,
+      className: "object-[center_9%]",
     },
   },
 ];
 
-export const inspirations: InspirationCategory[] = [
+export const inspirations: Inspiration[] = [
   {
-    title: "Rumah",
-    slug: "rumah",
-    copy: "Inspirasi interior rumah untuk ruang keluarga yang nyaman, rapi, dan terasa personal.",
+    title: "Storage & Rak",
+    copy: "Solusi penyimpanan rapi dan efisien.",
     image: {
-      src: "/inspirations/rumah-hero.webp",
-      alt: "Warm modern home interior",
-      width: 1400,
-      height: 1000,
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572091/storage_gjjkhl.png",
+      alt: "Storage dan rak interior",
+      width: 736,
+      height: 1104,
     },
-    areas: [
-      {
-        title: "Ruang Tamu",
-        description: "Area pertama yang membangun kesan rumah: nyaman untuk menerima tamu dan tetap enak dipakai harian.",
-        services: ["Layout furniture", "Backdrop TV atau wall panel", "Loose furniture selection", "Lighting ambience"],
-        image: {
-          src: "/inspirations/rumah-ruang-tamu.webp",
-          alt: "Modern home living room",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Kamar Tidur",
-        description: "Kamar yang lebih tenang dengan storage cukup, material hangat, dan alur gerak yang tidak sempit.",
-        services: ["Headboard custom", "Wardrobe built-in", "Meja rias atau meja kerja", "Layering lampu tidur"],
-        image: {
-          src: "/inspirations/rumah-kamar-tidur.webp",
-          alt: "Warm home bedroom interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Dapur",
-        description: "Dapur rumah yang rapi, mudah dibersihkan, dan disesuaikan dengan kebiasaan memasak keluarga.",
-        services: ["Kitchen set atas bawah", "Top table dan backsplash", "Storage alat masak", "Lighting area kerja"],
-        image: {
-          src: "/inspirations/rumah-dapur.webp",
-          alt: "Clean home kitchen interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Kamar Mandi",
-        description: "Kamar mandi yang fungsional dengan pemilihan material tahan lembap dan detail penyimpanan yang rapi.",
-        services: ["Vanity cabinet", "Mirror cabinet", "Niche storage", "Material dan finishing basah"],
-        image: {
-          src: "/inspirations/rumah-kamar-mandi.webp",
-          alt: "Modern home bathroom interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Wardrobe",
-        description: "Penyimpanan pakaian yang disusun berdasarkan kebutuhan pemilik rumah, bukan sekadar lemari besar.",
-        services: ["Pembagian gantung dan lipat", "Drawer accessories", "Cermin dan lighting", "Finishing panel"],
-        image: {
-          src: "/inspirations/rumah-wardrobe.webp",
-          alt: "Home wardrobe storage",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Ruang Keluarga",
-        description: "Ruang santai yang hangat untuk berkumpul, menonton, dan menyimpan kebutuhan aktivitas keluarga.",
-        services: ["TV cabinet", "Panel dinding", "Storage mainan atau buku", "Sofa dan coffee table"],
-        image: {
-          src: "/inspirations/rumah-ruang-keluarga.webp",
-          alt: "Home family room interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-    ],
   },
   {
-    title: "Apartment",
-    slug: "apartment",
-    copy: "Solusi interior apartment yang ringkas, efisien, dan terasa lega meski luas terbatas.",
+    title: "Kitchen Set",
+    copy: "Inspirasi dapur cantik yang fungsional, bersih, dan elegan.",
     image: {
-      src: "/inspirations/apartment-hero.webp",
-      alt: "Modern apartment interior",
-      width: 1400,
-      height: 1000,
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777571859/white_kitchen_ugkcsg.png",
+      alt: "Kitchen set modern",
+      width: 736,
+      height: 1104,
     },
-    areas: [
-      {
-        title: "Studio Layout",
-        description: "Zoning ruang tidur, santai, kerja, dan makan dalam satu area tanpa membuat ruangan terasa penuh.",
-        services: ["Space planning", "Partisi ringan", "Furniture multifungsi", "Sirkulasi ruang kecil"],
-        image: {
-          src: "/inspirations/apartment-studio-layout.webp",
-          alt: "Compact studio apartment layout",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Kitchen Set Compact",
-        description: "Kitchen set kecil yang tetap lengkap untuk kebutuhan harian, dengan storage vertikal yang maksimal.",
-        services: ["Kabinet modular", "Top table compact", "Rak bumbu dan alat masak", "Area sink dan kompor"],
-        image: {
-          src: "/inspirations/apartment-kitchen-set.webp",
-          alt: "Compact apartment kitchen set",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Bedroom",
-        description: "Kamar apartment yang tenang dengan storage tersembunyi agar ruangan tetap terasa lapang.",
-        services: ["Bedframe storage", "Wardrobe sliding", "Panel headboard", "Lampu baca dan ambience"],
-        image: {
-          src: "/inspirations/apartment-bedroom.webp",
-          alt: "Apartment bedroom interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Living Area",
-        description: "Area duduk yang nyaman untuk menerima tamu sekaligus menjadi ruang santai harian.",
-        services: ["Sofa sizing", "TV console", "Wall shelf", "Karpet dan coffee table"],
-        image: {
-          src: "/inspirations/apartment-living-area.webp",
-          alt: "Apartment living area interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Storage",
-        description: "Solusi penyimpanan yang menyatu dengan dinding dan sudut agar barang tidak terlihat berantakan.",
-        services: ["Kabinet tinggi", "Hidden storage", "Open shelf", "Finishing anti lembap"],
-        image: {
-          src: "/inspirations/apartment-storage.webp",
-          alt: "Apartment storage interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Laundry Corner",
-        description: "Area cuci kecil yang tetap rapi, mudah dipakai, dan aman dari cipratan air.",
-        services: ["Kabinet mesin cuci", "Rak deterjen", "Counter lipat", "Ventilasi dan material tahan air"],
-        image: {
-          src: "/inspirations/apartment-laundry.webp",
-          alt: "Apartment laundry corner",
-          width: 1200,
-          height: 900,
-        },
-      },
-    ],
   },
   {
-    title: "Hotel",
-    slug: "hotel",
-    copy: "Konsep interior hospitality yang menjaga pengalaman tamu sejak lobby sampai kamar.",
+    title: "Lemari/Wardrobe",
+    copy: "Penyimpanan rapi dan efisien yang menyesuaikan kebutuhan ruang.",
     image: {
-      src: "/inspirations/hotel-hero.webp",
-      alt: "Hotel interior and pool area",
-      width: 1400,
-      height: 1000,
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777571657/Lemari_Wardrobe_gk7pdx.png",
+      alt: "Lemari wardrobe modern",
+      width: 736,
+      height: 1104,
     },
-    areas: [
-      {
-        title: "Lobby",
-        description: "Area penyambutan dengan kesan brand yang kuat, alur tamu jelas, dan titik tunggu yang nyaman.",
-        services: ["Reception flow", "Lounge furniture", "Feature wall", "Decor dan lighting"],
-        image: {
-          src: "/inspirations/hotel-lobby.webp",
-          alt: "Hotel lobby interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Kamar Hotel",
-        description: "Kamar yang efisien untuk operasional, nyaman untuk tamu, dan tahan terhadap pemakaian intensif.",
-        services: ["Headboard panel", "Built-in desk", "Wardrobe dan luggage rack", "Material durable"],
-        image: {
-          src: "/inspirations/hotel-room.webp",
-          alt: "Hotel room interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Bathroom Vanity",
-        description: "Vanity kamar hotel yang bersih, mudah dirawat, dan punya detail pencahayaan yang flattering.",
-        services: ["Vanity counter", "Mirror lighting", "Storage amenities", "Material tahan air"],
-        image: {
-          src: "/inspirations/hotel-bathroom-vanity.webp",
-          alt: "Hotel bathroom vanity",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Corridor",
-        description: "Koridor yang tidak terasa kosong, dengan pencahayaan terarah dan signage yang mudah dibaca.",
-        services: ["Wall treatment", "Wayfinding", "Carpet atau flooring", "Lampu orientasi"],
-        image: {
-          src: "/inspirations/hotel-corridor.webp",
-          alt: "Hotel corridor interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Restaurant / Cafe Area",
-        description: "Area makan yang nyaman untuk breakfast, kerja singkat, atau meeting santai tamu hotel.",
-        services: ["Table layout", "Banquette seating", "Buffet counter", "Accent lighting"],
-        image: {
-          src: "/inspirations/hotel-restaurant.webp",
-          alt: "Hotel restaurant interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Reception Desk",
-        description: "Meja resepsionis yang rapi secara visual dan tetap mendukung kebutuhan kerja staf.",
-        services: ["Counter design", "Cable management", "Backwall branding", "Storage dokumen"],
-        image: {
-          src: "/inspirations/hotel-reception.webp",
-          alt: "Hotel reception desk",
-          width: 1200,
-          height: 900,
-        },
-      },
-    ],
   },
   {
-    title: "Kos / Boarding House",
-    slug: "kos-boarding-house",
-    copy: "Interior kos yang tahan pakai, mudah dirawat, dan tetap nyaman untuk penghuni.",
+    title: "Ruang Tamu",
+    copy: "Ruang santai yang nyaman dengan suasana hangat dan elegan.",
     image: {
-      src: "/inspirations/boarding-hero.webp",
-      alt: "Boarding house bedroom interior",
-      width: 1400,
-      height: 1000,
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572162/ruang_tamu_qpmb5k.png",
+      alt: "Ruang tamu modern",
+      width: 736,
+      height: 736,
     },
-    areas: [
-      {
-        title: "Kamar Kos",
-        description: "Kamar compact dengan kebutuhan dasar lengkap: tidur, belajar, menyimpan barang, dan bergerak nyaman.",
-        services: ["Bedframe storage", "Meja belajar", "Wardrobe compact", "Finishing tahan pakai"],
-        image: {
-          src: "/inspirations/boarding-room.webp",
-          alt: "Boarding house room interior",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Kamar Mandi",
-        description: "Kamar mandi yang mudah dibersihkan, minim sudut kotor, dan aman untuk pemakaian jangka panjang.",
-        services: ["Vanity sederhana", "Rak toiletries", "Partisi shower", "Material anti lembap"],
-        image: {
-          src: "/inspirations/boarding-bathroom.webp",
-          alt: "Boarding house bathroom",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Pantry Bersama",
-        description: "Pantry komunal yang tertata agar penghuni bisa memakai area bersama tanpa cepat berantakan.",
-        services: ["Kabinet pantry", "Counter preparation", "Rak alat makan", "Area sink"],
-        image: {
-          src: "/inspirations/boarding-pantry.webp",
-          alt: "Shared boarding house pantry",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Area Laundry",
-        description: "Area laundry yang memisahkan kebutuhan cuci, jemur, dan penyimpanan agar sirkulasi tetap rapi.",
-        services: ["Rak laundry", "Counter lipat", "Zona mesin cuci", "Material tahan air"],
-        image: {
-          src: "/inspirations/boarding-laundry.webp",
-          alt: "Boarding house laundry area",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Common Area",
-        description: "Area bersama yang nyaman untuk menunggu, kerja singkat, atau bersosialisasi antar penghuni.",
-        services: ["Bench seating", "Meja komunal", "Wall shelf", "Lighting hemat energi"],
-        image: {
-          src: "/inspirations/boarding-common-area.webp",
-          alt: "Boarding house common area",
-          width: 1200,
-          height: 900,
-        },
-      },
-      {
-        title: "Storage",
-        description: "Penyimpanan tambahan untuk kebutuhan operasional kos tanpa mengganggu area penghuni.",
-        services: ["Lemari linen", "Storage cleaning tools", "Rak utilitas", "Labeling dan akses"],
-        image: {
-          src: "/inspirations/boarding-storage.webp",
-          alt: "Boarding house storage area",
-          width: 1200,
-          height: 900,
-        },
-      },
-    ],
+  },
+  {
+    title: "Ruang Kerja",
+    copy: "Ruang kerja yang nyaman dan mendukung produktivitas.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572294/ruang_kerja_iy3ebf.png",
+      alt: "Ruang kerja interior",
+      width: 736,
+      height: 1104,
+    },
+  },
+  {
+    title: "Kamar Tidur",
+    copy: "Ruang istirahat yang nyaman dan menenangkan.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572362/kamar_tidur_cgnbcn.png",
+      alt: "Kamar tidur modern",
+      width: 736,
+      height: 1104,
+    },
+  },
+];
+
+export const services: Service[] = [
+  {
+    number: "01",
+    title: "Konsultasi Proyek",
+    copy: "Sampaikan kebutuhan interior, referensi desain, ukuran ruang, dan preferensi awal dengan mudah.",
+    icon: "consultation",
+  },
+  {
+    number: "02",
+    title: "Perencanaan Solusi",
+    copy: "Kami membantu menyusun arahan desain dan solusi interior yang sesuai dengan kebutuhan ruang.",
+    icon: "planning",
+  },
+  {
+    number: "03",
+    title: "Koordinasi & Monitoring",
+    copy: "VMATCH mengoordinasikan vendor partner dan membantu customer memantau progres proyek secara lebih jelas.",
+    icon: "monitoring",
+  },
+  {
+    number: "04",
+    title: "Realisasi Proyek",
+    copy: "Proyek diselesaikan secara terarah hingga hasil akhir sesuai dengan kebutuhan customer.",
+    icon: "realization",
   },
 ];
 

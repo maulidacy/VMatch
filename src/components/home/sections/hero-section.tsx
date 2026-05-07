@@ -1,61 +1,140 @@
-import { AnimateIn } from "@/components/home/animate-in";
+"use client";
+
+import { useEffect, useState } from "react";
 import { FillImage } from "@/components/home/fill-image";
 import { Navbar } from "@/components/home/navbar";
 import { heroThumbs } from "@/lib/home-content";
 
-const heroVideoUrl = "https://res.cloudinary.com/dyhatbrgj/video/upload/v1777021378/interiorvid_frqwr0.mp4";
+const slides = [
+  {
+    title: "Wujudkan Interior Impian Tanpa Ribet",
+    eyebrow: "Interior Custom & Furniture",
+    copy: "Cukup kirim kebutuhan Anda, kami siapkan solusi terbaik hingga proyek selesai.",
+    image: heroThumbs[0],
+  },
+  {
+    title: "Ruang Lebih Rapi, Hangat, dan Berkelas",
+    eyebrow: "Desain Interior Terarah",
+    copy: "Kami bantu menyusun konsep, material, dan pengerjaan dalam satu proses yang jelas.",
+    image: heroThumbs[1],
+  },
+  {
+    title: "Solusi Furniture Sesuai Kebutuhan Anda",
+    eyebrow: "Furniture Custom",
+    copy: "Setiap detail dibuat menyesuaikan fungsi, ukuran ruang, dan gaya hunian Anda.",
+    image: heroThumbs[2],
+  },
+];
 
 export function HeroSection() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActive((current) => (current + 1) % slides.length);
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const currentSlide = slides[active];
+
   return (
-    <section className="relative h-svh min-h-[620px] overflow-hidden bg-[#1c1a16] pt-[72px] text-white" id="beranda">
-      <video
-        className="absolute inset-x-0 bottom-0 top-[72px] h-[calc(100%-72px)] w-full object-cover object-center"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-      >
-        <source src={heroVideoUrl} type="video/mp4" />
-      </video>
-      <div className="absolute inset-x-0 bottom-0 top-[72px] bg-gradient-to-t from-black/72 via-black/14 to-transparent" />
+    <section
+      id="beranda"
+      className="relative h-svh min-h-[720px] overflow-hidden bg-[#1c1a16] text-white"
+    >
+      {slides.map((slide, index) => (
+        <div
+          key={slide.title}
+          className={`absolute inset-0 transition-all duration-1000 ${
+            active === index ? "opacity-100 scale-100" : "opacity-0 scale-105"
+          }`}
+        >
+          <FillImage image={slide.image} sizes="100vw" />
+        </div>
+      ))}
+
+      <div className="absolute inset-0 bg-gradient-to-r from-black/82 via-black/45 to-black/18" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+
       <Navbar />
-      <div className="relative z-10 mx-auto flex h-full max-w-[1536px] items-end px-[40px] pb-[72px] max-lg:px-8 max-md:pb-10 max-sm:px-6 lg:px-[60px] xl:px-[100px]">
-        <div className="grid min-w-0 w-full items-end gap-10 lg:grid-cols-[600px_1fr]">
-          <div className="min-w-0">
-            <AnimateIn delay={0.1} direction="up">
-              <h1 className="max-w-[340px] font-serif text-[40px] font-semibold italic leading-[38px] tracking-normal sm:max-w-[550px] sm:text-[52px] sm:leading-[48px]">
-                Wujudkan Interior Impian Tanpa Ribet
-              </h1>
-            </AnimateIn>
-            <AnimateIn delay={0.3} direction="up">
-              <p className="mt-5 max-w-[340px] font-sans text-base font-normal leading-[26px] text-white/90 sm:max-w-[520px] sm:text-[17px] sm:leading-[27px]">
-                Cukup kirim kebutuhan Anda, kami siapkan solusi terbaik hingga proyek selesai. Keindahan hunian yang dikurasi secara profesional.
-              </p>
-            </AnimateIn>
-            <AnimateIn delay={0.5} direction="up">
-              <div className="mt-8 flex flex-col items-start gap-5 font-sans sm:flex-row sm:flex-wrap sm:items-center sm:gap-8">
-                <a
-                  href="/login"
-                  className="inline-flex h-[47px] min-w-[212px] items-center justify-center bg-white px-9 text-[12px] font-medium uppercase tracking-[0.08em] text-[#6b5b52] transition-colors hover:bg-gray-100"
+
+      <div className="relative z-10 mx-auto flex h-full max-w-[1320px] items-end px-6 pb-12 pt-[120px] md:px-12 lg:pb-20">
+        <div className="grid w-full items-end gap-10 lg:grid-cols-[560px_1fr]">
+          <div key={currentSlide.title} className="animate-[fadeUp_800ms_ease-out_both]">
+            <p className="mb-4 text-[12px] uppercase tracking-[0.35em] text-white/75">
+              {currentSlide.eyebrow}
+            </p>
+
+            <h1 className="max-w-[620px] font-serif text-[48px] font-semibold italic leading-[0.95] sm:text-[62px] lg:text-[76px]">
+              {currentSlide.title}
+            </h1>
+
+            <p className="mt-6 max-w-[520px] text-[15px] leading-7 text-white/82 sm:text-[17px]">
+              {currentSlide.copy}
+            </p>
+
+            <div className="mt-9 flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-8">
+              <a
+                href="/login"
+                className="inline-flex h-[50px] min-w-[220px] items-center justify-center bg-white px-9 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#6b5b52] shadow-[0_16px_40px_rgba(0,0,0,0.22)] transition-all duration-300 hover:-translate-y-1 hover:bg-[#f3eee9] active:scale-95"
+              >
+                Mulai Proyek Anda
+              </a>
+
+              <a
+                href="#inspirasi"
+                className="group inline-flex items-center gap-2 border-b border-white/25 pb-1 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/90 transition-all duration-300 hover:border-white hover:text-white"
+              >
+                Lihat Inspirasi
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-0.5">
+                  <path d="M4.5 11.5L11.5 4.5M6.5 4.5H11.5V9.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          <div className="hidden justify-end lg:flex">
+            <div className="flex items-end gap-5">
+              {slides.map((slide, index) => (
+                <button
+                  key={slide.title}
+                  type="button"
+                  onClick={() => setActive(index)}
+                  className={`group relative overflow-hidden rounded-2xl bg-white/10 shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition-all duration-500 hover:-translate-y-2 ${
+                    active === index
+                      ? "h-[260px] w-[190px] border-2 border-white"
+                      : "h-[220px] w-[165px] opacity-80"
+                  }`}
                 >
-                  MULAI PROYEK ANDA
-                </a>
-                <a href="#inspirasi" className="border-b border-white/25 pb-1 text-[12px] font-medium uppercase tracking-[0.18em] text-white/90 transition-colors hover:text-white hover:border-white">
-                  Lihat Inspirasi
-                </a>
-              </div>
-            </AnimateIn>
+                  <FillImage image={slide.image} sizes="220px" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  <div className="absolute bottom-5 left-5 right-5 text-left">
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-white/70">
+                      VMatch
+                    </p>
+                    <p className="mt-2 font-serif text-[22px] italic leading-6 text-white">
+                      {slide.eyebrow}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="hidden justify-end gap-1.5 lg:flex">
-            {heroThumbs.map((image, index) => (
-              <AnimateIn key={image.src} delay={0.6 + index * 0.15} direction="left">
-                <div className="relative h-[140px] w-[132px] overflow-hidden bg-white/10">
-                  <FillImage image={image} sizes="132px" />
-                </div>
-              </AnimateIn>
-            ))}
-          </div>
+        </div>
+
+        <div className="absolute bottom-8 right-6 z-20 flex items-center gap-3 md:right-12">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setActive(index)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                active === index ? "w-8 bg-white" : "w-2 bg-white/45"
+              }`}
+              aria-label={`Slide ${index + 1}`}
+            />
+          ))}
         </div>
       </div>
     </section>

@@ -1,50 +1,107 @@
-import Image from "next/image";
+"use client";
 
-import { AnimateIn } from "@/components/home/animate-in";
+import { useEffect, useState } from "react";
 import { testimonials } from "@/lib/home-content";
 
 export function TestimonialsSection() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveIndex((current) => (current + 1) % testimonials.length);
+    }, 4500);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const visibleTestimonials = [
+    testimonials[activeIndex],
+    testimonials[(activeIndex + 1) % testimonials.length],
+  ];
+
   return (
-    <section className="bg-[#FCFBF9] pb-12 md:pb-16">
-      <div className="mx-auto max-w-[1180px] px-6">
-        <AnimateIn delay={0.1}>
-          <div className="mx-auto max-w-[560px] text-center">
-            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.28em] text-[#6B5B52]">
-              Client testimonials
-            </p>
-            <h2 className="mt-3 font-serif text-[31px] font-medium leading-[36px] text-[#31332C] sm:text-[40px] sm:leading-[45px]">
-              Apa kata klien setelah proyek selesai.
-            </h2>
-          </div>
-        </AnimateIn>
+    <section className="overflow-hidden bg-white pt-14 pb-8 md:pt-16 md:pb-10">
+      <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-12 px-6 lg:grid-cols-[340px_1fr] lg:gap-20">
+        <div className="animate-[fadeUp_700ms_ease-out_both]">
+          <p className="text-[15px] uppercase tracking-[0.28em] text-[#6b5b52]">
+            Suara Klien
+          </p>
 
-        <div className="mt-9 grid gap-5 lg:grid-cols-3">
-          {testimonials.map((testimonial, index) => (
-            <AnimateIn key={testimonial.author} delay={0.18 + index * 0.08} direction="up" as="article" className="border border-[#DED6CA] bg-white p-6">
-              <p className="font-sans text-[13px] font-semibold tracking-[0.22em] text-[#6B5B52]">*****</p>
-              <blockquote className="mt-5 font-serif text-[23px] leading-[31px] text-[#31332C]">
-                &ldquo;{testimonial.quote}&rdquo;
-              </blockquote>
+          <h2 className="mt-4 font-serif text-[42px] italic leading-tight text-[#31332c] md:text-5xl">
+            Testimoni Klien
+          </h2>
 
-              <div className="mt-7 flex items-center gap-4 border-t border-[#DED6CA] pt-5">
-                <Image
-                  src={testimonial.image.src}
-                  alt={testimonial.image.alt}
-                  width={testimonial.image.width}
-                  height={testimonial.image.height}
-                  sizes="48px"
-                  className="h-12 w-12 shrink-0 rounded-full object-cover"
+          <p className="mt-8 max-w-[330px] font-sans text-[15px] leading-7 text-[#5e6058]">
+            Kepercayaan klien menjadi dasar kami dalam menghadirkan proses
+            interior yang rapi, jelas, dan nyaman dari awal hingga selesai.
+          </p>
+
+          <div className="mt-10 flex items-end gap-5">
+            <div className="flex">
+              {[0, 1, 2].map((item) => (
+                <span
+                  key={item}
+                  className="-mr-3 h-12 w-12 rounded-full border-2 border-white bg-[#d8d1c6] shadow-sm"
                 />
-                <div className="min-w-0">
-                  <p className="font-sans text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332C]">
-                    {testimonial.author}
-                  </p>
-                  <p className="mt-1 font-sans text-[12px] leading-4 text-[#797C73]">{testimonial.project}</p>
-                </div>
+              ))}
+            </div>
+
+            <span className="text-[11px] uppercase tracking-[0.18em] text-[#6b5b52]">
+              Lebih dari 40 klien puas
+            </span>
+          </div>
+        </div>
+
+        <div className="grid gap-7 md:grid-cols-2">
+          {visibleTestimonials.map((testimonial, index) => (
+            <article
+              key={`${testimonial.author}-${activeIndex}-${index}`}
+              className="relative overflow-hidden border-l-4 border-[#6b5b52] bg-[#f5f3ee] px-8 py-9 shadow-[0_14px_35px_rgba(0,0,0,0.06)] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_22px_50px_rgba(0,0,0,0.12)] md:px-11 md:py-10"
+              style={{
+                animation: `fadeUp 700ms ease-out ${index * 140}ms both`,
+              }}
+            >
+              <div className="absolute right-6 top-4 font-serif text-[90px] leading-none text-[#6b5b52]/10">
+                ”
               </div>
-            </AnimateIn>
+
+              <div
+                className="relative z-10 flex gap-1 text-[#6b5b52]"
+                aria-label="Rating lima bintang"
+              >
+                {"★★★★★".split("").map((star, starIndex) => (
+                  <span key={`${star}-${starIndex}`} className="text-sm">
+                    {star}
+                  </span>
+                ))}
+              </div>
+
+              <p className="relative z-10 mt-6 font-serif text-[20px] italic leading-8 text-[#31332c]">
+                “{testimonial.quote}”
+              </p>
+
+              <p className="relative z-10 mt-8 border-t border-[#ded7cc] pt-5 text-[11px] uppercase tracking-[0.14em] text-[#6b5b52]">
+                {testimonial.author}
+              </p>
+            </article>
           ))}
         </div>
+      </div>
+
+      <div className="mt-10 flex justify-center gap-2">
+        {testimonials.map((_, index) => (
+          <button
+            key={index}
+            type="button"
+            onClick={() => setActiveIndex(index)}
+            aria-label={`Lihat testimoni ${index + 1}`}
+            className={`h-2 rounded-full transition-all duration-300 ${
+              activeIndex === index
+                ? "w-7 bg-[#6b5b52]"
+                : "w-2 bg-[#6b5b52]/35 hover:bg-[#6b5b52]"
+            }`}
+          />
+        ))}
       </div>
     </section>
   );

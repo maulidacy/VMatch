@@ -93,3 +93,121 @@ button,
     transform: translateY(0);
   }
 }
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeUpSoft {
+  from {
+    opacity: 0;
+    transform: translateY(34px);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes cardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(34px) scale(0.96);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes projectCenter {
+  from {
+    opacity: 0;
+    transform: translateY(34px) scale(0.94);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes projectLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-34px) scale(0.96);
+    filter: blur(6px);
+  }
+
+  to {
+    opacity: 0.7;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes projectRight {
+  from {
+    opacity: 0;
+    transform: translateX(34px) scale(0.96);
+    filter: blur(6px);
+  }
+
+  to {
+    opacity: 0.7;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.project-card {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  transition:
+    transform 650ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 650ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 650ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 650ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes serviceLabel {
+  from {
+    opacity: 0;
+    letter-spacing: 0.08em;
+  }
+
+  to {
+    opacity: 1;
+    letter-spacing: 0.32em;
+  }
+}
+
+@keyframes wordReveal {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+    filter: blur(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}

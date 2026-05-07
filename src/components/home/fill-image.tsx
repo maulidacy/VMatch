@@ -8,6 +8,10 @@ type FillImageProps = {
   sizes?: string;
 };
 
+function isCloudinaryImage(src: string) {
+  return src.startsWith("https://res.cloudinary.com");
+}
+
 export function FillImage({
   image,
   priority = false,
@@ -22,6 +26,7 @@ export function FillImage({
       priority={priority}
       loading={priority ? undefined : "lazy"}
       sizes={sizes}
+      unoptimized={isCloudinaryImage(image.src)}
       className={`h-full w-full object-cover ${image.className ?? ""}`}
     />
   );
