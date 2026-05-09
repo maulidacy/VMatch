@@ -15,7 +15,9 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://vmatch-interior.com"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://vmatch-interior.com",
+  ),
   title: {
     default: "VMatch Interior | Partner Eksekusi Interior Tanpa Ribet",
     template: "%s | VMatch Interior",
@@ -85,7 +87,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${manrope.variable} ${newsreader.variable}`}>
+    <html
+      lang="id"
+      data-scroll-behavior="smooth"
+      className={`${manrope.variable} ${newsreader.variable}`}
+    >
       <body>{children}</body>
     </html>
   );

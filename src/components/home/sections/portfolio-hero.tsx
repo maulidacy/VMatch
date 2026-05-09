@@ -29,15 +29,13 @@ export function PortfolioHero() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className={`relative py-2 transition-all duration-300 hover:-translate-y-0.5 hover:text-white active:scale-95 ${
-                    isActive ? "text-white" : ""
-                  }`}
+                  className={`relative py-2 transition-all duration-300 hover:-translate-y-0.5 hover:text-white active:scale-95 ${isActive ? "text-white" : ""
+                    }`}
                 >
                   {item.label}
                   <span
-                    className={`absolute bottom-0 left-1/2 h-px -translate-x-1/2 bg-white transition-all duration-300 ${
-                      isActive ? "w-full" : "w-0 group-hover:w-full"
-                    }`}
+                    className={`absolute bottom-0 left-1/2 h-px -translate-x-1/2 bg-white transition-all duration-300 ${isActive ? "w-full" : "w-0 group-hover:w-full"
+                      }`}
                   />
                 </Link>
               );
@@ -93,7 +91,7 @@ export function PortfolioHero() {
             alt="Interior ruang keluarga modern dengan panel kayu dan kabinet"
             fill
             priority
-            sizes="50vw"
+            sizes="(min-width: 1024px) 49vw, 0vw"
             className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-black/10" />
@@ -120,7 +118,7 @@ export function PortfolioHero() {
             alt="Interior ruang keluarga modern"
             fill
             priority
-            sizes="100vw"
+            sizes="(max-width: 1023px) 100vw, 0vw"
             className="object-cover object-center"
           />
         </div>
