@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const navItems = [
-  { label: "Beranda", href: "#beranda", id: "beranda" },
-  { label: "Inspirasi", href: "#inspirasi", id: "inspirasi" },
-  { label: "Cara Kerja", href: "#cara-kerja", id: "cara-kerja" },
-  { label: "Tentang", href: "#tentang", id: "tentang" },
-  { label: "Kontak", href: "#kontak", id: "kontak" },
+  { label: "Beranda", href: "/#beranda", id: "beranda" },
+  { label: "Inspirasi", href: "/#inspirasi", id: "inspirasi" },
+  { label: "Cara Kerja", href: "/#cara-kerja", id: "cara-kerja" },
+  { label: "Tentang", href: "/#tentang", id: "tentang" },
+  { label: "Kontak", href: "/#kontak", id: "kontak" },
 ];
 
 export function Navbar({ active = "beranda" }: { active?: string }) {
@@ -38,7 +38,7 @@ export function Navbar({ active = "beranda" }: { active?: string }) {
     <header className="fixed left-0 right-0 top-0 z-50 px-4 pt-4 md:px-12 md:pt-5">
       <nav className="relative mx-auto flex h-[64px] max-w-[1320px] animate-[fadeDown_700ms_ease-out_both] items-center justify-between bg-white/95 px-6 shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur-md md:px-10">
         <Link
-          href="#beranda"
+          href="/#beranda"
           onClick={() => setIsOpen(false)}
           className="font-serif text-xl italic text-[#31332c] transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
         >
@@ -70,7 +70,7 @@ export function Navbar({ active = "beranda" }: { active?: string }) {
         </div>
 
         <Link
-          href="/login"
+          href="/#kontak"
           className="hidden bg-[#6b5b52] px-8 py-3 text-sm font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#51433b] active:scale-95 lg:block"
         >
           Konsultasi

@@ -68,12 +68,14 @@ function useFilterStore() {
 const galleryItems = inspirations.flatMap((item, index) => [
   {
     ...item,
+    id: `${createSlug(item.title)}-${index}-main`,
     title: item.title,
     style: index % 2 === 0 ? "Modern" : "Minimalis",
     property: index % 3 === 0 ? "Apartemen" : "Rumah",
   },
   {
     ...item,
+    id: `${createSlug(item.title)}-${index}-alt`,
     title: `${item.title} ${index + 1}`,
     style: index % 2 === 0 ? "Minimalis" : "Modern",
     property: index % 2 === 0 ? "Rumah" : "Apartemen",
@@ -194,11 +196,9 @@ const GallerySection = memo(function GallerySection({
         <div className="columns-2 gap-4 sm:columns-3 lg:columns-4">
           {visibleItems.map((item, index) => (
             <Link
-              key={`${item.title}-${index}`}
-              href={`/inspirasi/${createSlug(activeCategoryTitle)}/${createSlug(
-                item.title,
-              )}`}
-              className="group relative mb-4 block break-inside-avoid overflow-hidden rounded-[22px] bg-[#f7f4ef]"
+              key={item.id}
+              href={`/inspirasi/${createSlug(activeCategoryTitle)}/${createSlug(item.title)}`}
+              className="group relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-[22px] bg-[#f7f4ef] text-left outline-none transition duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[#6b5b52]"
             >
               <Image
                 src={item.image}
@@ -206,7 +206,7 @@ const GallerySection = memo(function GallerySection({
                 width={800}
                 height={1100}
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                priority={index === 0}
+                priority={index <= 1}
                 className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.03] group-hover:brightness-75"
               />
 
