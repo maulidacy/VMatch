@@ -71,6 +71,19 @@ export type ContactInfo = {
   hours: string;
 };
 
+export type PortfolioProject = {
+  title: string;
+  category: string;
+  property: string;
+  location: string;
+  year: string;
+  description: string;
+  secondDescription: string;
+  material: string;
+  concept: string;
+  advantage: string;
+  image: ImageAsset;
+};
 
 export const heroThumbs: ImageAsset[] = [
   {
@@ -113,6 +126,105 @@ export const stats: StatItem[] = [
     icon: "chart",
     value: "4",
     label: "Kategori properti utama",
+  },
+];
+
+export const portfolioProjects: PortfolioProject[] = [
+  {
+    title: "Kitchen Set Walnut Modern",
+    category: "Kitchen Set",
+    property: "Rumah",
+    location: "Jakarta Selatan",
+    year: "2024",
+    description:
+      "Eksplorasi materialitas dan fungsi. Proyek ini mendefinisikan kembali jantung rumah dengan penggunaan material kayu walnut alami yang memberikan kehangatan organik di tengah estetika minimalis.",
+    secondDescription:
+      "Setiap garis dirancang untuk ketenangan visual, menyembunyikan kompleksitas teknis di balik panel kabinet yang mulus, menciptakan ruang yang bukan hanya untuk memasak, tapi juga untuk berkumpul.",
+    material:
+      "Walnut wood pilihan dengan serat lurus yang memberi tekstur premium dan durabilitas tinggi.",
+    concept:
+      "Minimalis modern yang mengutamakan kebersihan visual melalui integrasi kabinet tersembunyi.",
+    advantage:
+      "Layout ergonomis yang mengoptimalkan alur kerja dapur untuk efisiensi aktivitas harian.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777568553/Dapur_Walnut_Modern_g505wp.png",
+      alt: "Dapur modern dengan kabinet walnut dan meja island marmer",
+      width: 736,
+      height: 1104,
+      className: "object-[center_27%]",
+    },
+  },
+  {
+    title: "Wardrobe Minimalis",
+    category: "Bedroom",
+    property: "Rumah",
+    location: "Semarang",
+    year: "2025",
+    description:
+      "Wardrobe custom minimalis yang dirancang untuk memaksimalkan penyimpanan tanpa membuat ruangan terasa penuh.",
+    secondDescription:
+      "Desain dibuat dengan garis bersih, pembagian ruang yang fungsional, serta tampilan visual yang tetap rapi dan elegan.",
+    material:
+      "Material panel berkualitas dengan finishing halus yang mudah dirawat dan tahan untuk penggunaan harian.",
+    concept:
+      "Konsep minimalis modern dengan fokus pada penyimpanan tersembunyi dan tampilan ruang yang lebih bersih.",
+    advantage:
+      "Ruang penyimpanan lebih tertata, pakaian mudah diakses, dan kamar terasa lebih rapi.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777570068/Wardrobe_Minimalis_b2nte7.png",
+      alt: "Wardrobe minimalis modern",
+      width: 736,
+      height: 1037,
+      className: "object-[center_49%]",
+    },
+  },
+  {
+    title: "Lemari Display",
+    category: "Storage & Rak",
+    property: "Rumah",
+    location: "Yogyakarta",
+    year: "2025",
+    description:
+      "Ruang display dengan atmosfer tenang melalui rak custom, pencahayaan hangat, serta detail panel yang rapi.",
+    secondDescription:
+      "Setiap ambalan dirancang untuk menonjolkan koleksi tanpa membuat ruang terasa penuh, menjaga keseimbangan antara fungsi penyimpanan dan estetika.",
+    material:
+      "Panel kayu hangat dengan lighting terintegrasi dan finishing halus.",
+    concept:
+      "Display cabinet modern yang menyatukan fungsi pajangan, penyimpanan, dan suasana ruang yang lebih elegan.",
+    advantage:
+      "Koleksi lebih tertata, mudah dijangkau, dan menjadi elemen dekoratif utama ruangan.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777570214/Lemari_Display_quafgs.png",
+      alt: "Lemari display modern",
+      width: 736,
+      height: 736,
+      className: "object-[center_9%]",
+    },
+  },
+  {
+    title: "Backdrop TV Modern",
+    category: "Living Room",
+    property: "Rumah",
+    location: "Bandung",
+    year: "2026",
+    description:
+      "Area ruang keluarga dengan backdrop TV custom, pencahayaan aksen, dan komposisi simetris untuk menghadirkan kesan elegan.",
+    secondDescription:
+      "Desain ini memadukan penyimpanan tertutup dan panel dekoratif sehingga ruangan tetap terlihat rapi namun tetap memiliki karakter visual.",
+    material:
+      "Kayu finishing natural, panel dekoratif, dan lampu aksen warm white.",
+    concept:
+      "Backdrop modern dengan fokus pada komposisi visual, penyimpanan rapi, dan atmosfer ruang yang hangat.",
+    advantage:
+      "Area TV tampil lebih premium tanpa mengorbankan fungsi penyimpanan.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777570711/Backdrop_TV_modern_qwpq5j.png",
+      alt: "Backdrop TV modern",
+      width: 736,
+      height: 736,
+      className: "object-[center_9%]",
+    },
   },
 ];
 
