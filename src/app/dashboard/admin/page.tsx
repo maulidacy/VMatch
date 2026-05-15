@@ -56,7 +56,7 @@ const menuItems: MenuItem[] = [
   { id: "vendors", label: "Vendor Partner", icon: Wrench },
   { id: "files", label: "File Proyek", icon: FolderOpen },
   { id: "customers", label: "Customer", icon: Users2 },
-  { id: "portfolio", label: "Inspirasi / Portfolio", icon: ImageIcon },
+  { id: "portfolio", label: "Inspirasi/Portfolio", icon: ImageIcon },
   { id: "reviews", label: "Review", icon: Star },
   { id: "settings", label: "Pengaturan", icon: Settings },
 ];
@@ -317,16 +317,14 @@ function Sidebar({
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 bg-black/30 transition lg:hidden ${
-          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
+        className={`fixed inset-0 z-40 bg-black/30 transition lg:hidden ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          }`}
         onClick={onClose}
       />
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-[100dvh] w-[290px] flex-col bg-[#6B5B52] text-white transition-transform duration-300 lg:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed left-0 top-0 z-50 flex h-[100dvh] w-[290px] flex-col bg-[#6B5B52] text-white transition-transform duration-300 lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex h-20 items-center justify-between border-b border-white/10 px-6">
           <Link
@@ -365,11 +363,10 @@ function Sidebar({
                 key={item.id}
                 type="button"
                 onClick={() => onChangePage(item.id)}
-                className={`flex h-12 w-full items-center justify-between px-4 text-left text-[13px] font-medium transition ${
-                  active
+                className={`flex h-12 w-full items-center justify-between px-4 text-left text-[13px] font-medium transition ${active
                     ? "bg-white text-[#6B5B52]"
                     : "text-white/75 hover:bg-white/10 hover:text-white"
-                }`}
+                  }`}
               >
                 <span className="flex items-center gap-3">
                   <Icon size={17} />
@@ -717,7 +714,7 @@ function VendorsPage() {
 function FilesPage() {
   return (
     <Card
-      title="File / aset proyek"
+      title="File/aset proyek"
       subtitle="Referensi desain, RAB, invoice, progress, dan dokumen final"
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -769,7 +766,7 @@ function CustomersPage() {
 
 function PortfolioContentPage() {
   return (
-    <Card title="Inspirasi / Portfolio" subtitle="Kelola konten landing page">
+    <Card title="Inspirasi/Portfolio" subtitle="Kelola konten landing page">
       <ResponsiveTable
         headers={["Judul", "Kategori", "Deskripsi", "Status", "Aksi"]}
         rows={[
@@ -796,7 +793,7 @@ function PortfolioContentPage() {
 function ReviewsPage() {
   return (
     <Card
-      title="Review / Feedback"
+      title="Review/Feedback"
       subtitle="Kelola feedback setelah proyek selesai"
     >
       <ResponsiveTable
@@ -909,12 +906,19 @@ function FilterBar({ placeholder }: { placeholder: string }) {
           className="min-w-0 flex-1 bg-transparent text-[14px] outline-none"
         />
       </div>
-      <select className="h-12 rounded-2xl border border-[#ded6ca] bg-[#f7f4ef] px-4 text-[14px] outline-none">
-        <option>Semua Status</option>
-        <option>Request Masuk</option>
-        <option>Sedang Dianalisis</option>
-        <option>Disetujui</option>
-      </select>
+      <div className="relative">
+        <select className="h-12 w-full appearance-none border border-[#ded6ca] bg-[#f7f4ef] px-5 pr-12 text-[14px] outline-none">
+          <option>Semua Status</option>
+          <option>Request Masuk</option>
+          <option>Sedang Dianalisis</option>
+          <option>Disetujui</option>
+        </select>
+
+        <ChevronRight
+          size={16}
+          className="pointer-events-none absolute right-5 top-1/2 rotate-90 -translate-y-1/2 text-[#6b5b52]"
+        />
+      </div>
       <ActionButton>Filter</ActionButton>
     </div>
   );
@@ -986,10 +990,10 @@ function ResponsiveTable({
 function StatusBadge({ status }: { status: string }) {
   const style =
     status.includes("Selesai") ||
-    status.includes("Disetujui") ||
-    status.includes("Aktif") ||
-    status.includes("Publish") ||
-    status.includes("Tampil")
+      status.includes("Disetujui") ||
+      status.includes("Aktif") ||
+      status.includes("Publish") ||
+      status.includes("Tampil")
       ? "bg-emerald-50 text-emerald-700 border-emerald-100"
       : status.includes("Menunggu") || status.includes("Draft")
         ? "bg-amber-50 text-amber-700 border-amber-100"
