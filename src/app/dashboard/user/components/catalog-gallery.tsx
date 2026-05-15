@@ -224,97 +224,99 @@ export function CatalogGallery({
 }
 
 function GalleryCard({
-  item,
-  index,
-  onChangePage,
-  onDetail,
+    item,
+    index,
+    onChangePage,
+    onDetail,
 }: {
-  item: (typeof galleryItems)[number];
-  index: number;
-  onChangePage: (page: PageId) => void;
-  onDetail: () => void;
+    item: (typeof galleryItems)[number];
+    index: number;
+    onChangePage: (page: PageId) => void;
+    onDetail: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(false);
 
-  return (
-    <article
-      onClick={onDetail}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onDetail();
-        }
-      }}
-      className="group relative mb-4 block w-full cursor-pointer break-inside-avoid overflow-hidden rounded-[22px] bg-[#f7f4ef] text-left shadow-[0_10px_26px_rgba(0,0,0,0.08)] transition duration-300 hover:-translate-y-1"
-    >
-      <Image
-        src={item.image.src}
-        alt={item.image.alt}
-        width={800}
-        height={1100}
-        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-        priority={index <= 1}
-        className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.03] group-hover:brightness-75"
-      />
-
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen((value) => !value);
-        }}
-        className="absolute right-3 top-3 z-30 grid h-9 w-9 place-items-center rounded-full bg-white text-[#31332c] shadow-lg transition hover:bg-[#f7f4ef]"
-        aria-label="Menu inspirasi"
-      >
-        <MoreHorizontal size={18} />
-      </button>
-
-      {open && (
-        <div
-          onClick={(event) => event.stopPropagation()}
-          className="absolute right-3 top-14 z-40 w-[230px] overflow-hidden rounded-[20px] bg-white p-2 shadow-[0_18px_45px_rgba(0,0,0,0.22)]"
+    return (
+        <article
+            onClick={onDetail}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onDetail();
+                }
+            }}
+            className="group relative mb-4 block w-full cursor-pointer break-inside-avoid rounded-[22px] bg-[#f7f4ef] text-left shadow-[0_10px_26px_rgba(0,0,0,0.08)] transition duration-300 hover:-translate-y-1"
         >
-          <MenuAction icon={<Bookmark size={18} />} label="Simpan" />
+            <div className="overflow-hidden rounded-[22px]">
+                <Image
+                    src={item.image.src}
+                    alt={item.image.alt}
+                    width={800}
+                    height={1100}
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    priority={index <= 1}
+                    className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.03] group-hover:brightness-75"
+                />
+            </div>
 
-          <MenuAction
-            icon={<BrainCircuit size={18} />}
-            label="Gunakan untuk AI Ide"
-            onClick={() => onChangePage("ai-ide")}
-          />
+            <button
+                type="button"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    setOpen((value) => !value);
+                }}
+                className="absolute right-3 top-3 z-30 grid h-9 w-9 place-items-center rounded-full bg-white text-[#31332c] shadow-lg transition hover:bg-[#f7f4ef] active:scale-95"
+                aria-label="Menu inspirasi"
+            >
+                <MoreHorizontal size={18} />
+            </button>
 
-          <MenuAction
-            icon={<CalendarDays size={18} />}
-            label="Konsultasikan"
-            onClick={() => onChangePage("konsultasi")}
-          />
+            {open && (
+                <div
+                    onClick={(event) => event.stopPropagation()}
+                    className="absolute right-3 top-14 z-50 w-[260px] rounded-[24px] bg-white p-2 shadow-[0_24px_70px_rgba(0,0,0,0.24)] ring-1 ring-black/5"
+                >
+                    <MenuAction icon={<Bookmark size={18} />} label="Simpan" />
 
-          <MenuAction
-            icon={<Send size={18} />}
-            label="Ajukan Serupa"
-            onClick={() => onChangePage("ajukan")}
-          />
-        </div>
-      )}
+                    <MenuAction
+                        icon={<BrainCircuit size={18} />}
+                        label="Gunakan untuk AI Ide"
+                        onClick={() => onChangePage("ai-ide")}
+                    />
 
-      <div className="pointer-events-none absolute inset-0 bg-black/0 transition duration-300 group-hover:bg-black/25" />
+                    <MenuAction
+                        icon={<CalendarDays size={18} />}
+                        label="Konsultasikan"
+                        onClick={() => onChangePage("konsultasi")}
+                    />
 
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onDetail();
-        }}
-        className="absolute bottom-4 left-4 translate-y-3 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100"
-      >
-        <span className="inline-flex items-center gap-2 rounded-[16px] bg-white px-4 py-3 text-[14px] font-semibold leading-none text-[#191A17] shadow-lg">
-          <span className="text-[18px] leading-none">↗</span>
-          Lihat detail
-        </span>
-      </button>
-    </article>
-  );
+                    <MenuAction
+                        icon={<Send size={18} />}
+                        label="Ajukan Serupa"
+                        onClick={() => onChangePage("ajukan")}
+                    />
+                </div>
+            )}
+
+            <div className="pointer-events-none absolute inset-0 rounded-[22px] bg-black/0 transition duration-300 group-hover:bg-black/25" />
+
+            <button
+                type="button"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onDetail();
+                }}
+                className="absolute bottom-4 left-4 translate-y-3 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100"
+            >
+                <span className="inline-flex items-center gap-2 rounded-[16px] bg-white px-4 py-3 text-[14px] font-semibold leading-none text-[#191A17] shadow-lg">
+                    <span className="text-[18px] leading-none">↗</span>
+                    Lihat detail
+                </span>
+            </button>
+        </article>
+    );
 }
 
 function MenuAction({
@@ -379,142 +381,142 @@ function SelectField({
 }
 
 function CatalogItemDetail({
-  item,
-  references,
-  onBack,
-  onChangePage,
-  onSelectItem,
+    item,
+    references,
+    onBack,
+    onChangePage,
+    onSelectItem,
 }: {
-  item: (typeof galleryItems)[number];
-  references: (typeof galleryItems)[number][];
-  onBack: () => void;
-  onChangePage: (page: PageId) => void;
-  onSelectItem: (item: (typeof galleryItems)[number]) => void;
+    item: (typeof galleryItems)[number];
+    references: (typeof galleryItems)[number][];
+    onBack: () => void;
+    onChangePage: (page: PageId) => void;
+    onSelectItem: (item: (typeof galleryItems)[number]) => void;
 }) {
-  return (
-    <div className="space-y-10">
-      <section className="grid gap-6 lg:grid-cols-[1fr_0.72fr] lg:gap-8">
-        <div>
-          <button
-            type="button"
-            onClick={onBack}
-            aria-label="Kembali ke galeri"
-            className="mb-4 inline-flex h-11 w-11 items-center justify-center text-[#191A17] transition hover:bg-[#f4f1ed]"
-          >
-            <ArrowLeft size={32} strokeWidth={2.2} />
-          </button>
+    return (
+        <div className="space-y-10">
+            <section className="grid gap-6 lg:grid-cols-[1fr_0.72fr] lg:gap-8">
+                <div>
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        aria-label="Kembali ke galeri"
+                        className="mb-4 inline-flex h-11 w-11 items-center justify-center text-[#191A17] transition hover:bg-[#f4f1ed]"
+                    >
+                        <ArrowLeft size={32} strokeWidth={2.2} />
+                    </button>
 
-          <div className="overflow-hidden rounded-[28px] bg-[#f4f1ed]">
-            <Image
-              src={item.image.src}
-              alt={item.image.alt}
-              width={1100}
-              height={1400}
-              sizes="(max-width: 1024px) 100vw, 60vw"
-              priority
-              className="h-auto w-full object-cover"
-            />
-          </div>
+                    <div className="overflow-hidden rounded-[28px] bg-[#f4f1ed]">
+                        <Image
+                            src={item.image.src}
+                            alt={item.image.alt}
+                            width={1100}
+                            height={1400}
+                            sizes="(max-width: 1024px) 100vw, 60vw"
+                            priority
+                            className="h-auto w-full object-cover"
+                        />
+                    </div>
+                </div>
+
+                <div className="lg:sticky lg:top-24">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b8178]">
+                        Detail Inspirasi
+                    </p>
+
+                    <h1 className="mt-3 font-serif text-[38px] leading-tight text-[#31332c] sm:text-[48px]">
+                        {item.title}
+                    </h1>
+
+                    <p className="mt-5 text-[15px] leading-7 text-[#797C73]">
+                        {item.copy}
+                    </p>
+
+                    <div className="mt-7 grid grid-cols-2 gap-3">
+                        <div className="rounded-2xl bg-[#f7f4ef] p-4">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-[#8b8178]">
+                                Gaya
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-[#31332c]">
+                                {item.style}
+                            </p>
+                        </div>
+
+                        <div className="rounded-2xl bg-[#f7f4ef] p-4">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-[#8b8178]">
+                                Properti
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-[#31332c]">
+                                {item.property}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 grid gap-2.5">
+                        <button
+                            type="button"
+                            className="flex h-11 items-center justify-center gap-2 rounded-full bg-[#6b5b52] px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#5a4a42] active:scale-[0.98] sm:h-[52px] sm:text-[12px]"
+                        >
+                            <Bookmark size={15} />
+                            Simpan Inspirasi
+                        </button>
+
+                        <div className="grid grid-cols-3 gap-2.5">
+                            <button
+                                type="button"
+                                onClick={() => onChangePage("ai-ide")}
+                                className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-[#6b5b52]/30 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b5b52] transition hover:bg-[#f4f1ed] active:scale-[0.98] sm:h-12 sm:gap-2 sm:text-[12px]"
+                            >
+                                <BrainCircuit size={14} />
+                                AI Ide
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => onChangePage("konsultasi")}
+                                className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-[#6b5b52]/30 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b5b52] transition hover:bg-[#f4f1ed] active:scale-[0.98] sm:h-12 sm:gap-2 sm:text-[12px]"
+                            >
+                                <CalendarDays size={14} />
+                                Konsultasi
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => onChangePage("ajukan")}
+                                className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-[#6b5b52]/30 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b5b52] transition hover:bg-[#f4f1ed] active:scale-[0.98] sm:h-12 sm:gap-2 sm:text-[12px]"
+                            >
+                                <Send size={14} />
+                                Ajukan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b8178]">
+                    Referensi Lain
+                </p>
+
+                <h2 className="mt-3 font-serif text-[32px] leading-tight text-[#31332c] md:text-[42px]">
+                    Desain yang mungkin Anda suka
+                </h2>
+
+                <div className="mt-7 columns-2 gap-4 sm:columns-3 lg:columns-4">
+                    {references.slice(0, 8).map((ref, index) => (
+                        <GalleryCard
+                            key={ref.id}
+                            item={ref}
+                            index={index}
+                            onChangePage={onChangePage}
+                            onDetail={() => {
+                                onSelectItem(ref);
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                        />
+                    ))}
+                </div>
+            </section>
         </div>
-
-        <div className="lg:sticky lg:top-24">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b8178]">
-            Detail Inspirasi
-          </p>
-
-          <h1 className="mt-3 font-serif text-[38px] leading-tight text-[#31332c] sm:text-[48px]">
-            {item.title}
-          </h1>
-
-          <p className="mt-5 text-[15px] leading-7 text-[#797C73]">
-            {item.copy}
-          </p>
-
-          <div className="mt-7 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-[#f7f4ef] p-4">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8b8178]">
-                Gaya
-              </p>
-              <p className="mt-2 text-sm font-semibold text-[#31332c]">
-                {item.style}
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-[#f7f4ef] p-4">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8b8178]">
-                Properti
-              </p>
-              <p className="mt-2 text-sm font-semibold text-[#31332c]">
-                {item.property}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-2.5">
-            <button
-              type="button"
-              className="flex h-11 items-center justify-center gap-2 rounded-full bg-[#6b5b52] px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#5a4a42] active:scale-[0.98] sm:h-[52px] sm:text-[12px]"
-            >
-              <Bookmark size={15} />
-              Simpan Inspirasi
-            </button>
-
-            <div className="grid grid-cols-3 gap-2.5">
-              <button
-                type="button"
-                onClick={() => onChangePage("ai-ide")}
-                className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-[#6b5b52]/30 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b5b52] transition hover:bg-[#f4f1ed] active:scale-[0.98] sm:h-12 sm:gap-2 sm:text-[12px]"
-              >
-                <BrainCircuit size={14} />
-                AI Ide
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChangePage("konsultasi")}
-                className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-[#6b5b52]/30 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b5b52] transition hover:bg-[#f4f1ed] active:scale-[0.98] sm:h-12 sm:gap-2 sm:text-[12px]"
-              >
-                <CalendarDays size={14} />
-                Konsultasi
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChangePage("ajukan")}
-                className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-[#6b5b52]/30 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6b5b52] transition hover:bg-[#f4f1ed] active:scale-[0.98] sm:h-12 sm:gap-2 sm:text-[12px]"
-              >
-                <Send size={14} />
-                Ajukan
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b8178]">
-          Referensi Lain
-        </p>
-
-        <h2 className="mt-3 font-serif text-[32px] leading-tight text-[#31332c] md:text-[42px]">
-          Desain yang mungkin Anda suka
-        </h2>
-
-        <div className="mt-7 columns-2 gap-4 sm:columns-3 lg:columns-4">
-          {references.slice(0, 8).map((ref, index) => (
-            <GalleryCard
-              key={ref.id}
-              item={ref}
-              index={index}
-              onChangePage={onChangePage}
-              onDetail={() => {
-                onSelectItem(ref);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-            />
-          ))}
-        </div>
-      </section>
-    </div>
-  );
+    );
 }
