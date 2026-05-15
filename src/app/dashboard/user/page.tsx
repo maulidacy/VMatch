@@ -1,1562 +1,1360 @@
 "use client";
 
 import {
-  Activity,
-  ArrowLeft,
-  Bot,
-  Calendar,
-  CheckCircle2,
+  Bell,
+  Bookmark,
+  BrainCircuit,
+  CalendarDays,
+  ChevronDown,
+  ClipboardList,
   Download,
   FileText,
   FolderOpen,
-  HelpCircle,
-  ImagePlus,
-  Images,
+  Home,
+  ImageIcon,
+  LayoutDashboard,
   LogOut,
   Menu,
-  MessageSquare,
-  PenTool,
-  Plus,
-  Ruler,
-  Search,
+  MessageSquareText,
+  Pencil,
+  RefreshCcw,
   Send,
-  Video,
-  Wallet,
+  Star,
+  Upload,
+  UserRound,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { inspirations, projects as featuredProjects } from "@/lib/home-content";
+import { useMemo, useState } from "react";
+import { CatalogDesign } from "./components/catalog-design";
 
-type TabId = "overview" | "brief" | "meet" | "ai" | "docs" | "catalog";
-type CatalogKey = "featured" | "rumah" | "apartment" | "hotel" | "kos-boarding-house";
+type PageId =
+  | "dashboard"
+  | "catalog"
+  | "ai-ide"
+  | "konsultasi"
+  | "ajukan"
+  | "request"
+  | "solusi"
+  | "proyek"
+  | "revisi"
+  | "files"
+  | "notifikasi"
+  | "review"
+  | "profil";
 
-type DashboardTab = {
-  id: TabId;
+type MenuItem = {
+  id: PageId;
   label: string;
-  shortLabel: string;
   icon: LucideIcon;
 };
 
-type ClientProject = {
-  id: string;
-  title: string;
-  property: string;
-  location: string;
-  budget: string;
-  projectStart: string;
-  projectEnd: string;
-  duration: string;
-  status: string;
-  submittedAt: string;
-  image: string;
-  consultationDate?: string;
-  /** Object URL preview dari foto referensi yang diunggah saat submit brief */
-  referencePhotoUrl?: string;
-  /** Nama file dokumen rencana / denah yang dilampirkan klien */
-  planDocumentName?: string;
-  progressReports: ClientProgressReport[];
-};
-
-type ClientProgressReport = {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  status: "Selesai" | "Saat ini" | "Menunggu";
-  image: string;
-  percent: string;
-};
-
-type Conversation = {
-  id: string;
-  title: string;
-  meta: string;
-  messages: { from: "bot" | "user"; text: string }[];
-};
-
-const tabs: DashboardTab[] = [
-  { id: "overview", label: "Overview", shortLabel: "Overview", icon: Activity },
-  { id: "brief", label: "Ajukan Proyek", shortLabel: "Ajukan", icon: PenTool },
-  { id: "meet", label: "Konsultasi", shortLabel: "Meet", icon: Video },
-  { id: "ai", label: "AI Ide", shortLabel: "AI", icon: Bot },
-  { id: "docs", label: "Dokumen", shortLabel: "Docs", icon: FileText },
-  { id: "catalog", label: "Katalog", shortLabel: "Katalog", icon: Images },
+const menuItems: MenuItem[] = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "catalog", label: "Katalog Desain", icon: ImageIcon },
+  { id: "ai-ide", label: "AI Ide", icon: BrainCircuit },
+  { id: "konsultasi", label: "Konsultasi", icon: CalendarDays },
+  { id: "ajukan", label: "Ajukan Proyek", icon: Pencil },
+  { id: "request", label: "Request Saya", icon: ClipboardList },
+  { id: "solusi", label: "Solusi Proyek", icon: FileText },
+  { id: "proyek", label: "Proyek Saya", icon: Home },
+  { id: "revisi", label: "Revisi", icon: MessageSquareText },
+  { id: "files", label: "File Proyek", icon: FolderOpen },
+  { id: "notifikasi", label: "Notifikasi", icon: Bell },
+  { id: "review", label: "Review", icon: Star },
+  { id: "profil", label: "Profil", icon: UserRound },
 ];
 
-const initialProjects: ClientProject[] = [
+const stats = [
+  { label: "Proyek Aktif", value: "1", note: "Kitchen Set Walnut" },
+  { label: "Request Diproses", value: "2", note: "Sedang dianalisis" },
+  { label: "Solusi Menunggu", value: "1", note: "Perlu persetujuan" },
+  { label: "Revisi Ditangani", value: "1", note: "Diproses VMatch" },
+];
+
+const requests = [
   {
-    id: "project-a",
-    title: "Project A - Apartment living",
-    property: "Apartemen 2BR",
+    name: "Kitchen Set Walnut",
+    type: "Kitchen Set",
+    date: "15 Mei 2026",
+    location: "Bandung",
+    budget: "Rp85–115 jt",
+    status: "Solusi Dikirim",
+  },
+  {
+    name: "Wardrobe Minimalis",
+    type: "Wardrobe",
+    date: "12 Mei 2026",
+    location: "Semarang",
+    budget: "Rp45–70 jt",
+    status: "Sedang Dianalisis VMatch",
+  },
+];
+
+const projects = [
+  {
+    name: "Kitchen Set Walnut",
+    type: "Kitchen Set",
+    location: "Bandung",
+    start: "Mei 2026",
+    end: "Juli 2026",
+    status: "Produksi",
+    progress: 68,
+  },
+  {
+    name: "Japandi Living Room",
+    type: "Ruang Tamu",
     location: "Jakarta Selatan",
-    budget: "Rp 100-140 jt",
-    projectStart: "Mei 2026",
-    projectEnd: "Agustus 2026",
-    duration: "3 bulan",
-    status: "Produksi 50%",
-    submittedAt: "2 Mei 2026",
-    image: "/figma/project-walnut.webp",
-    consultationDate: "16 Mei 2026, 13:00 WIB",
-    progressReports: [
-      {
-        id: "report-brief",
-        title: "Request projek",
-        description: "Brief client diterima dan masuk pipeline admin untuk review awal.",
-        date: "2 Mei 2026",
-        status: "Selesai",
-        image: "/inspirations/apartment-living-area.webp",
-        percent: "10%",
-      },
-      {
-        id: "report-review",
-        title: "Review brief",
-        description: "Scope ruang, budget, dan rentang pengerjaan sudah dirapikan setelah diskusi internal.",
-        date: "4 Mei 2026",
-        status: "Selesai",
-        image: "/figma/process-bg.webp",
-        percent: "20%",
-      },
-      {
-        id: "report-meet",
-        title: "Konsultasi",
-        description: "Google Meet selesai, prioritas material dan kebutuhan storage sudah dikunci.",
-        date: "16 Mei 2026",
-        status: "Selesai",
-        image: "/figma/inspiration-living.webp",
-        percent: "35%",
-      },
-      {
-        id: "report-production",
-        title: "Progres pengerjaan",
-        description: "Admin mengunggah laporan mingguan: modul utama sudah masuk produksi sekitar separuh pekerjaan.",
-        date: "24 Mei 2026",
-        status: "Saat ini",
-        image: "/figma/benefits-kitchen.webp",
-        percent: "50%",
-      },
-      {
-        id: "report-install",
-        title: "Instalasi",
-        description: "Jadwal pemasangan akan dikonfirmasi setelah produksi selesai dan barang siap kirim.",
-        date: "Menunggu",
-        status: "Menunggu",
-        image: "/figma/project-walnut.webp",
-        percent: "80%",
-      },
-      {
-        id: "report-done",
-        title: "Selesai",
-        description: "Serah terima project, dokumentasi final, dan catatan maintenance.",
-        date: "Menunggu",
-        status: "Menunggu",
-        image: "/figma/project-library.webp",
-        percent: "100%",
-      },
-    ],
+    start: "Juni 2026",
+    end: "Agustus 2026",
+    status: "Perencanaan",
+    progress: 24,
   },
 ];
 
-const conversations: Conversation[] = [
+const timeline = [
   {
-    id: "living",
-    title: "Ruang tamu 3x4",
-    meta: "2 pesan",
-    messages: [
-      { from: "bot", text: "Mari bahas penataan ruang, dekorasi fungsional, atau kalkulasi anggaran awal." },
-      { from: "user", text: "Ruang tamu 3x4 meter, ingin warna light wood dan suasana terang." },
-      { from: "bot", text: "Pakai sofa ramping, storage tertutup, dan satu aksen kayu. Japandi atau Scandi-minimalist cocok." },
-    ],
+    title: "Request Diterima",
+    date: "15 Mei 2026",
+    status: "Selesai",
+    note: "Request proyek sudah diterima oleh tim VMatch.",
   },
   {
-    id: "kitchen",
-    title: "Kitchen set compact",
-    meta: "Draft ide",
-    messages: [
-      { from: "bot", text: "Untuk kitchen compact, prioritaskan alur kompor, sink, dan prep area." },
-      { from: "user", text: "Saya ingin top table kuat dan kabinet tidak cepat lembap." },
-      { from: "bot", text: "Gunakan finishing HPL tahan lembap dan top table solid surface atau quartz sesuai budget." },
-    ],
+    title: "Perencanaan",
+    date: "16 Mei 2026",
+    status: "Selesai",
+    note: "Tim menyusun kebutuhan ruang, budget, dan konsep awal.",
   },
   {
-    id: "bedroom",
-    title: "Bedroom storage",
-    meta: "Referensi",
-    messages: [
-      { from: "bot", text: "Storage kamar tidur bisa digabung dengan headboard agar ruangan tetap lapang." },
-      { from: "user", text: "Saya butuh wardrobe tinggi tapi tetap ringan dilihat." },
-      { from: "bot", text: "Pakai warna panel terang, handle tipis, dan cermin vertikal sebagai aksen." },
-    ],
+    title: "Koordinasi Vendor Partner",
+    date: "18 Mei 2026",
+    status: "Berjalan",
+    note: "VMatch mengoordinasikan partner internal yang sesuai kebutuhan proyek.",
+  },
+  {
+    title: "Produksi",
+    date: "24 Mei 2026",
+    status: "Berjalan",
+    note: "Modul utama sedang masuk proses produksi.",
+  },
+  {
+    title: "Finishing",
+    date: "Menunggu",
+    status: "Menunggu",
+    note: "Tahap finishing akan diperbarui setelah produksi selesai.",
   },
 ];
 
-const catalogCategories = [
-  { key: "apartment", label: "Apartemen", image: "/inspirations/apartment-hero.webp" },
-  { key: "rumah", label: "Rumah", image: "/inspirations/rumah-hero.webp" },
-  { key: "hotel", label: "Hotel", image: "/inspirations/hotel-hero.webp" },
-  { key: "kos-boarding-house", label: "Kos / Boarding", image: "/inspirations/boarding-hero.webp" },
-  { key: "featured", label: "Project Featured", image: "/figma/project-loft.webp" },
-] satisfies { key: CatalogKey; label: string; image: string }[];
+const files = [
+  { name: "RAB Kitchen Set Walnut.pdf", type: "RAB / Estimasi Biaya", date: "15 Mei 2026" },
+  { name: "Referensi Japandi.png", type: "Referensi Desain", date: "14 Mei 2026" },
+  { name: "Foto Progress Minggu 1.jpg", type: "Foto Progress", date: "18 Mei 2026" },
+];
 
-const TEAM_WHATSAPP_NUMBER = "6281234567890";
+const notifications = [
+  { title: "Solusi proyek sudah tersedia", date: "15 Mei 2026", status: "Belum dibaca" },
+  { title: "Progress proyek diperbarui", date: "18 Mei 2026", status: "Sudah dibaca" },
+  { title: "File RAB baru ditambahkan", date: "15 Mei 2026", status: "Sudah dibaca" },
+];
 
-export default function UserDashboard() {
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
-  const [clientProjects, setClientProjects] = useState<ClientProject[]>(initialProjects);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const selectedProject = clientProjects.find((project) => project.id === selectedProjectId) ?? null;
+export default function UserDashboardPage() {
+  const [activePage, setActivePage] = useState<PageId>("dashboard");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const openBrief = () => {
-    setSelectedProjectId(null);
-    setActiveTab("brief");
+  const activeMenu = useMemo(
+    () => menuItems.find((item) => item.id === activePage) ?? menuItems[0],
+    [activePage],
+  );
+
+  const changePage = (page: PageId) => {
+    setActivePage(page);
+    setIsSidebarOpen(false);
   };
-
-  const createProject = (project: ClientProject) => {
-    setClientProjects((current) => [project, ...current]);
-    setSelectedProjectId(project.id);
-    setActiveTab("overview");
-  };
-
-  const openMeetForProject = (projectId: string) => {
-    setSelectedProjectId(projectId);
-    setActiveTab("meet");
-  };
-
-  const isMeetTab = activeTab === "meet";
-  const isAiTab = activeTab === "ai";
 
   return (
-    <main
-      className={
-        isMeetTab
-          ? "flex min-h-[100dvh] w-full max-w-full flex-col overflow-x-hidden bg-[#FCFBF9]"
-          : "flex h-[100dvh] min-h-0 w-full max-h-[100dvh] max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-[#FCFBF9]"
-      }
-    >
-      <DashboardHeader activeTab={activeTab} setActiveTab={setActiveTab} />
+    <main className="min-h-[100dvh] bg-white text-[#31332c]">
+      <Sidebar
+        activePage={activePage}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onChangePage={changePage}
+      />
 
-      <div
-        className={
-          isMeetTab
-            ? "w-full max-w-full overflow-x-hidden px-3 pb-3 pt-3 sm:px-4 lg:px-5"
-            : isAiTab
-              ? "flex min-h-0 w-full max-w-full flex-1 flex-col overflow-x-hidden overflow-y-hidden px-0 pb-0 pt-0 lg:px-5 lg:pb-3 lg:pt-3"
-              : "flex min-h-0 w-full max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 pt-3 [-webkit-overflow-scrolling:touch] sm:px-4 lg:px-5"
-        }
-      >
-        <section
-          className={`mx-auto flex w-full max-w-[1600px] flex-col ${isMeetTab ? "pb-1" : isAiTab ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1"}`}
-        >
-          {activeTab === "overview" && (
-            selectedProject ? (
-              <ProjectDetail project={selectedProject} onBack={() => setSelectedProjectId(null)} setActiveTab={setActiveTab} />
-            ) : (
-              <ProjectHub
-                projects={clientProjects}
-                onOpenProject={setSelectedProjectId}
-                onCreateProject={openBrief}
-                onScheduleMeet={openMeetForProject}
-              />
-            )
-          )}
-          {activeTab === "brief" && <BriefTab onCreateProject={createProject} />}
-          {activeTab === "meet" && <MeetTab project={selectedProject} onSelectProject={() => setActiveTab("overview")} />}
-          {activeTab === "ai" && <AiTab />}
-          {activeTab === "docs" && <DocsTab project={selectedProject} />}
-          {activeTab === "catalog" && <CatalogTab />}
-        </section>
-      </div>
+      <section className="min-h-[100dvh] lg:pl-[290px]">
+        <Header title={activeMenu.label} onOpenMenu={() => setIsSidebarOpen(true)} />
+
+        <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
+          {activePage === "dashboard" && <DashboardPage onChangePage={changePage} />}
+          {activePage === "catalog" && <CatalogDesign onChangePage={changePage} />}
+          {activePage === "ai-ide" && <AiIdeaPage onChangePage={changePage} />}
+          {activePage === "konsultasi" && <ConsultationPage />}
+          {activePage === "ajukan" && <SubmitProjectPage />}
+          {activePage === "request" && <RequestsPage />}
+          {activePage === "solusi" && <SolutionPage />}
+          {activePage === "proyek" && <ProjectsPage />}
+          {activePage === "revisi" && <RevisionPage />}
+          {activePage === "files" && <FilesPage />}
+          {activePage === "notifikasi" && <NotificationsPage />}
+          {activePage === "review" && <ReviewPage />}
+          {activePage === "profil" && <ProfilePage />}
+        </div>
+      </section>
     </main>
   );
 }
 
-function DashboardHeader({
-  activeTab,
-  setActiveTab,
+function Sidebar({
+  activePage,
+  isOpen,
+  onClose,
+  onChangePage,
 }: {
-  activeTab: TabId;
-  setActiveTab: (tab: TabId) => void;
+  activePage: PageId;
+  isOpen: boolean;
+  onClose: () => void;
+  onChangePage: (page: PageId) => void;
 }) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const handleTabClick = (tab: TabId) => {
-    setActiveTab(tab);
-    setIsMobileMenuOpen(false);
-  };
-
   return (
-    <header className="shrink-0 rounded-b-[28px] bg-[#191A17] px-4 py-3 text-[#F5EFE5] shadow-[0_16px_40px_rgba(25,26,23,0.16)] sm:px-5 lg:rounded-b-[36px] lg:px-6">
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            href="/"
-            className="inline-flex h-12 items-center rounded-full bg-[#F5EFE5] px-5 font-serif text-[25px] font-medium italic leading-none text-[#31332C] transition-colors hover:bg-white sm:h-14 sm:px-7 sm:text-[29px]"
-          >
+    <>
+      <div
+        className={`fixed inset-0 z-40 bg-black/30 transition lg:hidden ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          }`}
+        onClick={onClose}
+      />
+
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-[100dvh] w-[290px] flex-col bg-[#6B5B52] text-white transition-transform duration-300 lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+      >
+        <div className="flex h-20 items-center justify-between border-b border-white/10 px-6">
+          <Link href="/" className="font-serif text-[32px] italic leading-none text-white">
             VMatch
-            <span className="ml-3 font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6B5B52]">
-              Client
-            </span>
           </Link>
+
           <button
             type="button"
-            aria-label={isMobileMenuOpen ? "Tutup menu navigasi" : "Buka menu navigasi"}
-            aria-expanded={isMobileMenuOpen}
-            onClick={() => setIsMobileMenuOpen((current) => !current)}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[#F5EFE5]/18 bg-[#F5EFE5]/8 text-[#F5EFE5] transition-colors hover:bg-[#F5EFE5] hover:text-[#31332C] lg:hidden"
+            onClick={onClose}
+            className="grid h-10 w-10 place-items-center bg-white/10 text-white transition hover:bg-white/15 lg:hidden"
+            aria-label="Tutup menu"
           >
-            {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            <X size={18} />
           </button>
         </div>
 
-        <nav className="hidden min-w-0 items-center gap-2 lg:flex lg:justify-end">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const Icon = tab.icon;
+        <div className="border-b border-white/10 px-6 py-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">
+            Customer Dashboard
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-white/70">
+            Ajukan request, lihat solusi, pantau progress, dan simpan file proyek.
+          </p>
+        </div>
+
+        <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-5">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const active = activePage === item.id;
 
             return (
               <button
-                key={tab.id}
+                key={item.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-[12px] font-semibold transition-all sm:h-11 sm:px-5 ${isActive
-                    ? "border-[#F5EFE5] bg-[#F5EFE5] text-[#31332C]"
-                    : "border-[#F5EFE5]/18 bg-[#F5EFE5]/8 text-[#F5EFE5]/76 hover:bg-[#F5EFE5]/14 hover:text-[#F5EFE5]"
+                onClick={() => onChangePage(item.id)}
+                className={`flex h-12 w-full items-center gap-3 px-4 text-left text-[13px] font-medium transition ${active ? "bg-white text-[#6B5B52]" : "text-white/75 hover:bg-white/10 hover:text-white"
                   }`}
               >
-                <Icon size={15} />
-                <span className="sm:hidden">{tab.shortLabel}</span>
-                <span className="hidden sm:inline">{tab.label}</span>
+                <Icon size={17} />
+                {item.label}
               </button>
             );
           })}
-          <Link
-            href="/login"
-            aria-label="Keluar"
-            className="hidden h-11 w-11 shrink-0 place-items-center rounded-full border border-[#F5EFE5]/18 bg-[#F5EFE5]/8 text-[#F5EFE5] transition-colors hover:bg-[#F5EFE5] hover:text-[#31332C] lg:grid"
-          >
-            <LogOut size={17} />
-          </Link>
         </nav>
-      </div>
 
-      <div
-        className={`mx-auto grid w-full max-w-[1600px] overflow-hidden border-t border-[#F5EFE5]/12 transition-all duration-300 ease-out lg:hidden ${isMobileMenuOpen
-            ? "mt-3 max-h-[560px] translate-y-0 pb-4 pt-3 opacity-100"
-            : "mt-0 max-h-0 -translate-y-1 pb-0 pt-0 opacity-0"
-          }`}
-      >
-        <div className="grid gap-2">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const Icon = tab.icon;
-
-            return (
-              <button
-                key={`mobile-${tab.id}`}
-                type="button"
-                onClick={() => handleTabClick(tab.id)}
-                className={`inline-flex h-12 w-full items-center justify-between gap-3 border px-4 text-left text-[12px] font-semibold transition-all ${isActive
-                    ? "border-[#F5EFE5] bg-[#F5EFE5] text-[#31332C]"
-                    : "border-[#F5EFE5]/18 bg-[#F5EFE5]/8 text-[#F5EFE5]/80 hover:bg-[#F5EFE5]/14 hover:text-[#F5EFE5]"
-                  }`}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <Icon size={15} />
-                  {tab.label}
-                </span>
-              </button>
-            );
-          })}
-
+        <div className="border-t border-white/10 p-4">
           <Link
             href="/login"
-            aria-label="Keluar"
-            className="inline-flex h-12 w-full items-center justify-between border border-[#F5EFE5]/18 bg-[#F5EFE5]/8 px-4 text-[12px] font-semibold text-[#F5EFE5] transition-colors hover:bg-[#F5EFE5] hover:text-[#31332C]"
+            className="flex h-11 items-center justify-center gap-2 bg-[#F5F1EC] text-[13px] font-semibold text-[#6b5b52] transition hover:bg-[#31332c] hover:text-white"
           >
-            <span>Keluar</span>
             <LogOut size={16} />
+            Keluar
           </Link>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function Header({
+  title,
+  onOpenMenu,
+}: {
+  title: string;
+  onOpenMenu: () => void;
+}) {
+  return (
+    <header className="sticky top-0 z-30 border-b border-[#E7DED4] bg-white/95 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-[1500px] items-center gap-4 px-4 sm:px-6 lg:px-8">
+        <button
+          type="button"
+          onClick={onOpenMenu}
+          className="grid h-10 w-10 place-items-center border border-[#ded6ca] bg-white text-[#6B5B52] transition hover:bg-[#f7f4ef] lg:hidden"
+          aria-label="Buka menu"
+        >
+          <Menu size={18} />
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[12px] font-semibold uppercase tracking-[0.22em] text-[#8b8179]">
+            Dashboard / {title}
+          </p>
+        </div>
+
+        <button
+          className="grid h-10 w-10 place-items-center border border-[#ded6ca] bg-white text-[#6b5b52] transition hover:bg-[#f7f4ef]"
+          aria-label="Notifikasi"
+        >
+          <Bell size={18} />
+        </button>
+
+        <div className="hidden h-10 items-center gap-3 border border-[#ded6ca] bg-white pl-1 pr-4 sm:flex">
+          <div className="grid h-8 w-8 place-items-center bg-[#31332c] text-white">
+            <UserRound size={16} />
+          </div>
+          <div>
+            <p className="text-[13px] font-semibold leading-none text-[#31332c]">
+              Customer
+            </p>
+            <p className="mt-1 text-[11px] leading-none text-[#797c73]">
+              VMatch Client
+            </p>
+          </div>
         </div>
       </div>
     </header>
   );
 }
 
-function ProjectHub({
-  projects,
-  onOpenProject,
-  onCreateProject,
-  onScheduleMeet,
-}: {
-  projects: ClientProject[];
-  onOpenProject: (id: string) => void;
-  onCreateProject: () => void;
-  onScheduleMeet: (id: string) => void;
-}) {
+function DashboardPage({ onChangePage }: { onChangePage: (page: PageId) => void }) {
   return (
-    <section className="border border-[#DED6CA] bg-white fade-in">
-      <div className="flex flex-col gap-3 border-b border-[#DED6CA] p-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B5B52]">Project hub</p>
-          <h1 className="mt-1 font-serif text-[26px] leading-8 text-[#31332C] sm:text-[30px]">Pilih dashboard proyek</h1>
-        </div>
-        <button
-          type="button"
-          onClick={onCreateProject}
-          className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 bg-[#31332C] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#F5EFE5] transition-colors hover:bg-[#191A17] sm:w-auto"
-        >
-          <Plus size={16} />
-          Tambah project
-        </button>
-      </div>
+    <div className="space-y-8">
+      <PageTitle
+        label="VMatch Customer"
+        title="Dashboard"
+        subtitle="Pantau request, solusi, progress, revisi, dan file proyek dalam satu tempat."
+      />
 
-      <div className="grid grid-cols-1 justify-items-stretch gap-4 p-4 sm:grid-cols-[repeat(auto-fill,minmax(300px,340px))] sm:justify-start">
-        {projects.map((project) => (
-          <article
-            key={project.id}
-            className="flex aspect-square w-full max-w-full flex-col border border-[#DED6CA] bg-[#FCFBF9] p-4 sm:max-w-none"
-          >
-            <button type="button" onClick={() => onOpenProject(project.id)} className="block w-full min-w-0 text-left">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">Brief pengajuan</p>
-              <h2 className="mt-1 line-clamp-2 font-serif text-[21px] leading-6 text-[#31332C]">{project.title}</h2>
-              <div className="mt-3 grid gap-1 text-[12px] leading-5 text-[#797C73]">
-                <span className="truncate">{project.property}</span>
-                <span className="truncate">{project.location}</span>
-                <span className="truncate">{project.budget}</span>
-                <span className="truncate">{project.projectStart} - {project.projectEnd}</span>
-              </div>
-            </button>
-
-            <div className="mt-auto border-t border-[#DED6CA] pt-3">
-              {project.consultationDate ? (
-                <div className="border border-[#DED6CA] bg-white px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">Jadwal meet</p>
-                  <p className="break-words text-[12px] leading-5 text-[#31332C]">{project.consultationDate}</p>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onScheduleMeet(project.id)}
-                  className="h-9 w-full border border-[#31332C] bg-white px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#31332C] transition-colors hover:bg-[#31332C] hover:text-[#F5EFE5]"
-                >
-                  + Tambah jadwal meet
-                </button>
-              )}
-            </div>
-
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6B5B52]">
-                Status sekarang: {project.status}
-              </p>
-              <button
-                type="button"
-                onClick={() => onOpenProject(project.id)}
-                className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#31332C] underline underline-offset-4"
-              >
-                Lihat detail
-              </button>
-            </div>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((item) => (
+          <article key={item.label} className="border border-[#ded6ca] bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.04)]">
+            <p className="text-[13px] text-[#797c73]">{item.label}</p>
+            <h2 className="mt-3 font-serif text-[42px] leading-none">{item.value}</h2>
+            <p className="mt-5 text-[12px] font-medium text-[#6b5b52]">{item.note}</p>
           </article>
         ))}
-      </div>
-    </section>
-  );
-}
+      </section>
 
-function AutoFitText({
-  as: Tag = "p",
-  children,
-  className = "",
-  minPx,
-  maxPx,
-}: {
-  as?: "h1" | "h2" | "p";
-  children: React.ReactNode;
-  className?: string;
-  minPx: number;
-  maxPx: number;
-}) {
-  const ref = useRef<HTMLHeadingElement | HTMLParagraphElement>(null);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-
-    const fit = () => {
-      el.style.fontSize = `${maxPx}px`;
-      if (el.scrollWidth <= el.clientWidth) {
-        return;
-      }
-
-      let lo = minPx;
-      let hi = maxPx;
-      for (let i = 0; i < 14; i++) {
-        const mid = (lo + hi) / 2;
-        el.style.fontSize = `${mid}px`;
-        if (el.scrollWidth <= el.clientWidth) {
-          lo = mid;
-        } else {
-          hi = mid;
-        }
-      }
-      el.style.fontSize = `${lo}px`;
-    };
-
-    fit();
-    const parent = el.parentElement;
-    if (!parent) {
-      return;
-    }
-    const ro = new ResizeObserver(fit);
-    ro.observe(parent);
-    return () => ro.disconnect();
-  }, [children, minPx, maxPx]);
-
-  return (
-    <Tag ref={ref} className={`min-w-0 whitespace-nowrap ${className}`} style={{ fontSize: maxPx }}>
-      {children}
-    </Tag>
-  );
-}
-
-function ProjectDetail({
-  project,
-  onBack,
-  setActiveTab,
-}: {
-  project: ClientProject;
-  onBack: () => void;
-  setActiveTab: (tab: TabId) => void;
-}) {
-  const currentTimelineRef = useRef<HTMLElement | null>(null);
-  const followUpWaLink = buildWhatsAppFollowUpLink(project);
-  const summaryCards = [
-    { label: "Tipe properti", value: project.property, icon: Ruler },
-    { label: "Estimasi biaya", value: project.budget, icon: Wallet },
-    { label: "Status", value: project.status, icon: MessageSquare },
-    { label: "Rentang project", value: `${project.projectStart} - ${project.projectEnd}`, icon: Calendar },
-    { label: "Durasi proyek", value: project.duration, icon: Calendar },
-  ];
-
-  useEffect(() => {
-    currentTimelineRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-  }, [project.id]);
-
-  const reports = project.progressReports;
-
-  return (
-    <div className="flex flex-col gap-3 fade-in">
-      <div className="grid shrink-0 gap-3 lg:grid-cols-[minmax(270px,380px)_minmax(0,1fr)_auto]">
-        <article className="flex items-center gap-3 border border-[#DED6CA] bg-white p-3">
-          <button type="button" onClick={onBack} className="grid h-11 w-11 shrink-0 place-items-center border border-[#DED6CA] text-[#31332C] transition-colors hover:border-[#31332C]">
-            <ArrowLeft size={17} />
-          </button>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5B52]">Dashboard proyek</p>
-            <AutoFitText
-              as="h1"
-              minPx={13}
-              maxPx={25}
-              className="mt-1 font-serif font-medium leading-none text-[#31332C]"
-            >
-              {project.title}
-            </AutoFitText>
-            <p className="mt-2 text-[13px] leading-5 text-[#797C73]">{project.location}</p>
-          </div>
-        </article>
-
-        <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:grid-cols-5">
-          {summaryCards.map((item) => {
-            const Icon = item.icon;
-            return (
-              <article key={item.label} className="min-w-0 border border-[#DED6CA] bg-white p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#797C73]">{item.label}</p>
-                  <Icon className="shrink-0 text-[#6B5B52]" size={18} />
+      <section className="grid gap-8 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <Panel title="Status proyek terbaru" subtitle="Tracking proyek berjalan.">
+          {projects.slice(0, 1).map((project) => (
+            <div key={project.name} className="border border-[#ded6ca] bg-[#f7f4ef] p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h3 className="font-serif text-[30px] leading-tight">{project.name}</h3>
+                  <p className="mt-2 text-[14px] text-[#797c73]">
+                    {project.type} • {project.location}
+                  </p>
                 </div>
-                <AutoFitText minPx={11} maxPx={20} className="mt-3 font-serif leading-6 text-[#31332C]">
-                  {item.value}
-                </AutoFitText>
-              </article>
-            );
-          })}
-        </div>
+                <StatusBadge status={project.status} />
+              </div>
 
+              <ProgressBar value={project.progress} />
+
+              <button
+                type="button"
+                onClick={() => onChangePage("proyek")}
+                className="mt-5 h-11 bg-[#31332c] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-white"
+              >
+                Lihat Detail Proyek
+              </button>
+            </div>
+          ))}
+        </Panel>
+
+        <Panel title="Update terbaru" subtitle="Notifikasi dan aktivitas dari VMatch.">
+          <div className="space-y-3">
+            {notifications.map((item) => (
+              <article key={item.title} className="border border-[#ded6ca] bg-[#f7f4ef] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium">{item.title}</p>
+                  <StatusBadge status={item.status} />
+                </div>
+                <p className="mt-2 text-[12px] text-[#797c73]">{item.date}</p>
+              </article>
+            ))}
+          </div>
+        </Panel>
+      </section>
+
+      <section className="border border-[#ded6ca] bg-[#6B5B52] p-6 text-white">
+        <h2 className="font-serif text-[34px] leading-tight">
+          Punya kebutuhan interior baru?
+        </h2>
+        <p className="mt-3 max-w-[720px] text-[14px] leading-7 text-white/75">
+          Ceritakan kebutuhan ruang kamu. VMatch akan membantu menganalisis request,
+          menyusun solusi, dan mengelola proses proyek sampai selesai.
+        </p>
         <button
           type="button"
-          onClick={() => setActiveTab("brief")}
-          className="inline-flex h-full min-h-14 items-center justify-center gap-3 bg-[#31332C] px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#F5EFE5] transition-colors hover:bg-[#191A17] lg:min-w-[170px]"
+          onClick={() => onChangePage("ajukan")}
+          className="mt-5 h-11 bg-white px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#6B5B52]"
         >
-          <Plus size={18} />
-          Project baru
+          Ajukan Proyek Baru
         </button>
-      </div>
-
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="relative min-w-0 border border-[#DED6CA] bg-white">
-          <div className="flex flex-col gap-3 border-b border-[#DED6CA] p-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-            <div className="min-w-0 pr-0 sm:pr-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B5B52]">Project timeline</p>
-              <AutoFitText as="h2" minPx={14} maxPx={29} className="mt-1 font-serif font-medium leading-8 text-[#31332C]">
-                {project.title}
-              </AutoFitText>
-            </div>
-            <button
-              type="button"
-              onClick={() => setActiveTab("meet")}
-              className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 border border-[#31332C] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332C] transition-colors hover:bg-[#31332C] hover:text-[#F5EFE5] sm:w-auto"
-            >
-              <Video size={15} />
-              Jadwalkan
-            </button>
-          </div>
-
-          <div className="max-w-full overflow-x-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="relative flex w-max gap-4 pt-10">
-              <div className="absolute left-0 right-0 top-[61px] h-px bg-[#DED6CA]" />
-              {reports.map((item, index) => {
-                const isCurrent = item.status === "Saat ini";
-                const isDone = item.status === "Selesai";
-                return (
-                  <article
-                    key={item.id}
-                    ref={isCurrent ? currentTimelineRef : undefined}
-                    className="relative z-10 w-[230px] shrink-0 sm:w-[255px]"
-                  >
-                    <div
-                      className={`grid h-11 w-11 place-items-center rounded-full border text-[12px] font-semibold ${isCurrent
-                          ? "border-[#31332C] bg-[#31332C] text-[#F5EFE5]"
-                          : isDone
-                            ? "border-[#6B5B52] bg-[#6B5B52] text-white"
-                            : "border-[#DED6CA] bg-[#FCFBF9] text-[#797C73]"
-                        }`}
-                    >
-                      {isDone ? <CheckCircle2 size={16} /> : String(index + 1).padStart(2, "0")}
-                    </div>
-                    <div
-                      className={`mt-4 grid min-h-[310px] grid-rows-[128px_1fr_auto] border ${isCurrent ? "border-[#31332C] bg-white" : "border-[#DED6CA] bg-[#FCFBF9]"
-                        }`}
-                    >
-                      <div className="relative h-32 w-full overflow-hidden bg-[#DED6CA]">
-                        {item.image.startsWith("blob:") ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.image} alt={`Progress ${item.title}`} className="h-full w-full object-cover" />
-                        ) : (
-                          <Image src={item.image} alt={`Progress ${item.title}`} fill className="object-cover" sizes="260px" />
-                        )}
-                      </div>
-                      <div className="min-w-0 p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">{item.status}</p>
-                          <span className="shrink-0 border border-[#DED6CA] bg-white px-2 py-1 text-[10px] font-semibold text-[#31332C]">
-                            {item.percent}
-                          </span>
-                        </div>
-                        <h3 className="mt-2 font-serif text-[20px] leading-6 text-[#31332C]">{item.title}</h3>
-                        <p className="mt-2 line-clamp-3 text-[11px] leading-4 text-[#797C73]">{item.description}</p>
-                      </div>
-                      <div className="flex items-center justify-between border-t border-[#DED6CA] px-3 py-3">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#797C73]">
-                          {item.date}
-                        </span>
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">
-                          Laporan admin
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <aside className="grid gap-3">
-          <article className="border border-[#DED6CA] bg-[#31332C] p-4 text-[#F5EFE5]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#F5EFE5]/70">Catatan tim</p>
-            <h2 className="mt-2 font-serif text-[24px] leading-7">Prioritas minggu ini</h2>
-            <p className="mt-3 text-[12px] leading-5 text-[#F5EFE5]/78">
-              Finalkan kebutuhan storage, ukuran kitchen set, dan preferensi finishing sebelum RAB dikirim.
-            </p>
-          </article>
-
-          <article className="grid gap-4 border border-[#DED6CA] bg-white p-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B5B52]">Konsultasi</p>
-              <h3 className="mt-2 font-serif text-[22px] leading-7 text-[#31332C]">{project.property}</h3>
-            </div>
-            {project.consultationDate ? (
-              <div className="mt-4 grid place-items-center border border-[#DED6CA] bg-[#FCFBF9] p-4 text-center">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">Jadwal meet</p>
-                <p className="mt-2 max-w-full break-words font-serif text-[22px] leading-7 text-[#31332C] sm:text-[24px]">
-                  {project.consultationDate}
-                </p>
-                <p className="mt-3 text-[12px] leading-5 text-[#797C73]">
-                  Link Google Meet akan dikirim lewat email dan WhatsApp. Mohon cek inbox, spam, dan chat WA sebelum jadwal dimulai.
-                </p>
-              </div>
-            ) : (
-              <div className="mt-4 grid place-items-center border border-dashed border-[#DED6CA] bg-[#FCFBF9] p-4 text-center">
-                <p className="text-[13px] leading-5 text-[#797C73]">Belum ada jadwal konsultasi untuk project ini.</p>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setActiveTab("meet")}
-              className="mt-4 h-10 border border-[#31332C] px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#31332C] transition-colors hover:bg-[#31332C] hover:text-[#F5EFE5]"
-            >
-              + Tambah jadwal meet
-            </button>
-            <a
-              href={followUpWaLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-10 items-center justify-center gap-2 border border-[#6B5B52] bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6B5B52] transition-colors hover:bg-[#6B5B52] hover:text-white"
-            >
-              <MessageSquare size={14} />
-              Follow up WA
-            </a>
-          </article>
-        </aside>
-      </div>
+      </section>
     </div>
   );
 }
 
-function parseIsoDateLocal(iso: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-    return null;
-  }
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
+function AiIdeaPage({ onChangePage }: { onChangePage: (page: PageId) => void }) {
+  const quickPrompts = [
+    "Saya ingin kitchen set minimalis dengan budget 10 juta",
+    "Bantu buat ide kamar tidur kecil agar lebih rapi",
+    "Ruang tamu 3x4 ingin terlihat terang dan luas",
+    "Rekomendasi warna untuk interior Japandi",
+    "Material apa yang cocok untuk wardrobe sederhana?",
+  ];
 
-function formatBriefDateId(iso: string): string {
-  const parsed = parseIsoDateLocal(iso);
-  if (!parsed) {
-    return "";
-  }
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(parsed);
-}
+  const messages = [
+    {
+      from: "ai",
+      text: "Halo, saya AI Ide VMatch. Ceritakan kebutuhan ruang kamu, lalu saya bantu buat gambaran awal konsep interior sebelum kamu mengajukan request proyek.",
+    },
+    {
+      from: "user",
+      text: "Ruang tamu 3x4 ingin terlihat terang, luas, dan tetap hangat.",
+    },
+    {
+      from: "ai",
+      text: "Baik. Untuk ruang tamu 3x4, konsep yang cocok adalah modern Japandi dengan warna terang, furniture ramping, storage tertutup, dan pencahayaan hangat agar ruang terasa lebih lega.",
+    },
+  ];
 
-function BriefTab({ onCreateProject }: { onCreateProject: (project: ClientProject) => void }) {
-  const [property, setProperty] = useState("Apartemen");
-  const [location, setLocation] = useState("");
-  const [budget, setBudget] = useState("");
-  const [projectStartDate, setProjectStartDate] = useState("");
-  const [projectEndDate, setProjectEndDate] = useState("");
-  const [duration, setDuration] = useState("");
-  const [description, setDescription] = useState("");
-  const [dateError, setDateError] = useState("");
-  const [photoPreview, setPhotoPreview] = useState<{ url: string; name: string } | null>(null);
-  const [planDocument, setPlanDocument] = useState<{ name: string } | null>(null);
-
-  const defaultProjectImage =
-    property === "Rumah tapak" ? "/inspirations/rumah-hero.webp" : "/inspirations/apartment-hero.webp";
-
-  const handleReferencePhoto = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !file.type.startsWith("image/")) {
-      return;
-    }
-    setPhotoPreview((prev) => {
-      if (prev) {
-        URL.revokeObjectURL(prev.url);
-      }
-      return { url: URL.createObjectURL(file), name: file.name };
-    });
-  };
-
-  const clearReferencePhoto = () => {
-    setPhotoPreview((prev) => {
-      if (prev) {
-        URL.revokeObjectURL(prev.url);
-      }
-      return null;
-    });
-  };
-
-  const handlePlanDocument = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) {
-      return;
-    }
-    setPlanDocument({ name: file.name });
-  };
-
-  const submitBrief = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (projectStartDate && projectEndDate && projectStartDate > projectEndDate) {
-      setDateError("Tanggal selesai harus sama atau setelah tanggal mulai.");
-      return;
-    }
-    setDateError("");
-
-    const count = Date.now().toString().slice(-4);
-    const startLabel = formatBriefDateId(projectStartDate) || "Start belum diisi";
-    const endLabel = formatBriefDateId(projectEndDate) || "End belum diisi";
-    const coverImage = photoPreview?.url ?? defaultProjectImage;
-
-    onCreateProject({
-      id: `project-${count}`,
-      title: `Project ${count} - ${property}`,
-      property,
-      location: location || "Lokasi belum diisi",
-      budget: budget || "Budget belum diisi",
-      projectStart: startLabel,
-      projectEnd: endLabel,
-      duration: duration || "Durasi belum diisi",
-      status: "Brief baru",
-      submittedAt: "3 Mei 2026",
-      image: coverImage,
-      referencePhotoUrl: photoPreview?.url,
-      planDocumentName: planDocument?.name,
-      progressReports: [
-        {
-          id: `report-${count}-brief`,
-          title: "Request projek",
-          description: "Brief baru sudah masuk. Admin akan review kebutuhan dan menyiapkan langkah berikutnya.",
-          date: "3 Mei 2026",
-          status: "Saat ini",
-          image: coverImage,
-          percent: "10%",
-        },
-        {
-          id: `report-${count}-review`,
-          title: "Review brief",
-          description: "Admin akan merapikan scope dan menyesuaikan timeline setelah brief lengkap.",
-          date: "Menunggu",
-          status: "Menunggu",
-          image: "/figma/process-bg.webp",
-          percent: "20%",
-        },
-        {
-          id: `report-${count}-meet`,
-          title: "Konsultasi",
-          description: "Jadwal Google Meet akan muncul setelah client memilih slot konsultasi.",
-          date: "Menunggu",
-          status: "Menunggu",
-          image: "/figma/inspiration-living.webp",
-          percent: "35%",
-        },
-        {
-          id: `report-${count}-progress`,
-          title: "Progres pengerjaan",
-          description: "Laporan mingguan dari admin akan tampil di sini beserta foto progress.",
-          date: "Menunggu",
-          status: "Menunggu",
-          image: "/figma/benefits-kitchen.webp",
-          percent: "50%",
-        },
-      ],
-    });
-  };
+  const savedIdeas = [
+    {
+      title: "Ruang Tamu 3x4 Terang",
+      type: "Ruang Tamu",
+      date: "15 Mei 2026",
+      status: "Draft Ide",
+    },
+    {
+      title: "Kitchen Set Minimalis 10 Juta",
+      type: "Kitchen Set",
+      date: "12 Mei 2026",
+      status: "Sudah Dijadikan Request",
+    },
+  ];
 
   return (
-    <div className="grid gap-4 fade-in lg:grid-cols-[1fr_360px] lg:items-start">
-      <section className="border border-[#DED6CA] bg-white">
-        <div className="border-b border-[#DED6CA] bg-[#FCFBF9] px-4 py-5 sm:px-6 sm:py-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B5B52]">Pengajuan proyek</p>
-          <h2 className="mt-1 font-serif text-[24px] font-medium leading-7 text-[#31332C] sm:text-[29px] sm:leading-8">
-            Kuesioner detail proyek
+    <div className="grid min-h-[calc(100dvh-112px)] gap-5 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+      <aside className="hidden border border-[#ded6ca] bg-white shadow-[0_12px_30px_rgba(0,0,0,0.04)] xl:block">
+        <div className="border-b border-[#ded6ca] bg-[#f7f4ef] p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#6b5b52]">
+            History AI
+          </p>
+          <h2 className="mt-2 font-serif text-[26px] leading-tight">
+            Percakapan
           </h2>
         </div>
 
-        <form onSubmit={submitBrief} className="grid gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:pb-8">
-          <div className="grid gap-5 md:grid-cols-2">
-            <Field label="Tipe properti">
-              <select className="field-control bg-white" value={property} onChange={(event) => setProperty(event.target.value)}>
-                <option>Apartemen</option>
-                <option>Rumah tapak</option>
-                <option>Kantor / ruko</option>
-                <option>Hotel / komersial</option>
-              </select>
-            </Field>
-            <Field label="Lokasi proyek">
-              <input
-                className="field-control bg-white"
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                type="text"
-                placeholder="Contoh: Jakarta Selatan"
-                autoComplete="address-level2"
-              />
-            </Field>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-2">
-            <Field label="Estimasi budget">
-              <input
-                className="field-control bg-white"
-                value={budget}
-                onChange={(event) => setBudget(event.target.value)}
-                type="text"
-                placeholder="Rp 100-140 jt"
-              />
-            </Field>
-            <Field label="Estimasi durasi">
-              <input
-                className="field-control bg-white"
-                value={duration}
-                onChange={(event) => setDuration(event.target.value)}
-                type="text"
-                placeholder="Contoh: 3 bulan"
-              />
-            </Field>
-          </div>
-
-          <div>
-            <div className="grid gap-5 md:grid-cols-2">
-              <Field label="Mulai proyek">
-                <input
-                  className="field-control bg-white"
-                  value={projectStartDate}
-                  onChange={(event) => {
-                    setProjectStartDate(event.target.value);
-                    setDateError("");
-                  }}
-                  type="date"
-                  required
-                  max={projectEndDate || undefined}
-                />
-              </Field>
-              <Field label="Selesai proyek (perkiraan)">
-                <input
-                  className="field-control bg-white"
-                  value={projectEndDate}
-                  onChange={(event) => {
-                    setProjectEndDate(event.target.value);
-                    setDateError("");
-                  }}
-                  type="date"
-                  required
-                  min={projectStartDate || undefined}
-                />
-              </Field>
-            </div>
-            {dateError ? (
-              <p className="mt-3 text-[13px] text-red-700" role="alert">
-                {dateError}
-              </p>
-            ) : (
-              <p className="mt-3 border-l-2 border-[#6B5B52] pl-3 text-[12px] leading-relaxed text-[#797C73]">
-                Pilih tanggal lewat kalender. Tim memakai rentang ini untuk jadwal konsultasi, RAB, produksi, dan instalasi.
-              </p>
-            )}
-          </div>
-
-          <Field label="Kebutuhan desain dan referensi tone">
-            <textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              className="field-control min-h-[140px] resize-y bg-white"
-              placeholder="Contoh: dominan walnut, storage tertutup, ruang tamu lebih terang, dan kitchen set mudah dibersihkan."
-            />
-          </Field>
-
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="min-w-0">
-              <span className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332C]">
-                Foto referensi ruang <span className="font-normal normal-case text-[#797C73]">(opsional)</span>
-              </span>
-              <div className="relative border border-dashed border-[#DED6CA] bg-[#FCFBF9]">
-                {photoPreview ? (
-                  <div className="grid gap-2 p-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- blob URL dari unggahan lokal */}
-                    <img src={photoPreview.url} alt={`Preview ${photoPreview.name}`} className="mx-auto max-h-44 w-full object-contain" />
-                    <p className="truncate text-center text-[11px] text-[#797C73]">{photoPreview.name}</p>
-                    <button
-                      type="button"
-                      onClick={clearReferencePhoto}
-                      className="justify-self-center text-[11px] font-semibold uppercase tracking-[0.1em] text-[#31332C] underline underline-offset-4"
-                    >
-                      Hapus foto
-                    </button>
-                  </div>
-                ) : null}
-                <label
-                  className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 p-4 transition-colors hover:bg-white/60 ${photoPreview ? "sr-only" : ""}`}
-                >
-                  <ImagePlus className="text-[#6B5B52]" size={26} strokeWidth={1.5} aria-hidden />
-                  <span className="text-center text-[12px] leading-snug text-[#797C73]">
-                    Unggah foto kondisi ruang, referensi mood, atau sketsa. JPG, PNG, WebP — maks. 25 MB.
-                  </span>
-                  <input type="file" accept="image/jpeg,image/png,image/webp,image/*" className="sr-only" onChange={handleReferencePhoto} />
-                </label>
-              </div>
-            </div>
-            <div className="min-w-0">
-              <span className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332C]">
-                Dokumen rencana / denah <span className="font-normal normal-case text-[#797C73]">(opsional)</span>
-              </span>
-              <div className="relative flex min-h-[140px] flex-col border border-dashed border-[#DED6CA] bg-[#FCFBF9]">
-                {planDocument ? (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4 text-center">
-                    <FileText className="text-[#6B5B52]" size={26} strokeWidth={1.5} aria-hidden />
-                    <p className="min-w-0 break-words text-[13px] font-medium text-[#31332C]">{planDocument.name}</p>
-                    <button
-                      type="button"
-                      onClick={() => setPlanDocument(null)}
-                      className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#31332C] underline underline-offset-4"
-                    >
-                      Hapus dokumen
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex min-h-[140px] flex-1 cursor-pointer flex-col items-center justify-center gap-2 p-4 transition-colors hover:bg-white/60">
-                    <FileText className="text-[#6B5B52]" size={26} strokeWidth={1.5} aria-hidden />
-                    <span className="text-center text-[12px] leading-snug text-[#797C73]">
-                      PDF atau Word jika kamu sudah punya denah, layout, atau brief tertulis. Maks. 25 MB.
-                    </span>
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      className="sr-only"
-                      onChange={handlePlanDocument}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-3 border-t border-[#DED6CA] bg-white/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-[2px] sm:static sm:z-auto sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-6 sm:backdrop-blur-0 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+        <div className="grid gap-2 p-3">
+          {[
+            ["Ruang tamu 3x4", "Draft ide"],
+            ["Kitchen set 10 juta", "Referensi budget"],
+            ["Wardrobe sederhana", "Material umum"],
+          ].map(([title, meta], index) => (
             <button
-              type="button"
-              className="inline-flex h-12 w-full items-center justify-center border border-[#DED6CA] bg-white px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332C] transition-colors hover:border-[#31332C] sm:w-auto sm:min-w-[160px]"
+              key={title}
+              className={`border p-3 text-left transition ${index === 0
+                ? "border-[#31332c] bg-[#31332c] text-white"
+                : "border-[#ded6ca] bg-[#f7f4ef] text-[#31332c] hover:border-[#6b5b52]"
+                }`}
             >
-              Simpan draft
+              <p className="truncate font-serif text-[18px] leading-6">
+                {title}
+              </p>
+              <p
+                className={`mt-1 text-[11px] ${index === 0 ? "text-white/70" : "text-[#797c73]"
+                  }`}
+              >
+                {meta}
+              </p>
             </button>
-            <button
-              type="submit"
-              className="inline-flex h-12 w-full items-center justify-center bg-[#31332C] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#F5EFE5] transition-colors hover:bg-[#191A17] sm:w-auto sm:min-w-[200px]"
-            >
-              Submit permintaan
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <aside className="grid gap-3">
-        <div className="border border-[#DED6CA] bg-[#31332C] p-5 text-[#F5EFE5]">
-          <HelpCircle size={24} />
-          <h3 className="mt-4 font-serif text-[25px] leading-7">Brief menjadi project card</h3>
-          <p className="mt-3 text-[12px] leading-5 text-[#F5EFE5]/78">
-            Setelah submit, project baru muncul di halaman awal. Setiap project punya dashboard dan timeline sendiri.
-          </p>
-        </div>
-
-        <div className="border border-[#DED6CA] bg-white p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52]">Lampiran opsional</p>
-          <p className="mt-2 text-[13px] leading-5 text-[#797C73]">
-            Foto referensi dan dokumen rencana membantu tim memahami ruang lebih cepat. Tanpa lampiran, brief teks tetap bisa
-            diproses.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="border border-[#DED6CA] bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#797C73]">SLA respon</p>
-            <p className="mt-2 font-serif text-[22px] text-[#31332C]">1 hari</p>
-          </div>
-          <div className="border border-[#DED6CA] bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#797C73]">File maks.</p>
-            <p className="mt-2 font-serif text-[22px] text-[#31332C]">25 MB</p>
-          </div>
-        </div>
-      </aside>
-    </div>
-  );
-}
-
-function AiTab() {
-  const [activeConversationId, setActiveConversationId] = useState(conversations[0].id);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId) ?? conversations[0];
-
-  const handleConversationSelect = (conversationId: string) => {
-    setActiveConversationId(conversationId);
-    setIsHistoryOpen(false);
-  };
-
-  const historyList = (
-    <div className="grid gap-2">
-      {conversations.map((conversation) => (
-        <button
-          key={conversation.id}
-          type="button"
-          onClick={() => handleConversationSelect(conversation.id)}
-          className={`border p-2 text-left transition-colors ${activeConversationId === conversation.id ? "border-[#31332C] bg-[#31332C] text-[#F5EFE5]" : "border-[#DED6CA] bg-[#FCFBF9] text-[#31332C] hover:border-[#31332C]"
-            }`}
-        >
-          <p className="truncate font-serif text-[16px] leading-5">{conversation.title}</p>
-          <p className={`mt-1 text-[11px] ${activeConversationId === conversation.id ? "text-[#F5EFE5]/70" : "text-[#797C73]"}`}>{conversation.meta}</p>
-        </button>
-      ))}
-    </div>
-  );
-
-  return (
-    <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden fade-in lg:flex-row">
-      <aside className="hidden max-h-[min(220px,38dvh)] shrink-0 flex-col overflow-hidden border border-[#DED6CA] bg-white lg:flex lg:max-h-none lg:w-[240px] lg:shrink-0">
-        <div className="shrink-0 border-b border-[#DED6CA] bg-[#FCFBF9] p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6B5B52]">History AI</p>
-          <h2 className="mt-1 font-serif text-[20px] leading-6 text-[#31332C]">Percakapan</h2>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 [scrollbar-gutter:stable]">
-          {historyList}
+          ))}
         </div>
       </aside>
 
-      <div className={`fixed inset-0 z-40 lg:hidden ${isHistoryOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
-        <button
-          type="button"
-          aria-label="Tutup panel history"
-          onClick={() => setIsHistoryOpen(false)}
-          className={`absolute inset-0 bg-[#191A17]/45 transition-opacity ${isHistoryOpen ? "opacity-100" : "opacity-0"}`}
-        />
-        <aside
-          className={`absolute inset-y-0 left-0 flex w-[280px] max-w-[82vw] flex-col border-r border-[#DED6CA] bg-white transition-transform duration-300 ease-out ${isHistoryOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
-        >
-          <div className="flex items-start justify-between gap-3 border-b border-[#DED6CA] bg-[#FCFBF9] p-3">
+      <section className="flex min-h-[620px] flex-col border border-[#ded6ca] bg-white shadow-[0_12px_30px_rgba(0,0,0,0.04)]">
+        <div className="border-b border-[#ded6ca] bg-[#f7f4ef] p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6B5B52]">History AI</p>
-              <h2 className="mt-1 font-serif text-[20px] leading-6 text-[#31332C]">Percakapan</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#6b5b52]">
+                AI Ide Interior
+              </p>
+              <h1 className="mt-2 font-serif text-[32px] leading-tight">
+                Ruang tamu 3x4
+              </h1>
+              <p className="mt-2 max-w-[760px] text-[13px] leading-6 text-[#797c73]">
+                Chatbot ini hanya membantu membuat gambaran awal berbasis teks.
+                Solusi final tetap akan disusun dan divalidasi oleh tim VMatch.
+              </p>
             </div>
-            <button
-              type="button"
-              aria-label="Tutup history chat"
-              onClick={() => setIsHistoryOpen(false)}
-              className="grid h-9 w-9 shrink-0 place-items-center border border-[#DED6CA] bg-white text-[#31332C]"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 [scrollbar-gutter:stable]">{historyList}</div>
-        </aside>
-      </div>
 
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#FCFBF9] lg:border lg:border-[#DED6CA] lg:bg-white">
-        <div className="shrink-0 px-4 pb-3 pt-4 lg:border-b lg:border-[#DED6CA] lg:bg-[#FCFBF9] lg:p-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              aria-label="Buka history chat"
-              onClick={() => setIsHistoryOpen(true)}
-              className="grid h-11 w-11 shrink-0 place-items-center border border-[#DED6CA] bg-white text-[#31332C] lg:hidden"
-            >
-              <Menu size={18} />
-            </button>
-            <div className="grid h-11 w-11 shrink-0 place-items-center bg-[#6B5B52] text-white">
-              <Bot size={20} />
-            </div>
-            <div className="min-w-0">
-              <h2 className="truncate font-serif text-[25px] leading-7 text-[#31332C]">{activeConversation.title}</h2>
-              <p className="text-[12px] text-[#797C73]">AI brainstorming interior</p>
+            <StatusBadge status="Draft Ide" />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto bg-white p-4 sm:p-5">
+          <div className="space-y-4">
+            {messages.map((message, index) => {
+              const isUser = message.from === "user";
+
+              return (
+                <div
+                  key={index}
+                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[82%] border px-4 py-3 text-[14px] leading-7 ${isUser
+                      ? "border-[#31332c] bg-[#31332c] text-white"
+                      : "border-[#ded6ca] bg-[#f7f4ef] text-[#31332c]"
+                      }`}
+                  >
+                    {message.text}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 border border-[#ded6ca] bg-[#f7f4ef] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b5b52]">
+              Quick prompt
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {quickPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  className="border border-[#ded6ca] bg-white px-3 py-2 text-left text-[12px] text-[#6b5b52] transition hover:border-[#6b5b52]"
+                >
+                  {prompt}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-2 [scrollbar-gutter:stable] lg:p-4">
-          <div className="grid gap-3">
-            {activeConversation.messages.map((message, index) => (
-              <ChatBubble key={`${message.from}-${index}`} from={message.from}>
-                {message.text}
-              </ChatBubble>
-            ))}
-          </div>
-        </div>
-
-        <div className="shrink-0 px-4 pb-4 pt-2 lg:border-t lg:border-[#DED6CA] lg:bg-white lg:p-3">
-          <div className="flex items-center gap-2 border border-[#DED6CA] bg-white p-2 lg:bg-[#FCFBF9]">
-            <input
-              type="text"
-              className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[14px] outline-none"
-              placeholder="Tanya tentang furnitur minimalis..."
+        <div className="border-t border-[#ded6ca] bg-white p-3 sm:p-4">
+          <div className="flex items-end gap-2 border border-[#ded6ca] bg-[#f7f4ef] p-2">
+            <textarea
+              rows={1}
+              placeholder="Tulis kebutuhan ruang kamu..."
+              className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-3 py-2 text-[14px] leading-6 outline-none placeholder:text-[#8b8179]"
             />
-            <button
-              type="button"
-              className="grid h-10 w-10 shrink-0 place-items-center bg-[#31332C] text-[#F5EFE5] transition-colors hover:bg-[#191A17]"
-            >
+            <button className="grid h-10 w-10 shrink-0 place-items-center bg-[#31332c] text-white transition hover:bg-[#191a17]">
               <Send size={16} />
             </button>
           </div>
         </div>
       </section>
-    </div>
-  );
-}
 
-function MeetTab({ project, onSelectProject }: { project: ClientProject | null; onSelectProject: () => void }) {
-  const followUpWaLink = buildWhatsAppFollowUpLink(project);
-
-  return (
-    <div className="fade-in flex w-full min-w-0 flex-col gap-3 lg:flex-row lg:items-start">
-      <aside className="flex shrink-0 flex-col border border-[#DED6CA] bg-white lg:w-[280px]">
-        <div className="shrink-0 border-b border-[#DED6CA] bg-[#FCFBF9] p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6B5B52]">Konsultasi</p>
-          <h2 className="mt-1 font-serif text-[24px] leading-7 text-[#31332C]">Jadwal kamu</h2>
-        </div>
-        <div className="p-3">
-          <div className="grid gap-3">
-            {!project ? (
-              <div className="border border-dashed border-[#DED6CA] bg-[#FCFBF9] p-3">
-                <p className="text-[12px] leading-relaxed text-[#797C73]">Pilih project dari Overview untuk melihat jadwal.</p>
-                <button
-                  type="button"
-                  onClick={onSelectProject}
-                  className="mt-3 h-9 w-full border border-[#31332C] text-[11px] font-semibold uppercase tracking-[0.1em] text-[#31332C] transition-colors hover:bg-[#31332C] hover:text-[#F5EFE5]"
-                >
-                  Pilih project
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="border border-[#DED6CA] bg-[#FCFBF9] p-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6B5B52]">Project</p>
-                  <p className="mt-1 font-serif text-[16px] leading-snug text-[#31332C]">{project.title}</p>
-                </div>
-                {project.consultationDate ? (
-                  <div className="border border-[#DED6CA] bg-white p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6B5B52]">Terkonfirmasi</p>
-                    <p className="mt-2 flex items-start gap-2 font-serif text-[17px] leading-snug text-[#31332C]">
-                      <Calendar size={18} className="mt-0.5 shrink-0 text-[#6B5B52]" aria-hidden />
-                      <span className="min-w-0 break-words">{project.consultationDate}</span>
-                    </p>
-                    <p className="mt-2 text-[11px] leading-relaxed text-[#797C73]">
-                      Link Meet dikirim ke email dan WhatsApp.
-                    </p>
-                    <a
-                      href={followUpWaLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 border border-[#6B5B52] bg-white px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6B5B52] transition-colors hover:bg-[#6B5B52] hover:text-white"
-                    >
-                      <MessageSquare size={14} />
-                      Follow up WA
-                    </a>
-                  </div>
-                ) : (
-                  <div className="border border-dashed border-[#DED6CA] bg-[#FCFBF9] p-3">
-                    <p className="text-[12px] font-medium text-[#31332C]">Belum ada jadwal</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-[#797C73]">
-                      Tentukan tanggal dan waktu di panel kanan.
-                    </p>
-                    <a
-                      href={followUpWaLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 border border-[#6B5B52] bg-white px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6B5B52] transition-colors hover:bg-[#6B5B52] hover:text-white"
-                    >
-                      <MessageSquare size={14} />
-                      Follow up WA
-                    </a>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-        <div className="shrink-0 border-t border-[#DED6CA] bg-[#FCFBF9] p-2">
-          <p className="text-[10px] leading-snug text-[#797C73]">
-            Slot bisa berubah. Sudah terkonfirmasi? Tidak perlu kunci ulang.
+      <aside className="space-y-5">
+        <section className="border border-[#ded6ca] bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.04)]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#6b5b52]">
+            Ringkasan AI
           </p>
-        </div>
-      </aside>
+          <h2 className="mt-2 font-serif text-[28px] leading-tight">
+            Hasil ide awal
+          </h2>
 
-      <section className="flex min-w-0 flex-1 flex-col border border-[#DED6CA] bg-white">
-        <div className="shrink-0 border-b border-[#DED6CA] bg-[#FCFBF9] p-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center bg-[#6B5B52] text-white">
-              <Calendar size={20} />
-            </div>
-            <div className="min-w-0">
-              <h2 className="font-serif text-[22px] leading-7 text-[#31332C] sm:text-[25px]">Pilih jadwal konsultasi</h2>
-              <p className="text-[12px] text-[#797C73]">Google Meet — tanggal dan waktu WIB</p>
-            </div>
+          <div className="mt-5 space-y-3">
+            <AiSummaryItem
+              title="Rekomendasi konsep"
+              text="Modern Japandi dengan warna terang, furniture ramping, dan storage tertutup."
+            />
+            <AiSummaryItem
+              title="Saran warna"
+              text="Warm white, beige, light wood, dan aksen hitam tipis."
+            />
+            <AiSummaryItem
+              title="Saran furniture"
+              text="Sofa slim, meja kecil, rak dinding ringan, dan kabinet rendah tertutup."
+            />
+            <AiSummaryItem
+              title="Layout sederhana"
+              text="Sofa menempel ke dinding, area tengah dibuat kosong, storage di sisi TV."
+            />
+            <AiSummaryItem
+              title="Material umum"
+              text="HPL light wood, fabric netral, finishing matte, dan lampu warm white."
+            />
+            <AiSummaryItem
+              title="Estimasi kasar"
+              text="Budget Rp8–18 juta, durasi sekitar 2–4 minggu tergantung scope."
+            />
           </div>
-        </div>
 
-        <div className="min-w-0 p-4 sm:p-5">
-          <p className="mb-4 border border-[#DED6CA] bg-[#FCFBF9] px-3 py-2.5 text-[13px] leading-relaxed text-[#797C73]">
-            <span className="font-semibold text-[#31332C]">Belum menentukan jadwal konsultasi.</span> Pilih tanggal lalu slot
-            waktu; tim mengonfirmasi lewat email dan WhatsApp.
-          </p>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start md:gap-5">
-            <article className="min-w-0 border border-[#DED6CA] bg-[#FCFBF9] p-4 sm:p-5">
-              <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#31332C]">Pilih tanggal</h3>
-              <div className="w-full">
-                <div className="grid grid-cols-7 gap-1.5 text-center">
-                  {["Sn", "Sl", "Rb", "Km", "Jm", "Sb", "Mg"].map((day) => (
-                    <span key={day} className="py-1 text-[11px] font-semibold text-[#797C73]">
-                      {day}
-                    </span>
-                  ))}
-                  {Array.from({ length: 30 }).map((_, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      className={`h-10 rounded-sm text-[12px] font-medium transition-colors sm:h-11 ${index === 15
-                          ? "bg-[#31332C] text-[#F5EFE5]"
-                          : index < 12
-                            ? "text-[#DED6CA]"
-                            : "bg-white text-[#31332C] hover:bg-[#DED6CA]"
-                        }`}
-                    >
-                      {index + 1}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </article>
-
-            <article className="min-w-0 border border-[#DED6CA] bg-[#FCFBF9] p-4 sm:p-5">
-              <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#31332C]">Pilih waktu WIB</h3>
-              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-1">
-                {["10:00 - 11:00", "13:00 - 14:00", "15:00 - 16:00", "19:00 - 20:00"].map((time, index) => (
-                  <button
-                    key={time}
-                    type="button"
-                    className={`border px-3 py-3 text-[12px] font-semibold transition-colors ${index === 1
-                        ? "border-[#31332C] bg-[#31332C] text-[#F5EFE5]"
-                        : "border-[#DED6CA] bg-white text-[#31332C] hover:border-[#31332C]"
-                      }`}
-                  >
-                    {time}
-                  </button>
-                ))}
-              </div>
-            </article>
+          <div className="mt-5 border border-[#ded6ca] bg-[#f7f4ef] p-4">
+            <h3 className="font-serif text-[22px]">Catatan penting</h3>
+            <p className="mt-2 text-[13px] leading-6 text-[#797c73]">
+              Hasil AI Ide hanya sebagai gambaran awal. Solusi final akan
+              disusun dan divalidasi oleh tim VMatch setelah request proyek
+              diajukan.
+            </p>
           </div>
-        </div>
 
-        <div className="shrink-0 border-t border-[#DED6CA] bg-white p-3">
-          <button
-            type="button"
-            className="h-11 w-full bg-[#31332C] text-[12px] font-semibold uppercase tracking-[0.12em] text-[#F5EFE5] transition-colors hover:bg-[#191A17]"
-          >
-            Kunci jadwal
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function DocsTab({ project }: { project: ClientProject | null }) {
-  const clientPlanDoc =
-    project?.planDocumentName != null
-      ? [{ title: "Dokumen rencana klien", meta: project.planDocumentName, type: "Unggahan" }]
-      : [];
-
-  const docs = [
-    ...clientPlanDoc,
-    { title: "Brief proyek", meta: project ? project.submittedAt : "Pilih project dahulu", type: "PDF" },
-    { title: "Estimasi RAB awal", meta: "Draft internal", type: "XLS" },
-    { title: "Referensi material", meta: "Untuk konsultasi", type: "PDF" },
-  ];
-
-  return (
-    <div className="fade-in">
-      <section className="border border-[#DED6CA] bg-white p-4 sm:p-5">
-        <div className="mb-4 flex flex-col gap-3 border-b border-[#DED6CA] pb-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B5B52]">Dokumen</p>
-            <h2 className="mt-1 font-serif text-[29px] leading-8 text-[#31332C]">{project ? project.title : "RAB dan file proyek"}</h2>
-          </div>
-          <button className="inline-flex h-11 w-full items-center justify-center gap-2 border border-[#31332C] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332C] transition-colors hover:bg-[#31332C] hover:text-[#F5EFE5] sm:w-fit">
-            <FolderOpen size={16} />
-            Semua file
-          </button>
-        </div>
-        <div className="grid gap-3">
-          {docs.map((doc) => (
-            <article key={doc.title} className="flex flex-col gap-3 border border-[#DED6CA] bg-[#FCFBF9] p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="grid h-11 w-11 shrink-0 place-items-center bg-[#6B5B52] text-white">
-                  <FileText size={18} />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="truncate font-serif text-[22px] leading-7 text-[#31332C]">{doc.title}</h3>
-                  <p className="text-[13px] text-[#797C73]">{doc.meta}</p>
-                </div>
-              </div>
-              <button className="inline-flex h-10 w-full items-center justify-center gap-2 border border-[#DED6CA] bg-white px-4 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332C] transition-colors hover:border-[#31332C] sm:w-auto sm:shrink-0">
-                <Download size={15} />
-                {doc.type}
-              </button>
-            </article>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function CatalogTab() {
-  const [selectedCatalog, setSelectedCatalog] = useState<CatalogKey | null>(null);
-
-  const inspirationMap: Partial<Record<CatalogKey, (typeof inspirations)[number]>> = {
-    apartment: inspirations[0],
-    rumah: inspirations[1],
-    hotel: inspirations[2],
-    "kos-boarding-house": inspirations[3],
-  };
-
-  type CatalogImage = {
-    src: string;
-    alt: string;
-    className?: string;
-  };
-
-  type CatalogArea = {
-    title: string;
-    description: string;
-    image: CatalogImage;
-  };
-
-  type InspirationWithAreas = {
-    areas: CatalogArea[];
-  };
-
-  type CatalogDetailItem = {
-    title: string;
-    copy: string;
-    image: CatalogImage;
-  };
-
-  const activeInspiration =
-    selectedCatalog && selectedCatalog !== "featured"
-      ? (inspirationMap[selectedCatalog] as InspirationWithAreas | undefined) ?? null
-      : null;
-
-  const catalogDetail: CatalogDetailItem[] =
-    selectedCatalog === "featured"
-      ? featuredProjects.slice(0, 8).map((project) => ({
-        title: project.title,
-        copy: project.location,
-        image: project.image,
-      }))
-      : activeInspiration?.areas.map((area) => ({
-        title: area.title,
-        copy: area.description,
-        image: area.image,
-      })) ?? [];
-  return (
-    <div className="fade-in">
-      <section className="grid border border-[#DED6CA] bg-white p-4 sm:p-5">
-        <div className="mb-4 flex flex-col gap-3 border-b border-[#DED6CA] pb-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B5B52]">Katalog</p>
-            <h2 className="mt-1 font-serif text-[26px] leading-8 text-[#31332C] sm:text-[29px]">
-              {selectedCatalog ? catalogCategories.find((item) => item.key === selectedCatalog)?.label : "Pilih kategori katalog"}
-            </h2>
-          </div>
-          {selectedCatalog ? (
+          <div className="mt-5 grid gap-2">
             <button
-              type="button"
-              onClick={() => setSelectedCatalog(null)}
-              className="h-11 w-full shrink-0 border border-[#31332C] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332C] lg:w-auto"
+              onClick={() => onChangePage("ajukan")}
+              className="flex h-11 items-center justify-center gap-2 bg-[#31332c] px-4 text-[12px] font-semibold text-white transition hover:bg-[#191a17]"
             >
-              Kembali kategori
+              <Send size={15} />
+              Jadikan Request Proyek
             </button>
-          ) : (
-            <div className="flex h-11 min-h-11 items-center gap-2 border border-[#DED6CA] bg-[#FCFBF9] px-3 sm:px-4">
-              <Search size={16} className="shrink-0 text-[#6B5B52]" />
-              <input
-                type="text"
-                className="min-h-11 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[#797C73] sm:text-[13px]"
-                placeholder="Cari gaya atau ruang"
-              />
-            </div>
-          )}
-        </div>
-
-        {!selectedCatalog ? (
-          <div className="grid gap-3">
-            {catalogCategories.map((category) => (
-              <button
-                key={category.key}
-                type="button"
-                onClick={() => setSelectedCatalog(category.key)}
-                className="group grid gap-4 border border-[#DED6CA] bg-[#FCFBF9] p-3 text-left transition-colors hover:border-[#31332C] sm:grid-cols-[220px_1fr_auto] sm:items-center"
-              >
-                <div className="relative h-36 overflow-hidden bg-[#DED6CA] sm:h-28">
-                  <Image src={category.image} alt={category.label} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="280px" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#6B5B52]">Kategori</p>
-                  <h3 className="mt-1 font-serif text-[24px] leading-8 text-[#31332C] sm:text-[26px]">{category.label}</h3>
-                  <p className="mt-2 text-[13px] leading-5 text-[#797C73]">
-                    Buka kumpulan referensi, area, dan mood visual untuk kategori {category.label}.
-                  </p>
-                </div>
-                <span className="inline-flex h-11 items-center justify-center border border-[#DED6CA] bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#31332C] sm:h-auto sm:py-3">
-                  Lihat katalog
-                </span>
-              </button>
-            ))}
+            <button className="flex h-11 items-center justify-center gap-2 border border-[#31332c] px-4 text-[12px] font-semibold text-[#31332c] transition hover:bg-[#31332c] hover:text-white">
+              <Bookmark size={15} />
+              Simpan Ide
+            </button>
+            <button className="flex h-11 items-center justify-center gap-2 border border-[#ded6ca] px-4 text-[12px] font-semibold text-[#6b5b52] transition hover:border-[#6b5b52]">
+              <RefreshCcw size={15} />
+              Generate Ulang
+            </button>
+            <button className="flex h-11 items-center justify-center gap-2 border border-[#ded6ca] px-4 text-[12px] font-semibold text-[#6b5b52] transition hover:border-[#6b5b52]">
+              <Pencil size={15} />
+              Edit Kebutuhan
+            </button>
           </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {catalogDetail.slice(0, 8).map((item) => (
-              <article key={item.title} className="grid min-h-[280px] grid-rows-[1fr_auto] overflow-hidden border border-[#DED6CA] bg-[#FCFBF9]">
-                <div className="relative min-h-0 overflow-hidden bg-[#DED6CA]">
-                  <Image
-                    src={item.image.src}
-                    alt={item.image.alt}
-                    fill
-                    className={`object-cover ${item.image.className ?? ""}`}
-                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                  />
-                </div>
-                <div className="p-3">
-                  <h3 className="truncate font-serif text-[21px] leading-6 text-[#31332C]">{item.title}</h3>
-                  <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#797C73]">{item.copy}</p>
+        </section>
+
+        <section className="border border-[#ded6ca] bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.04)]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#6b5b52]">
+            Ide tersimpan
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {savedIdeas.map((idea) => (
+              <article key={idea.title} className="border border-[#ded6ca] bg-[#f7f4ef] p-4">
+                <h3 className="font-serif text-[20px] leading-6">
+                  {idea.title}
+                </h3>
+                <p className="mt-1 text-[12px] text-[#797c73]">
+                  {idea.type} • {idea.date}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <StatusBadge status={idea.status} />
+                  <button className="border border-[#31332c] px-3 py-1.5 text-[11px] font-semibold text-[#31332c]">
+                    Lihat detail
+                  </button>
                 </div>
               </article>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      </aside>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function AiSummaryItem({ title, text }: { title: string; text: string }) {
   return (
-    <label className="block min-w-0">
-      <span className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332C]">{label}</span>
-      {children}
-    </label>
+    <div className="border border-[#ded6ca] bg-[#f7f4ef] p-3">
+      <p className="font-serif text-[19px] leading-6 text-[#31332c]">
+        {title}
+      </p>
+      <p className="mt-1 text-[13px] leading-6 text-[#797c73]">
+        {text}
+      </p>
+    </div>
   );
 }
 
-function ChatBubble({ from, children }: { from: "bot" | "user"; children: React.ReactNode }) {
-  const isUser = from === "user";
+function ConsultationPage() {
+  const slots = ["09:00 WIB", "10:30 WIB", "13:00 WIB", "14:30 WIB", "16:00 WIB"];
+
+  const histories = [
+    {
+      project: "Kitchen Set Walnut",
+      date: "18 Mei 2026",
+      time: "13:00 WIB",
+      status: "Terkonfirmasi",
+      meet: "Google Meet tersedia",
+    },
+    {
+      project: "Wardrobe Minimalis",
+      date: "12 Mei 2026",
+      time: "10:30 WIB",
+      status: "Selesai",
+      meet: "Sesi selesai",
+    },
+    {
+      project: "Japandi Living Room",
+      date: "20 Mei 2026",
+      time: "14:30 WIB",
+      status: "Menunggu Konfirmasi",
+      meet: "Menunggu konfirmasi tim",
+    },
+  ];
 
   return (
-    <div className={`flex min-h-0 ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[76%] self-center px-5 py-4 text-[14px] leading-6 ${isUser ? "bg-[#31332C] text-[#F5EFE5]" : "bg-[#FCFBF9] text-[#31332C]"
-          }`}
+    <div className="space-y-8">
+      <PageTitle
+        label="Konsultasi"
+        title="Jadwalkan Konsultasi"
+        subtitle="Pilih request atau proyek yang ingin dikonsultasikan dengan tim VMatch untuk memperjelas kebutuhan sebelum solusi proyek disusun."
+      />
+
+      <section className="grid gap-8 xl:grid-cols-[minmax(0,0.95fr)_minmax(320px,0.65fr)]">
+        <Panel
+          title="Ajukan jadwal konsultasi"
+          subtitle="Jadwal akan dikonfirmasi oleh tim VMatch melalui email atau WhatsApp."
+        >
+          <div className="grid gap-5">
+            <Field label="Pilih request / proyek">
+              <select className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 text-[14px] outline-none focus:border-[#6b5b52]">
+                <option>Kitchen Set Walnut</option>
+                <option>Wardrobe Minimalis</option>
+                <option>Japandi Living Room</option>
+              </select>
+            </Field>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <Field label="Tanggal konsultasi">
+                <input
+                  type="date"
+                  className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 text-[14px] outline-none focus:border-[#6b5b52]"
+                />
+              </Field>
+
+              <Field label="Status jadwal">
+                <div className="flex h-12 items-center border border-[#ded6ca] bg-[#f7f4ef] px-4">
+                  <StatusBadge status="Menunggu Konfirmasi" />
+                </div>
+              </Field>
+            </div>
+
+            <div>
+              <p className="text-[12px] font-semibold text-[#6b5b52]">
+                Pilih slot waktu WIB
+              </p>
+
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {slots.map((slot, index) => (
+                  <button
+                    key={slot}
+                    type="button"
+                    className={`h-11 border px-4 text-[13px] font-semibold transition ${index === 2
+                      ? "border-[#31332c] bg-[#31332c] text-white"
+                      : "border-[#ded6ca] bg-[#f7f4ef] text-[#6b5b52] hover:border-[#6b5b52]"
+                      }`}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border border-[#ded6ca] bg-[#f7f4ef] p-4">
+              <h3 className="font-serif text-[23px] leading-7 text-[#31332c]">
+                Informasi konsultasi
+              </h3>
+              <p className="mt-2 text-[14px] leading-7 text-[#797c73]">
+                Konsultasi dilakukan dengan tim VMatch, bukan vendor. Sesi ini
+                digunakan untuk memperjelas kebutuhan, prioritas ruang, budget,
+                referensi desain, dan timeline sebelum solusi proyek disusun.
+              </p>
+            </div>
+
+            <button className="h-12 bg-[#31332c] px-6 text-[13px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#191a17]">
+              Ajukan Jadwal Konsultasi
+            </button>
+          </div>
+        </Panel>
+
+        <aside className="space-y-5">
+          <section className="border border-[#ded6ca] bg-[#6B5B52] p-5 text-white shadow-[0_12px_30px_rgba(0,0,0,0.04)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">
+              Status Meet
+            </p>
+            <h2 className="mt-2 font-serif text-[30px] leading-tight">
+              Google Meet muncul setelah dikonfirmasi
+            </h2>
+            <p className="mt-3 text-[14px] leading-7 text-white/75">
+              Link Google Meet akan tersedia setelah jadwal disetujui dan
+              dikirim oleh tim VMatch melalui email atau WhatsApp.
+            </p>
+          </section>
+
+          <section className="border border-[#ded6ca] bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.04)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#6b5b52]">
+              Ringkasan Jadwal
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <SummaryRow label="Request" value="Kitchen Set Walnut" />
+              <SummaryRow label="Tanggal" value="Belum dipilih" />
+              <SummaryRow label="Slot" value="13:00 WIB" />
+              <SummaryRow label="Status" value="Menunggu Konfirmasi" />
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <Panel
+        title="Riwayat konsultasi"
+        subtitle="Daftar sesi konsultasi yang pernah diajukan atau sudah dilakukan."
       >
-        {children}
+        <DataTable
+          headers={["Request / Proyek", "Tanggal", "Waktu", "Status", "Google Meet"]}
+          rows={histories.map((item) => [
+            item.project,
+            item.date,
+            item.time,
+            <StatusBadge key={item.project} status={item.status} />,
+            item.meet,
+          ])}
+        />
+      </Panel>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-[#eee8df] pb-3 last:border-b-0 last:pb-0">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#8b8179]">
+        {label}
+      </p>
+      <p className="text-right text-[13px] font-medium text-[#31332c]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function SubmitProjectPage() {
+  return (
+    <div className="space-y-8">
+      <PageTitle label="Request Proyek" title="Ajukan Proyek" subtitle="Ceritakan kebutuhan interior kamu agar tim VMatch dapat menganalisis dan menyusun solusi." />
+
+      <Panel title="Form kebutuhan proyek">
+        <div className="grid gap-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Jenis proyek">
+              <select className="h-12 appearance-none border border-[#ded6ca] bg-[#f7f4ef] px-4 pr-12 outline-none">
+                <option>Kitchen Set</option>
+                <option>Wardrobe</option>
+                <option>Kamar Tidur</option>
+                <option>Ruang Kerja</option>
+                <option>Ruang Tamu</option>
+                <option>Storage</option>
+                <option>Lainnya</option>
+              </select>
+            </Field>
+            <Field label="Lokasi proyek">
+              <input className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 outline-none" placeholder="Contoh: Semarang" />
+            </Field>
+            <Field label="Ukuran ruangan">
+              <input className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 outline-none" placeholder="Contoh: 3 x 4 meter" />
+            </Field>
+            <Field label="Estimasi budget">
+              <input className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 outline-none" placeholder="Contoh: Rp80–120 juta" />
+            </Field>
+          </div>
+
+          <Field label="Referensi desain / catatan tambahan">
+            <textarea
+              className="min-h-36 border border-[#ded6ca] bg-[#f7f4ef] p-4 outline-none"
+              placeholder="Ceritakan kebutuhan, preferensi warna, material, atau masalah ruang."
+            />
+          </Field>
+
+          <div className="border border-[#ded6ca] bg-white p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6b5b52]">
+              Rencana Waktu Pengerjaan
+            </p>
+
+            <p className="mt-2 text-[13px] leading-6 text-[#797c73]">
+              Jadwal ini adalah preferensi awal dari customer, bukan jadwal final.
+              Estimasi durasi dan jadwal final akan disusun oleh tim VMatch setelah
+              kebutuhan proyek dianalisis.
+            </p>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <Field label="Target mulai pengerjaan">
+                <SelectInput>
+                  <option>Secepatnya</option>
+                  <option>Minggu depan</option>
+                  <option>Bulan depan</option>
+                  <option>Pilih tanggal sendiri</option>
+                </SelectInput>
+              </Field>
+
+              <Field label="Target selesai">
+                <SelectInput>
+                  <option>Fleksibel</option>
+                  <option>Dalam 2 minggu</option>
+                  <option>Dalam 1 bulan</option>
+                  <option>Dalam 2-3 bulan</option>
+                  <option>Pilih tanggal sendiri</option>
+                </SelectInput>
+              </Field>
+
+              <Field label="Urgensi proyek">
+                <SelectInput>
+                  <option>Tidak urgent</option>
+                  <option>Cukup urgent</option>
+                  <option>Sangat urgent</option>
+                </SelectInput>
+              </Field>
+
+              <Field label="Catatan jadwal tambahan">
+                <input
+                  className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 outline-none"
+                  placeholder="Contoh: ingin selesai sebelum Lebaran / sebelum pindahan"
+                />
+              </Field>
+            </div>
+          </div>
+
+          <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center border border-dashed border-[#ded6ca] bg-[#f7f4ef] p-5 text-center">
+            <Upload className="text-[#6b5b52]" />
+            <span className="mt-3 text-[14px] font-medium">Upload gambar/file referensi</span>
+            <span className="text-[12px] text-[#797c73]">Opsional, JPG/PNG/PDF.</span>
+            <input type="file" className="sr-only" />
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-[auto_auto]">
+            <button
+              type="button"
+              className="h-12 border border-[#31332c] px-6 text-[13px] font-semibold uppercase tracking-[0.14em] text-[#31332c] transition hover:bg-[#f7f4ef]"
+            >
+              Simpan Draft
+            </button>
+
+            <button
+              type="submit"
+              className="h-12 bg-[#31332c] px-6 text-[13px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#191a17]"
+            >
+              Submit Request
+            </button>
+          </div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function RequestsPage() {
+  return (
+    <div className="space-y-8">
+      <PageTitle label="Request" title="Request Saya" subtitle="Daftar request proyek yang pernah kamu ajukan." />
+      <DataTable
+        headers={["Request", "Jenis", "Tanggal", "Lokasi", "Budget", "Status", "Aksi"]}
+        rows={requests.map((item) => [
+          item.name,
+          item.type,
+          item.date,
+          item.location,
+          item.budget,
+          <StatusBadge key={item.name} status={item.status} />,
+          <ActionButton key={`btn-${item.name}`}>Detail</ActionButton>,
+        ])}
+      />
+    </div>
+  );
+}
+
+function SolutionPage() {
+  return (
+    <div className="space-y-8">
+      <PageTitle label="Proposal" title="Solusi Proyek" subtitle="Solusi yang disiapkan oleh tim VMatch berdasarkan request kamu." />
+
+      <Panel title="Kitchen Set Walnut" subtitle="Status: Solusi Dikirim">
+        <div className="grid gap-4 md:grid-cols-2">
+          <InfoCard title="Ringkasan kebutuhan" text="Kitchen set compact, banyak storage, mudah dibersihkan, dan tampilan hangat." />
+          <InfoCard title="Rekomendasi konsep" text="Modern warm minimal dengan kabinet tertutup dan aksen walnut." />
+          <InfoCard title="Estimasi budget" text="Rp85–115 juta, menyesuaikan material final dan ukuran aktual." />
+          <InfoCard title="Estimasi waktu" text="6–8 minggu setelah solusi disetujui dan produksi dijadwalkan." />
+          <InfoCard title="Rekomendasi material" text="HPL walnut, solid surface, engsel soft-close, dan finishing matte." />
+          <InfoCard title="Catatan VMatch" text="Tim akan validasi ukuran ruang sebelum RAB final dan produksi." />
+        </div>
+
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <button className="h-11 bg-[#31332c] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-white">
+            Setujui Solusi
+          </button>
+          <button className="h-11 border border-[#31332c] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#31332c]">
+            Ajukan Revisi
+          </button>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function ProjectsPage() {
+  return (
+    <div className="space-y-8">
+      <PageTitle label="Project Tracking" title="Proyek Saya" subtitle="Pantau progress proyek yang sedang berjalan atau sudah selesai." />
+      <DataTable
+        headers={["Proyek", "Jenis", "Lokasi", "Mulai", "Estimasi Selesai", "Status", "Progress"]}
+        rows={projects.map((item) => [
+          item.name,
+          item.type,
+          item.location,
+          item.start,
+          item.end,
+          <StatusBadge key={item.name} status={item.status} />,
+          <ProgressBar key={`progress-${item.name}`} value={item.progress} />,
+        ])}
+      />
+
+      <Panel title="Timeline Progress" subtitle="Tracking proyek seperti paket.">
+        <Timeline />
+      </Panel>
+    </div>
+  );
+}
+
+function RevisionPage() {
+  return (
+    <div className="space-y-8">
+      <PageTitle label="Masukan" title="Revisi" subtitle="Ajukan revisi atau masukan agar tercatat rapi." />
+
+      <Panel title="Ajukan revisi">
+        <div className="grid gap-4">
+          <Field label="Pilih proyek">
+            <SelectInput>
+              <option>Kitchen Set Walnut</option>
+              <option>Japandi Living Room</option>
+            </SelectInput>
+          </Field>
+          <Field label="Isi revisi/masukan">
+            <textarea className="min-h-32 border border-[#ded6ca] bg-[#f7f4ef] p-4 outline-none" placeholder="Tulis revisi atau masukan kamu." />
+          </Field>
+          <button className="h-11 bg-[#31332c] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-white">
+            Kirim Revisi
+          </button>
+        </div>
+      </Panel>
+
+      <Panel title="Daftar revisi">
+        <DataTable
+          headers={["Tanggal", "Isi Revisi", "Status", "Catatan VMatch"]}
+          rows={[
+            ["15 Mei 2026", "Handle kabinet dibuat hidden.", <StatusBadge key="r1" status="Diproses" />, "Tim sedang menyesuaikan desain."],
+            ["12 Mei 2026", "Warna dibuat lebih terang.", <StatusBadge key="r2" status="Selesai" />, "Sudah diperbarui pada proposal."],
+          ]}
+        />
+      </Panel>
+    </div>
+  );
+}
+
+function FilesPage() {
+  return (
+    <div className="space-y-8">
+      <PageTitle label="Dokumen" title="File Proyek" subtitle="Dokumen penting proyek, file desain, invoice, dan foto progress." />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {files.map((file) => (
+          <article key={file.name} className="border border-[#ded6ca] bg-[#f7f4ef] p-5">
+            <FileText className="text-[#6b5b52]" />
+            <h3 className="mt-4 font-medium">{file.name}</h3>
+            <p className="mt-2 text-[13px] text-[#797c73]">{file.type}</p>
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-[12px] text-[#797c73]">{file.date}</span>
+              <button className="inline-flex items-center gap-2 text-[12px] font-semibold text-[#31332c]">
+                <Download size={14} />
+                Lihat
+              </button>
+            </div>
+          </article>
+        ))}
       </div>
     </div>
   );
 }
 
-function buildWhatsAppFollowUpLink(project: ClientProject | null): string {
-  const projectLabel = project?.title ?? "project saya";
-  const message = `Halo tim VMatch, saya mau follow up update untuk ${projectLabel}.`;
-  return `https://wa.me/${TEAM_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+function NotificationsPage() {
+  return (
+    <div className="space-y-8">
+      <PageTitle label="Update" title="Notifikasi" subtitle="Informasi terbaru dari VMatch terkait request dan proyek kamu." />
+      <Panel title="Notifikasi terbaru">
+        <div className="space-y-3">
+          {notifications.map((item) => (
+            <article key={item.title} className="border border-[#ded6ca] bg-[#f7f4ef] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-medium">{item.title}</p>
+                <StatusBadge status={item.status} />
+              </div>
+              <p className="mt-2 text-[12px] text-[#797c73]">{item.date}</p>
+            </article>
+          ))}
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function ReviewPage() {
+  return (
+    <div className="space-y-8">
+      <PageTitle label="Feedback" title="Review" subtitle="Berikan feedback setelah proyek selesai." />
+      <Panel title="Kirim feedback">
+        <div className="grid gap-4">
+          <Field label="Rating">
+            <SelectInput>
+              <option>5 - Sangat puas</option>
+              <option>4 - Puas</option>
+              <option>3 - Cukup</option>
+            </SelectInput>
+          </Field>
+          <Field label="Komentar">
+            <textarea className="min-h-32 border border-[#ded6ca] bg-[#f7f4ef] p-4 outline-none" placeholder="Tulis pengalaman kamu selama proyek." />
+          </Field>
+          <button className="h-11 bg-[#31332c] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-white">
+            Kirim Feedback
+          </button>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function ProfilePage() {
+  return (
+    <div className="space-y-8">
+      <PageTitle label="Akun" title="Profil Saya" subtitle="Kelola informasi akun customer." />
+      <Panel title="Data profil">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Nama">
+            <input className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 outline-none" defaultValue="Customer VMatch" />
+          </Field>
+          <Field label="Email">
+            <input className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 outline-none" defaultValue="customer@email.com" />
+          </Field>
+          <Field label="Nomor HP">
+            <input className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 outline-none" defaultValue="0812xxxx" />
+          </Field>
+          <Field label="Alamat / lokasi">
+            <input className="h-12 border border-[#ded6ca] bg-[#f7f4ef] px-4 outline-none" defaultValue="Semarang" />
+          </Field>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function PageTitle({
+  label,
+  title,
+  subtitle,
+}: {
+  label: string;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <section>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6b5b52]">
+        {label}
+      </p>
+      <h1 className="mt-3 font-serif text-[42px] leading-tight text-[#31332c] sm:text-[56px]">
+        {title}
+      </h1>
+      <p className="mt-4 max-w-[760px] text-[15px] leading-7 text-[#797c73]">
+        {subtitle}
+      </p>
+    </section>
+  );
+}
+
+function Panel({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border border-[#ded6ca] bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.04)] sm:p-6">
+      <h2 className="font-serif text-[32px] leading-tight">{title}</h2>
+      {subtitle && <p className="mt-2 text-[14px] leading-6 text-[#797c73]">{subtitle}</p>}
+      <div className="mt-6">{children}</div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-[12px] font-semibold text-[#6b5b52]">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function InfoCard({ title, text }: { title: string; text: string }) {
+  return (
+    <article className="border border-[#ded6ca] bg-[#f7f4ef] p-5">
+      <h3 className="font-serif text-[24px] leading-7">{title}</h3>
+      <p className="mt-2 text-[14px] leading-7 text-[#797c73]">{text}</p>
+    </article>
+  );
+}
+
+function Timeline() {
+  return (
+    <div className="space-y-0">
+      {timeline.map((item, index) => (
+        <div key={item.title} className="grid grid-cols-[28px_1fr] gap-4">
+          <div className="relative flex justify-center">
+            <span className="mt-1.5 h-4 w-4 bg-[#31332c]" />
+            {index < timeline.length - 1 && (
+              <span className="absolute top-7 h-[calc(100%-8px)] w-px bg-[#ded6ca]" />
+            )}
+          </div>
+          <div className="pb-7">
+            <div className="border border-[#ded6ca] bg-[#f7f4ef] p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="font-serif text-[24px]">{item.title}</h3>
+                <StatusBadge status={item.status} />
+              </div>
+              <p className="mt-2 text-[12px] font-medium text-[#6b5b52]">{item.date}</p>
+              <p className="mt-3 text-[14px] leading-6 text-[#797c73]">{item.note}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DataTable({
+  headers,
+  rows,
+}: {
+  headers: string[];
+  rows: React.ReactNode[][];
+}) {
+  return (
+    <div className="overflow-hidden border border-[#ded6ca] bg-white shadow-[0_12px_30px_rgba(0,0,0,0.04)]">
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="w-full border-collapse bg-white text-left text-[14px]">
+          <thead className="bg-[#f7f4ef] text-[11px] uppercase tracking-[0.14em] text-[#6b5b52]">
+            <tr>
+              {headers.map((header) => (
+                <th key={header} className="whitespace-nowrap px-4 py-4 font-semibold">
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={index} className="border-t border-[#ded6ca]">
+                {row.map((cell, cellIndex) => (
+                  <td key={cellIndex} className="px-4 py-4 align-middle">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid gap-3 bg-[#f7f4ef] p-3 lg:hidden">
+        {rows.map((row, rowIndex) => (
+          <article key={rowIndex} className="bg-white p-4">
+            {row.map((cell, cellIndex) => (
+              <div key={cellIndex} className="flex justify-between gap-4 border-b border-[#f0ebe4] py-2 last:border-b-0">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b8179]">
+                  {headers[cellIndex]}
+                </span>
+                <span className="text-right text-[13px]">{cell}</span>
+              </div>
+            ))}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const style =
+    status.includes("Selesai") || status.includes("Disetujui") || status.includes("Sudah")
+      ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+      : status.includes("Menunggu") || status.includes("Draft")
+        ? "border-amber-100 bg-amber-50 text-amber-700"
+        : "border-[#ded6ca] bg-[#f7f4ef] text-[#6b5b52]";
+
+  return (
+    <span className={`inline-flex border px-3 py-1 text-[11px] font-semibold ${style}`}>
+      {status}
+    </span>
+  );
+}
+
+function ProgressBar({ value }: { value: number }) {
+  return (
+    <div className="mt-5">
+      <div className="h-2 overflow-hidden bg-[#eee8df]">
+        <div className="h-full bg-[#31332c]" style={{ width: `${value}%` }} />
+      </div>
+      <p className="mt-2 text-[12px] font-medium text-[#6b5b52]">{value}% selesai</p>
+    </div>
+  );
+}
+
+function ActionButton({ children }: { children: React.ReactNode }) {
+  return (
+    <button className="h-10 bg-[#31332c] px-4 text-[12px] font-semibold text-white transition hover:bg-[#191a17]">
+      {children}
+    </button>
+  );
+}
+
+function SelectInput({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className="relative">
+      <select
+        className={`h-12 w-full appearance-none border border-[#ded6ca] bg-[#f7f4ef] px-4 pr-12 text-[14px] outline-none focus:border-[#6b5b52] ${className}`}
+      >
+        {children}
+      </select>
+
+      <ChevronDown
+        size={18}
+        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8b8179]"
+      />
+    </div>
+  );
 }

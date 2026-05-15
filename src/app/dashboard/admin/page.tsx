@@ -363,25 +363,22 @@ function Sidebar({
                 key={item.id}
                 type="button"
                 onClick={() => onChangePage(item.id)}
-                className={`flex h-12 w-full items-center justify-between px-4 text-left text-[13px] font-medium transition ${active
+                className={`flex h-12 w-full items-center gap-3 px-4 text-left text-[13px] font-medium transition ${active
                     ? "bg-white text-[#6B5B52]"
                     : "text-white/75 hover:bg-white/10 hover:text-white"
                   }`}
               >
-                <span className="flex items-center gap-3">
-                  <Icon size={17} />
-                  {item.label}
-                </span>
-                {active && <ChevronRight size={15} />}
+                <Icon size={17} />
+                {item.label}
               </button>
             );
           })}
         </nav>
 
-        <div className="border-t border-[#ded6ca] p-4">
+        <div className="border-t border-white/10 p-4">
           <Link
             href="/login"
-            className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#F5F1EC] text-[13px] font-semibold text-[#6b5b52] transition hover:bg-[#31332c] hover:text-white"
+            className="flex h-11 items-center justify-center gap-2 bg-[#F5F1EC] text-[13px] font-semibold text-[#6b5b52] transition hover:bg-[#31332c] hover:text-white"
           >
             <LogOut size={16} />
             Keluar
