@@ -5,20 +5,7 @@ import { useRef, useState } from "react";
 import { inspirations } from "@/lib/home-content";
 import { CatalogGallery } from "./catalog-gallery";
 
-type PageId =
-    | "dashboard"
-    | "catalog"
-    | "ai-ide"
-    | "konsultasi"
-    | "ajukan"
-    | "request"
-    | "solusi"
-    | "proyek"
-    | "revisi"
-    | "files"
-    | "notifikasi"
-    | "review"
-    | "profil";
+type PageId = string;
 
 export function CatalogDesign({
     onChangePage,

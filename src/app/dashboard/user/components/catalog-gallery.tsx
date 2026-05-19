@@ -14,20 +14,7 @@ import {
 import { inspirations } from "@/lib/home-content";
 
 
-type PageId =
-    | "dashboard"
-    | "catalog"
-    | "ai-ide"
-    | "konsultasi"
-    | "ajukan"
-    | "request"
-    | "solusi"
-    | "proyek"
-    | "revisi"
-    | "files"
-    | "notifikasi"
-    | "review"
-    | "profil";
+type PageId = string;
 
 type Inspiration = (typeof inspirations)[number];
 
