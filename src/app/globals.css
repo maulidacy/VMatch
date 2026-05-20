@@ -274,26 +274,27 @@ button,
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
-.shimmer-text {
+.text-shimmer-effect {
+  color: #5A4A42;
   background: linear-gradient(
     90deg,
-    #7A7067 0%,
-    #6B5B52 20%,
-    #B8A99E 40%,
-    #6B5B52 60%,
-    #7A7067 80%,
-    #6B5B52 100%
+    #5A4A42 25%,
+    #B8A99E 50%,
+    #5A4A42 75%
   );
-  background-size: 200% 100%;
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 1.8s ease-in-out infinite;
-  font-size: 13px;
-  font-weight: 500;
+  animation: text-shimmer 3s linear infinite;
 }
 
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+@keyframes text-shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
 }

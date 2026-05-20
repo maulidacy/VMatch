@@ -199,7 +199,7 @@ export default function UserDashboardPage() {
       </aside>
 
       {/* Content */}
-      <section className="flex min-h-[100dvh] flex-col lg:pl-[250px]">
+      <section className={`flex flex-col lg:pl-[250px] ${activePage === "ai" ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
         {/* Header */}
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-[#E8E2D9]/80 bg-[#F8F6F2]/95 px-5 backdrop-blur-xl sm:px-6">
           <button onClick={() => setIsSidebarOpen(true)} className="grid h-8 w-8 place-items-center rounded-lg text-[#7A7067] transition hover:bg-[#F0EBE4] lg:hidden" aria-label="Menu">
@@ -335,56 +335,39 @@ function DashboardView({ onChangePage }: { onChangePage: (p: PageId) => void }) 
   );
 }
 
+
 // ─── AI Chat (VMatch Helper) ─────────────────────────────────────────────────
 
 type ChatMessage = {
   from: "ai" | "user";
   text: string;
   images?: { src: string; label: string }[];
-  quickReplies?: string[];
+  form?: { question: string; options: string[] };
 };
 
-// Parse markdown-like formatting to JSX
 function FormatText({ text }: { text: string }) {
-  // Split into paragraphs
-  const paragraphs = text.split(/\n\n+/);
-
+  const cleaned = text
+    .replace(/#{1,4}\s*/g, "")
+    .replace(/^---+$/gm, "")
+    .replace(/\*{3,}/g, "")
+    .replace(/[^\S\n]*\n{3,}/g, "\n\n")
+    .trim();
+  const paragraphs = cleaned.split(/\n\n+/).filter(Boolean);
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       {paragraphs.map((para, pi) => {
-        // Check if it's a numbered list
-        const listItems = para.split(/\n/).filter(Boolean);
-        const isNumberedList = listItems.length > 1 && listItems.every((l) => /^\d+[\.\)]/.test(l.trim()));
-        const isBulletList = listItems.length > 1 && listItems.every((l) => /^[-•*]/.test(l.trim()));
-
-        if (isNumberedList || isBulletList) {
-          return (
-            <ol key={pi} className={`space-y-1.5 pl-1 ${isNumberedList ? "list-none" : "list-none"}`}>
-              {listItems.map((item, li) => {
-                const cleaned = item.replace(/^\d+[\.\)]\s*|^[-•*]\s*/, "");
-                return (
-                  <li key={li} className="flex gap-2 text-[14px] leading-relaxed">
-                    <span className="mt-0.5 shrink-0 text-[#6B5B52] font-medium">{isNumberedList ? `${li + 1}.` : "•"}</span>
-                    <span><InlineFormat text={cleaned} /></span>
-                  </li>
-                );
-              })}
-            </ol>
-          );
+        const lines = para.split(/\n/).filter(Boolean);
+        const isNumberedList = lines.length > 1 && lines.every((l) => /^\d+[\.\)]/.test(l.trim()));
+        const isBulletList = lines.length > 1 && lines.every((l) => /^[-•*]\s/.test(l.trim()));
+        if (isNumberedList) {
+          return (<ol key={pi} className="space-y-1">{lines.map((item, li) => (<li key={li} className="flex gap-2 text-[14px] leading-relaxed"><span className="shrink-0 font-medium text-[#6B5B52]">{li + 1}.</span><span><InlineFormat text={item.replace(/^\d+[\.\)]\s*/, "")} /></span></li>))}</ol>);
         }
-
-        // Single line items split by \n
-        const lines = para.split(/\n/);
+        if (isBulletList) {
+          return (<ul key={pi} className="space-y-1">{lines.map((item, li) => (<li key={li} className="flex gap-2 text-[14px] leading-relaxed"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#8B8179]" /><span><InlineFormat text={item.replace(/^[-•*]\s*/, "")} /></span></li>))}</ul>);
+        }
         if (lines.length > 1) {
-          return (
-            <div key={pi} className="space-y-1">
-              {lines.map((line, li) => (
-                <p key={li} className="text-[14px] leading-relaxed"><InlineFormat text={line} /></p>
-              ))}
-            </div>
-          );
+          return (<div key={pi} className="space-y-1">{lines.map((line, li) => (<p key={li} className="text-[14px] leading-relaxed"><InlineFormat text={line} /></p>))}</div>);
         }
-
         return <p key={pi} className="text-[14px] leading-relaxed"><InlineFormat text={para} /></p>;
       })}
     </div>
@@ -392,35 +375,20 @@ function FormatText({ text }: { text: string }) {
 }
 
 function InlineFormat({ text }: { text: string }) {
-  // Handle **bold** and *italic*
-  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
-  return (
-    <>
-      {parts.map((part, i) => {
-        if (part.startsWith("**") && part.endsWith("**")) {
-          return <strong key={i} className="font-semibold text-[#3D3530]">{part.slice(2, -2)}</strong>;
-        }
-        if (part.startsWith("*") && part.endsWith("*")) {
-          return <em key={i}>{part.slice(1, -1)}</em>;
-        }
-        return <span key={i}>{part}</span>;
-      })}
-    </>
-  );
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (<>{parts.map((part, i) => { if (part.startsWith("**") && part.endsWith("**")) { return <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>; } return <span key={i}>{part}</span>; })}</>);
 }
 
-// Extract quick-reply suggestions from AI text
-function extractQuickReplies(text: string): string[] {
-  const replies: string[] = [];
-  // Match numbered questions like "1. **Ukuran ruang** – ..."
-  const matches = text.match(/\d+[\.\)]\s*\*\*([^*]+)\*\*/g);
-  if (matches && matches.length >= 2) {
-    matches.slice(0, 4).forEach((m) => {
-      const label = m.replace(/^\d+[\.\)]\s*\*\*/, "").replace(/\*\*$/, "").trim();
-      if (label.length < 30) replies.push(label);
-    });
+function extractFormFromText(text: string): { question: string; options: string[] } | null {
+  const lines = text.split("\n").filter(Boolean);
+  const numbered = lines.filter((l) => /^\d+[\.\)]/.test(l.trim()));
+  if (numbered.length >= 2 && numbered.length <= 6) {
+    const firstNumIdx = lines.findIndex((l) => /^\d+[\.\)]/.test(l.trim()));
+    const question = firstNumIdx > 0 ? lines[firstNumIdx - 1].replace(/[*#]/g, "").trim() : "Pilih salah satu:";
+    const options = numbered.map((l) => l.replace(/^\d+[\.\)]\s*/, "").replace(/\*\*/g, "").split(/[–\-]/)[0].trim());
+    return { question, options };
   }
-  return replies;
+  return null;
 }
 
 function AiChatView() {
@@ -428,224 +396,103 @@ function AiChatView() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  const suggestions = useMemo(() => {
+    const all = [
+      "Kitchen set minimalis", "Budget kamar tidur", "Gaya Japandi", "Wardrobe custom",
+      "Desain ruang tamu kecil", "Interior apartemen studio", "Kamar mandi modern",
+      "Backdrop TV minimalis", "Storage untuk ruang sempit", "Estimasi renovasi dapur",
+      "Material HPL vs veneer", "Desain kos-kosan premium", "Ruang kerja di rumah",
+      "Kombinasi warna netral", "Kitchen island budget", "Lemari built-in",
+    ];
+    return [...all].sort(() => Math.random() - 0.5).slice(0, 4);
+  }, []);
   const hasMessages = messages.length > 0;
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isLoading]);
 
   const parseAiContent = (text: string): { cleanText: string; images: { src: string; label: string }[] } => {
     const images: { src: string; label: string }[] = [];
-    const cleanText = text.replace(/\[IMG:(\/[^\]|]+)\|([^\]]+)\]/g, (_, src, label) => {
-      images.push({ src, label });
-      return "";
-    }).trim();
-    return { cleanText, images };
+    let cleanText = text.replace(/\[IMG:(\/[^\]|]+)\|([^\]]+)\]/g, (_, src, label) => { images.push({ src, label }); return ""; });
+    cleanText = cleanText.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "");
+    return { cleanText: cleanText.trim(), images };
   };
 
   const sendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isLoading) return;
-
     setInput("");
-    setMessages((prev) => [...prev, { from: "user", text: userMessage }]);
+    setMessages((prev) => {
+      const updated = [...prev];
+      if (updated.length > 0 && updated[updated.length - 1].form) { updated[updated.length - 1] = { ...updated[updated.length - 1], form: undefined }; }
+      return [...updated, { from: "user", text: userMessage }, { from: "ai", text: "" }];
+    });
     setIsLoading(true);
-
     try {
-      const chatHistory = [
-        ...messages.map((m) => ({
-          role: m.from === "ai" ? "assistant" : "user",
-          content: m.text,
-        })),
-        { role: "user", content: userMessage },
-      ];
-
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: chatHistory }),
-      });
-
+      const currentMessages = [...messages, { from: "user" as const, text: userMessage }];
+      const chatHistory = currentMessages.map((m) => ({ role: m.from === "ai" ? "assistant" : "user", content: m.text }));
+      const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: chatHistory }) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader");
-
       const decoder = new TextDecoder();
       let fullText = "";
       let buffer = "";
 
-      setMessages((prev) => [...prev, { from: "ai", text: "" }]);
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n\n");
         buffer = lines.pop() ?? "";
-
         for (const line of lines) {
           const trimmed = line.replace(/^data: /, "").trim();
           if (!trimmed || trimmed === "[DONE]") continue;
-          try {
-            const json = JSON.parse(trimmed);
-            if (json.content) {
-              fullText += json.content;
-              const { cleanText, images } = parseAiContent(fullText);
-              setMessages((prev) => {
-                const updated = [...prev];
-                updated[updated.length - 1] = { from: "ai", text: cleanText || fullText, images: images.length > 0 ? images : undefined };
-                return updated;
-              });
-            }
-          } catch {
-            // Skip
-          }
+          try { const json = JSON.parse(trimmed); if (json.content) { fullText += json.content; const { cleanText, images } = parseAiContent(fullText); setMessages((prev) => { const updated = [...prev]; updated[updated.length - 1] = { from: "ai", text: cleanText || fullText, images: images.length > 0 ? images : undefined }; return updated; }); } } catch { /* skip */ }
         }
       }
-
       const { cleanText, images } = parseAiContent(fullText);
-      const quickReplies = extractQuickReplies(cleanText || fullText);
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          from: "ai",
-          text: cleanText || fullText,
-          images: images.length > 0 ? images : undefined,
-          quickReplies: quickReplies.length > 0 ? quickReplies : undefined,
-        };
-        return updated;
-      });
+      const finalText = cleanText || fullText;
+      const form = extractFormFromText(finalText);
+      setMessages((prev) => { const updated = [...prev]; updated[updated.length - 1] = { from: "ai", text: finalText, images: images.length > 0 ? images : undefined, form: form ?? undefined }; return updated; });
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { from: "ai", text: "Maaf, terjadi gangguan koneksi. Coba lagi dalam beberapa saat." },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
+      setMessages((prev) => [...prev, { from: "ai", text: "Maaf, terjadi gangguan koneksi. Coba lagi dalam beberapa saat." }]);
+    } finally { setIsLoading(false); }
   };
 
   const handleSubmit = () => sendMessage(input.trim());
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
-  const handleQuickReply = (reply: string) => {
-    // Remove quick replies from last message when user picks one
-    setMessages((prev) => {
-      const updated = [...prev];
-      if (updated.length > 0 && updated[updated.length - 1].quickReplies) {
-        updated[updated.length - 1] = { ...updated[updated.length - 1], quickReplies: undefined };
-      }
-      return updated;
-    });
-    sendMessage(reply);
-  };
-
-  // Input component (reused in both states)
-  const InputBar = (
-    <div className="flex items-center gap-2 rounded-2xl border border-[#E8E2D9] bg-white px-4 py-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-shadow focus-within:border-[#6B5B52] focus-within:shadow-[0_4px_20px_rgba(107,91,82,0.08)]">
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Tulis pertanyaan kamu..."
-        disabled={isLoading}
-        className="min-w-0 flex-1 bg-transparent py-1 text-[14px] text-[#3D3530] outline-none disabled:opacity-50 placeholder:text-[#B8B2AA]"
-      />
-      <button
-        onClick={handleSubmit}
-        disabled={!input.trim() || isLoading}
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#6B5B52] text-white transition hover:bg-[#5A4A42] disabled:opacity-30"
-      >
-        <Send size={14} />
-      </button>
-    </div>
-  );
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") { e.preventDefault(); handleSubmit(); } };
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {!hasMessages ? (
-        /* Empty state — centered */
         <div className="flex flex-1 flex-col items-center justify-center px-5">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#6B5B52] text-white">
-            <Bot size={22} />
+          <h1 className="text-center font-serif text-[28px] text-[#3D3530] sm:text-[32px]">Ada yang bisa dibantu?</h1>
+          <div className="mt-6 w-full max-w-[600px]">
+            <div className="rounded-2xl border border-[#E8E2D9] bg-white shadow-[0_2px_16px_rgba(0,0,0,0.04)] transition-shadow focus-within:border-[#6B5B52]/40 focus-within:shadow-[0_4px_24px_rgba(107,91,82,0.08)]">
+              <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Tanya soal desain interior..." disabled={isLoading} className="w-full bg-transparent px-5 pb-3 pt-4 text-[15px] text-[#3D3530] outline-none placeholder:text-[#B8B2AA]" />
+              <div className="flex items-center justify-between px-4 pb-3">
+                <span className="text-[11px] text-[#B8B2AA]">VMatch Helper</span>
+                <button onClick={handleSubmit} disabled={!input.trim() || isLoading} className="grid h-8 w-8 place-items-center rounded-lg bg-[#6B5B52] text-white transition hover:bg-[#5A4A42] disabled:opacity-30"><Send size={14} /></button>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {suggestions.map((s) => (
+                <button key={s} onClick={() => sendMessage(s)} className="rounded-full border border-[#E8E2D9] bg-white px-3.5 py-1.5 text-[12px] text-[#7A7067] transition hover:border-[#6B5B52] hover:text-[#6B5B52]">{s}</button>
+              ))}
+            </div>
           </div>
-          <h2 className="mt-4 text-center font-serif text-[24px] text-[#3D3530]">
-            Ada yang bisa dibantu?
-          </h2>
-          <p className="mt-2 max-w-[420px] text-center text-[13px] leading-5 text-[#8B8179]">
-            Konsultasi desain interior, material, budget, atau cari inspirasi.
-          </p>
-          <div className="mt-8 w-full max-w-[560px]">{InputBar}</div>
         </div>
       ) : (
         <>
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-5 sm:px-6">
-            <div className="mx-auto max-w-[680px] py-6">
+          <div className="flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-[700px] px-5 py-6 sm:px-6">
               {messages.map((msg, i) => (
-                <div key={i} className={`mb-5 ${msg.from === "user" ? "flex justify-end" : ""}`}>
+                <div key={i} className={`mb-6 ${msg.from === "user" ? "flex justify-end" : ""}`}>
                   {msg.from === "user" ? (
-                    <div className="rounded-2xl rounded-br-sm bg-[#6B5B52] px-4 py-2.5 text-[14px] leading-relaxed text-white">
-                      {msg.text}
-                    </div>
+                    <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-[#6B5B52] px-4 py-2.5 text-[14px] leading-relaxed text-white break-words">{msg.text}</div>
                   ) : (
-                    <div className="flex gap-2.5">
-                      <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#6B5B52] text-white">
-                        <Bot size={14} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        {/* AI text content */}
-                        {msg.text ? (
-                          <div className="text-[#3D3530]">
-                            <FormatText text={msg.text} />
-                          </div>
-                        ) : isLoading && i === messages.length - 1 ? (
-                          /* Shimmer loading */
-                          <div className="flex items-center gap-2 py-1">
-                            <div className="shimmer-bar h-2 w-16 rounded-full" />
-                            <div className="shimmer-bar h-2 w-24 rounded-full" style={{ animationDelay: "0.15s" }} />
-                            <div className="shimmer-bar h-2 w-12 rounded-full" style={{ animationDelay: "0.3s" }} />
-                          </div>
-                        ) : null}
-
-                        {/* Images */}
-                        {msg.images && msg.images.length > 0 && (
-                          <div className="mt-3 flex gap-2.5 overflow-x-auto">
-                            {msg.images.map((img, imgIdx) => (
-                              <div key={imgIdx} className="shrink-0">
-                                <div className="h-[130px] w-[185px] overflow-hidden rounded-xl border border-[#E8E2D9]">
-                                  <img src={img.src} alt={img.label} className="h-full w-full object-cover" />
-                                </div>
-                                <p className="mt-1.5 text-[11px] text-[#8B8179]">{img.label}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Quick reply buttons */}
-                        {msg.quickReplies && !isLoading && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {msg.quickReplies.map((reply, ri) => (
-                              <button
-                                key={ri}
-                                onClick={() => handleQuickReply(reply)}
-                                className="rounded-lg border border-[#E8E2D9] bg-white px-3 py-1.5 text-[12px] font-medium text-[#6B5B52] transition hover:border-[#6B5B52] hover:bg-[#F5F0EA]"
-                              >
-                                {reply}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                    <div className="max-w-[90%]">
+                      {msg.text ? (<div className="text-[#3D3530]"><FormatText text={msg.text} /></div>) : isLoading && i === messages.length - 1 ? (<p className="text-shimmer-effect text-[14px]">Sedang menyusun jawaban...</p>) : null}
+                      {msg.images && msg.images.length > 0 && (<div className="mt-4 flex gap-3 overflow-x-auto">{msg.images.map((img, imgIdx) => (<div key={imgIdx} className="shrink-0"><div className="h-[140px] w-[200px] overflow-hidden rounded-xl border border-[#E8E2D9]"><img src={img.src} alt={img.label} className="h-full w-full object-cover" /></div><p className="mt-1.5 text-[11px] text-[#8B8179]">{img.label}</p></div>))}</div>)}
                     </div>
                   )}
                 </div>
@@ -654,9 +501,54 @@ function AiChatView() {
             </div>
           </div>
 
-          {/* Input bottom */}
-          <div className="shrink-0 px-5 pb-4 pt-2 sm:px-6">
-            <div className="mx-auto max-w-[680px]">{InputBar}</div>
+          {/* Bottom area: form (attached to input) + input bar */}
+          <div className="shrink-0 px-5 pb-5 sm:px-6">
+            <div className="mx-auto max-w-[700px]">
+              {/* Form options — appears above input, attached */}
+              {(() => {
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg?.form && !isLoading) {
+                  return (
+                    <div className="mb-0 rounded-t-2xl border border-b-0 border-[#E8E2D9] bg-white px-5 py-4">
+                      <p className="text-[13px] font-medium text-[#3D3530]">{lastMsg.form.question}</p>
+                      <div className="mt-3 space-y-1.5">
+                        {lastMsg.form.options.map((opt, oi) => (
+                          <button key={oi} onClick={() => sendMessage(opt)} className="flex w-full items-center gap-3 rounded-lg border border-[#E8E2D9] px-4 py-2.5 text-left text-[13px] text-[#3D3530] transition hover:border-[#6B5B52] hover:bg-[#F5F0EA]">
+                            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[#F0EBE4] text-[11px] font-semibold text-[#6B5B52]">{oi + 1}</span>
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Input bar — big, clean, no separator line */}
+              <div className={`bg-white shadow-[0_-2px_16px_rgba(0,0,0,0.03)] ${messages[messages.length - 1]?.form && !isLoading ? "rounded-b-2xl border border-t-0 border-[#E8E2D9]" : "rounded-2xl border border-[#E8E2D9]"}`}>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Tulis pesan..."
+                  disabled={isLoading}
+                  className="w-full bg-transparent px-5 pb-3 pt-4 text-[15px] text-[#3D3530] outline-none disabled:opacity-50 placeholder:text-[#B8B2AA]"
+                />
+                <div className="flex items-center justify-between px-5 pb-3">
+                  <span className="text-[11px] text-[#B8B2AA]">VMatch Helper</span>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!input.trim() || isLoading}
+                    className="grid h-8 w-8 place-items-center rounded-lg bg-[#6B5B52] text-white transition hover:bg-[#5A4A42] disabled:opacity-30"
+                  >
+                    <Send size={14} />
+                  </button>
+                </div>
+              </div>
+              <p className="mt-2 text-center text-[11px] text-[#B8B2AA]">VMatch Helper bisa keliru. Pastikan untuk verifikasi informasi penting.</p>
+            </div>
           </div>
         </>
       )}
