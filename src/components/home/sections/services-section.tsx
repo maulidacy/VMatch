@@ -92,7 +92,7 @@ export function ServicesSection() {
         <AnimateIn direction="up" delay={0.45} duration={0.65}>
           <div className="mt-14 flex justify-center">
             <a
-              href="#kontak"
+              href="/login"
               className="inline-flex items-center justify-center bg-white px-9 py-4 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#6b5b52] transition-all duration-300 hover:-translate-y-1 hover:bg-[#d8c79a] hover:text-white active:scale-95"
             >
               Mulai Konsultasi

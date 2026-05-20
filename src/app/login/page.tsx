@@ -33,8 +33,9 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-[100dvh] bg-[#f7f4ef] text-[#31332c]">
-      <div className="grid min-h-[100dvh] lg:grid-cols-[1.08fr_0.92fr]">
+    <main className="h-[100dvh] overflow-hidden bg-[#f7f4ef] text-[#31332c]">
+      <div className="grid h-full lg:grid-cols-[1.1fr_0.9fr]">
+        {/* Left — Hero image panel */}
         <section className="relative hidden overflow-hidden lg:block">
           <Image
             src={LOGIN_IMAGE}
@@ -45,85 +46,72 @@ export default function LoginPage() {
             className="object-cover object-center"
           />
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#191A17]/85 via-[#191A17]/35 to-[#191A17]/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#191A17]/80 via-[#191A17]/30 to-transparent" />
 
           <Link
             href="/"
             aria-label="Kembali ke beranda"
-            className="absolute left-10 top-8 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-[#31332c] shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-md transition hover:-translate-x-0.5 hover:bg-white"
+            className="absolute left-8 top-7 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[#31332c] shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-md transition hover:-translate-x-0.5 hover:bg-white"
           >
-            <ArrowLeft size={22} strokeWidth={2.2} />
+            <ArrowLeft size={20} strokeWidth={2.2} />
           </Link>
 
-          <div className="absolute bottom-0 left-0 right-0 z-10 p-10 xl:p-14">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/70">
+          <div className="absolute bottom-0 left-0 right-0 z-10 p-8 xl:p-12">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60">
               VMatch Portal
             </p>
 
-            <h1 className="mt-5 max-w-[680px] font-serif text-[48px] leading-[0.95] text-white xl:text-[62px]">
+            <h1 className="mt-3 max-w-[580px] font-serif text-[38px] leading-[1] text-white xl:text-[48px]">
               Kelola proyek interior dalam satu tempat.
             </h1>
 
-            <p className="mt-6 max-w-[560px] text-[15px] leading-7 text-white/78">
+            <p className="mt-4 max-w-[480px] text-[14px] leading-6 text-white/70">
               Pantau brief, timeline, konsultasi, material, dan progres proyek
               dengan tampilan yang lebih rapi.
             </p>
-
-            <div className="mt-8 grid max-w-[560px] grid-cols-3 gap-3">
-              {["Brief", "Timeline", "Progress"].map((item) => (
-                <div
-                  key={item}
-                  className="border border-white/15 bg-white/10 px-4 py-3 text-white backdrop-blur-md"
-                >
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">
-                    Portal
-                  </p>
-                  <p className="mt-1 font-serif text-[20px]">{item}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
 
-        <section className="flex min-h-[100dvh] items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
-          <div className="w-full max-w-[430px]">
-            <div className="mb-8 flex items-center justify-between">
+        {/* Right — Login form */}
+        <section className="flex h-full items-center justify-center px-5 sm:px-8 lg:px-12">
+          <div className="w-full max-w-[400px]">
+            {/* Header */}
+            <div className="mb-6 flex items-center justify-between">
               <Link
                 href="/"
-                className="font-serif text-[30px] italic leading-none text-[#31332c] transition hover:text-[#6b5b52]"
+                className="font-serif text-[28px] italic leading-none text-[#31332c] transition hover:text-[#6b5b52]"
               >
                 VMatch
               </Link>
 
               <Link
                 href="/"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#31332c] shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition hover:-translate-x-0.5 hover:bg-[#eee8df] lg:hidden"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#31332c] shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition hover:-translate-x-0.5 hover:bg-[#eee8df] lg:hidden"
                 aria-label="Kembali ke beranda"
               >
-                <ArrowLeft size={21} />
+                <ArrowLeft size={18} />
               </Link>
             </div>
 
-            <div className="bg-white px-5 py-7 shadow-[0_18px_55px_rgba(0,0,0,0.08)] sm:px-8 sm:py-9">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#8b8179]">
-                  Masuk Akun
-                </p>
+            {/* Form card */}
+            <div className="bg-white px-6 py-7 shadow-[0_18px_55px_rgba(0,0,0,0.06)] sm:px-8 sm:py-8">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#8b8179]">
+                Masuk Akun
+              </p>
 
-                <h2 className="mt-3 font-serif text-[36px] leading-tight text-[#31332c]">
-                  Selamat datang
-                </h2>
+              <h2 className="mt-2 font-serif text-[30px] leading-tight text-[#31332c]">
+                Selamat datang
+              </h2>
 
-                <p className="mt-3 text-[14px] leading-6 text-[#797c73]">
-                  Masuk untuk melanjutkan ke portal klien atau dashboard tim.
-                </p>
-              </div>
+              <p className="mt-2 text-[13px] leading-5 text-[#797c73]">
+                Masuk untuk melanjutkan ke portal klien atau dashboard tim.
+              </p>
 
-              <form onSubmit={handleLogin} className="mt-8 space-y-5">
+              <form onSubmit={handleLogin} className="mt-6 space-y-4">
                 {error && (
                   <div
                     role="alert"
-                    className="border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700"
+                    className="border border-red-200 bg-red-50 px-4 py-2.5 text-[13px] text-red-700"
                   >
                     {error}
                   </div>
@@ -132,7 +120,7 @@ export default function LoginPage() {
                 <InputField
                   id="login-username"
                   label="Username"
-                  icon={<User size={18} strokeWidth={1.75} />}
+                  icon={<User size={17} strokeWidth={1.75} />}
                   value={username}
                   onChange={setUsername}
                   placeholder="admin atau user"
@@ -142,14 +130,14 @@ export default function LoginPage() {
                 <div>
                   <label
                     htmlFor="login-password"
-                    className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b5b52]"
+                    className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b5b52]"
                   >
                     Password
                   </label>
 
                   <div className="relative">
                     <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#797c73]">
-                      <Lock size={18} strokeWidth={1.75} />
+                      <Lock size={17} strokeWidth={1.75} />
                     </span>
 
                     <input
@@ -158,7 +146,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                       autoComplete="current-password"
-                      className="h-12 w-full border border-[#ded6ca] bg-[#fcfbf9] pl-12 pr-12 text-[15px] text-[#31332c] outline-none transition focus:border-[#31332c] focus:bg-white focus:ring-1 focus:ring-[#31332c] [&::-ms-clear]:hidden [&::-ms-reveal]:hidden"
+                      className="h-11 w-full border border-[#ded6ca] bg-[#fcfbf9] pl-11 pr-11 text-[14px] text-[#31332c] outline-none transition focus:border-[#31332c] focus:bg-white focus:ring-1 focus:ring-[#31332c] [&::-ms-clear]:hidden [&::-ms-reveal]:hidden"
                       placeholder="••••••"
                       required
                     />
@@ -166,7 +154,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setIsPasswordVisible((value) => !value)}
-                      className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-[#797c73] transition hover:text-[#31332c]"
+                      className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#797c73] transition hover:text-[#31332c]"
                       aria-label={
                         isPasswordVisible
                           ? "Sembunyikan password"
@@ -174,9 +162,9 @@ export default function LoginPage() {
                       }
                     >
                       {isPasswordVisible ? (
-                        <EyeOff size={18} />
+                        <EyeOff size={17} />
                       ) : (
-                        <Eye size={18} />
+                        <Eye size={17} />
                       )}
                     </button>
                   </div>
@@ -184,13 +172,13 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  className="h-12 w-full bg-[#31332c] text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition hover:-translate-y-0.5 hover:bg-[#191a17] active:scale-[0.99]"
+                  className="h-11 w-full bg-[#31332c] text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:-translate-y-0.5 hover:bg-[#191a17] active:scale-[0.99]"
                 >
                   Masuk
                 </button>
               </form>
 
-              <p className="mt-5 text-center text-[12px] text-[#797c73]">
+              <p className="mt-4 text-center text-[12px] text-[#797c73]">
                 Belum punya akun?{" "}
                 <Link
                   href="/register"
@@ -199,20 +187,15 @@ export default function LoginPage() {
                   Daftar
                 </Link>
               </p>
-
-              <div className="mt-7 border-t border-[#ded6ca] pt-5">
-                <p className="text-center text-[12px] leading-6 text-[#797c73]">
-                  Demo: <span className="font-medium text-[#31332c]">admin</span>{" "}
-                  / <span className="font-medium text-[#31332c]">123</span>
-                  <span className="mx-1 text-[#ded6ca]">·</span>
-                  <span className="font-medium text-[#31332c]">user</span> /{" "}
-                  <span className="font-medium text-[#31332c]">123</span>
-                </p>
-              </div>
             </div>
 
-            <p className="mt-6 text-center text-[12px] text-[#797c73]">
-              Portal ini digunakan untuk kebutuhan demo dan monitoring proyek.
+            {/* Demo credentials */}
+            <p className="mt-4 text-center text-[11px] text-[#797c73]">
+              Demo: <span className="font-medium text-[#31332c]">admin</span> /{" "}
+              <span className="font-medium text-[#31332c]">123</span>
+              <span className="mx-1.5 text-[#ded6ca]">·</span>
+              <span className="font-medium text-[#31332c]">user</span> /{" "}
+              <span className="font-medium text-[#31332c]">123</span>
             </p>
           </div>
         </section>
@@ -242,7 +225,7 @@ function InputField({
     <div>
       <label
         htmlFor={id}
-        className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b5b52]"
+        className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b5b52]"
       >
         {label}
       </label>
@@ -258,7 +241,7 @@ function InputField({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           autoComplete={autoComplete}
-          className="h-12 w-full border border-[#ded6ca] bg-[#fcfbf9] pl-12 pr-4 text-[15px] text-[#31332c] outline-none transition focus:border-[#31332c] focus:bg-white focus:ring-1 focus:ring-[#31332c]"
+          className="h-11 w-full border border-[#ded6ca] bg-[#fcfbf9] pl-11 pr-4 text-[14px] text-[#31332c] outline-none transition focus:border-[#31332c] focus:bg-white focus:ring-1 focus:ring-[#31332c]"
           placeholder={placeholder}
           required
         />

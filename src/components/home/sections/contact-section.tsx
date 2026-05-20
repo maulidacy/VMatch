@@ -32,7 +32,7 @@ export function ContactSection() {
 
           <AnimateIn delay={0.2} direction="left">
             <a
-              href="https://wa.me/6281234567890"
+              href="/login"
               className="inline-flex h-11 shrink-0 items-center justify-center bg-[#F5EFE5] px-7 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B5B52] transition-colors hover:bg-white"
             >
               Konsultasi Sekarang

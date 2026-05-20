@@ -43,7 +43,7 @@ const FAQLeftContent = memo(function FAQLeftContent() {
       </p>
 
       <a
-        href="#kontak"
+        href="/login"
         className="mt-8 inline-flex bg-[#6b5b52] px-7 py-3 text-sm font-medium text-white transition-all duration-300 hover:-translate-y-1 hover:bg-[#5a4a42] active:scale-95"
       >
         Konsultasi Sekarang

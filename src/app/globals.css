@@ -62,10 +62,11 @@ button,
 
 .field-control {
   width: 100%;
-  border: 1px solid #ded6ca;
-  background: #fcfbf9;
-  padding: 0.78rem 0.9rem;
-  color: #31332c;
+  border: 1px solid #E8E2D9;
+  border-radius: 0.5rem;
+  background: #F8F6F2;
+  padding: 0.625rem 0.85rem;
+  color: #2C2C2C;
   font-size: 14px;
   line-height: 1.45;
   outline: none;
@@ -75,7 +76,7 @@ button,
 .field-control:focus {
   border-color: #6b5b52;
   background: #fff;
-  box-shadow: 0 0 0 1px #6b5b52;
+  box-shadow: 0 0 0 2px rgba(107, 91, 82, 0.1);
 }
 
 .fade-in {
@@ -256,4 +257,43 @@ button,
 
 .sidebar-nav::-webkit-scrollbar {
   display: none;
+}
+
+/* ─── Shimmer animation for AI thinking state ─── */
+.shimmer-bar {
+  background: linear-gradient(
+    90deg,
+    #E8E2D9 0%,
+    #D4C9BD 20%,
+    #F5F0EA 40%,
+    #D4C9BD 60%,
+    #E8E2D9 80%,
+    #D4C9BD 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #7A7067 0%,
+    #6B5B52 20%,
+    #B8A99E 40%,
+    #6B5B52 60%,
+    #7A7067 80%,
+    #6B5B52 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 1.8s ease-in-out infinite;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

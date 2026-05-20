@@ -70,7 +70,7 @@ export function Navbar({ active = "beranda" }: { active?: string }) {
         </div>
 
         <Link
-          href="/#kontak"
+          href="/login"
           className="hidden bg-[#6b5b52] px-8 py-3 text-sm font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#51433b] active:scale-95 lg:block"
         >
           Konsultasi
