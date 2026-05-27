@@ -29,6 +29,11 @@ export default function LoginPage() {
       return;
     }
 
+    if (username === "vendor" && password === "123") {
+      router.push("/dashboard/vendor");
+      return;
+    }
+
     setError("Username atau password salah.");
   };
 
@@ -195,6 +200,9 @@ export default function LoginPage() {
               <span className="font-medium text-[#31332c]">123</span>
               <span className="mx-1.5 text-[#ded6ca]">·</span>
               <span className="font-medium text-[#31332c]">user</span> /{" "}
+              <span className="font-medium text-[#31332c]">123</span>
+              <span className="mx-1.5 text-[#ded6ca]">·</span>
+              <span className="font-medium text-[#31332c]">vendor</span> /{" "}
               <span className="font-medium text-[#31332c]">123</span>
             </p>
           </div>
