@@ -413,12 +413,12 @@ function ConsultationCard({
     const confirmed = item.status === "Terkonfirmasi";
 
     return (
-        <article className="rounded-xl border border-[#E8E2D9] bg-white p-5 shadow-[0_8px_28px_rgba(49,51,44,0.03)]">
+        <article className="rounded-xl border border-[#DED1C4] bg-white p-5 shadow-[0_10px_30px_rgba(49,51,44,0.05)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <StatusPill status={item.status} />
-                        <span className="rounded-full bg-[#FCFBF9] px-3 py-1 text-[11px] font-medium text-[#7B756E]">
+                        <span className="rounded-full border border-[#EFE7DD] bg-[#FCFBF9] px-3 py-1 text-[11px] font-medium text-[#7B756E]">
                             {item.type}
                         </span>
                     </div>
@@ -439,7 +439,7 @@ function ConsultationCard({
             </div>
 
             {item.note && (
-                <div className="mt-4 rounded-xl bg-[#FCFBF9] p-4">
+                <div className="mt-4 rounded-xl border border-[#EFE7DD] bg-[#FFFDF9] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
                     <p className="text-[12px] font-semibold text-[#725F54]">
                         Catatan Konsultasi
                     </p>
@@ -449,7 +449,7 @@ function ConsultationCard({
                 </div>
             )}
 
-            <div className="mt-4 rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] p-4">
+            <div className="mt-4 rounded-xl border border-[#D8CCC2] bg-white p-4 shadow-[0_8px_22px_rgba(49,51,44,0.04)]">
                 <p className="text-[13px] leading-6 text-[#7B756E]">
                     {confirmed
                         ? "Jadwal sudah dikonfirmasi. Kamu bisa masuk melalui link Google Meet pada waktu yang ditentukan."
@@ -747,7 +747,7 @@ function InfoMini({
     value: string;
 }) {
     return (
-        <div className="rounded-xl bg-[#FCFBF9] p-3">
+        <div className="rounded-xl border border-[#E4D8CD] border-l-4 border-l-[#725F54] bg-white p-3 shadow-[0_8px_20px_rgba(49,51,44,0.04)]">
             <div className="flex items-center gap-2 text-[#725F54]">
                 <Icon size={14} />
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
@@ -788,11 +788,11 @@ function SelectInput({
 
 function StatusPill({ status }: { status: ConsultationStatus }) {
     const styleMap: Record<ConsultationStatus, string> = {
-        "Menunggu Konfirmasi": "bg-amber-50 text-amber-700",
-        Terkonfirmasi: "bg-emerald-50 text-emerald-700",
-        "Dijadwalkan Ulang": "bg-blue-50 text-blue-700",
-        Selesai: "bg-[#FCFBF9] text-[#725F54]",
-        Dibatalkan: "bg-red-50 text-red-700",
+        "Menunggu Konfirmasi": "border border-amber-200 bg-amber-50 text-amber-700",
+        Terkonfirmasi: "border border-emerald-200 bg-emerald-50 text-emerald-700",
+        "Dijadwalkan Ulang": "border border-blue-200 bg-blue-50 text-blue-700",
+        Selesai: "border border-[#E4D8CD] bg-[#FCFBF9] text-[#725F54]",
+        Dibatalkan: "border border-red-200 bg-red-50 text-red-700",
     };
 
     return (
