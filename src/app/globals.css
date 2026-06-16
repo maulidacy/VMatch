@@ -298,3 +298,22 @@ button,
   0% { background-position: 200% center; }
   100% { background-position: -200% center; }
 }
+
+@keyframes softPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.soft-pulse {
+  animation: softPulse 1.8s ease-out infinite;
+}

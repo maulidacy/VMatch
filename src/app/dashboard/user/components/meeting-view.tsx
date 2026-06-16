@@ -1,0 +1,840 @@
+"use client";
+
+import {
+    Ban,
+    CalendarDays,
+    CheckCircle2,
+    ChevronDown,
+    Clock,
+    FileText,
+    Link2,
+    MessageCircle,
+    Plus,
+    RotateCcw,
+    Video,
+    X,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
+type ConsultationStatus =
+    | "Menunggu Konfirmasi"
+    | "Terkonfirmasi"
+    | "Dijadwalkan Ulang"
+    | "Selesai"
+    | "Dibatalkan";
+
+type Consultation = {
+    id: string;
+    projectName: string;
+    topic: string;
+    type: "Google Meet" | "WhatsApp Call" | "Chat WhatsApp";
+    date: string;
+    time: string;
+    note: string;
+    status: ConsultationStatus;
+    meetUrl?: string;
+    resultSummary?: string;
+};
+
+type ConsultationForm = {
+    projectName: string;
+    topic: string;
+    type: "Google Meet" | "WhatsApp Call" | "Chat WhatsApp" | "";
+    date: string;
+    time: string;
+    note: string;
+};
+
+const projectOptions = [
+    "Kitchen Set Minimalis",
+    "Wardrobe Kamar Utama",
+    "Storage & Rak Multifungsi",
+    "Belum terkait proyek tertentu",
+];
+
+const topicOptions = [
+    "Konsultasi kebutuhan proyek",
+    "Konfirmasi request proyek",
+    "Diskusi solusi proyek",
+    "Diskusi material",
+    "Revisi atau tambahan pekerjaan",
+    "Kendala proyek",
+    "Progress pengerjaan",
+    "Lainnya",
+];
+
+const typeOptions: ConsultationForm["type"][] = [
+    "Google Meet",
+    "WhatsApp Call",
+    "Chat WhatsApp",
+];
+
+const timeOptions = ["09.00", "10.00", "13.00", "14.00", "15.00", "16.00"];
+
+const initialForm: ConsultationForm = {
+    projectName: "",
+    topic: "",
+    type: "",
+    date: "",
+    time: "",
+    note: "",
+};
+
+const initialConsultations: Consultation[] = [
+    {
+        id: "c-1",
+        projectName: "Kitchen Set Minimalis",
+        topic: "Progress pengerjaan",
+        type: "Google Meet",
+        date: "2026-06-20",
+        time: "10.00",
+        note: "Ingin membahas progress produksi dan timeline instalasi.",
+        status: "Terkonfirmasi",
+        meetUrl: "https://meet.google.com/vmatch-demo",
+    },
+    {
+        id: "c-2",
+        projectName: "Wardrobe Kamar Utama",
+        topic: "Diskusi material",
+        type: "Google Meet",
+        date: "2026-06-18",
+        time: "13.00",
+        note: "Membahas pilihan material dan estimasi budget.",
+        status: "Selesai",
+        resultSummary:
+            "Customer memilih arah material HPL dengan finishing matte. Tim VMatch akan menyesuaikan estimasi akhir.",
+    },
+];
+
+export function MeetingView() {
+    const [consultations, setConsultations] =
+        useState<Consultation[]>(initialConsultations);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [form, setForm] = useState<ConsultationForm>(initialForm);
+    const [formError, setFormError] = useState("");
+    const [notice, setNotice] = useState("");
+
+    useEffect(() => {
+        if (!notice) return;
+
+        const timer = window.setTimeout(() => {
+            setNotice("");
+        }, 2800);
+
+        return () => window.clearTimeout(timer);
+    }, [notice]);
+
+    const activeConsultations = useMemo(
+        () =>
+            consultations.filter(
+                (item) =>
+                    item.status === "Menunggu Konfirmasi" ||
+                    item.status === "Terkonfirmasi" ||
+                    item.status === "Dijadwalkan Ulang",
+            ),
+        [consultations],
+    );
+
+    const historyConsultations = useMemo(
+        () =>
+            consultations.filter(
+                (item) => item.status === "Selesai" || item.status === "Dibatalkan",
+            ),
+        [consultations],
+    );
+
+    const openCreateModal = () => {
+        setEditingId(null);
+        setForm(initialForm);
+        setFormError("");
+        setIsModalOpen(true);
+    };
+
+    const openRescheduleModal = (item: Consultation) => {
+        setEditingId(item.id);
+        setForm({
+            projectName: item.projectName,
+            topic: item.topic,
+            type: item.type,
+            date: item.date,
+            time: item.time,
+            note: item.note,
+        });
+        setFormError("");
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setEditingId(null);
+        setForm(initialForm);
+        setFormError("");
+    };
+
+    const updateForm = (key: keyof ConsultationForm, value: string) => {
+        setForm((current) => ({
+            ...current,
+            [key]: value,
+        }));
+    };
+
+    const handleSubmit = () => {
+        if (
+            !form.projectName ||
+            !form.topic ||
+            !form.type ||
+            !form.date ||
+            !form.time
+        ) {
+            setFormError("Mohon lengkapi data konsultasi terlebih dahulu.");
+            return;
+        }
+
+        if (editingId) {
+            setConsultations((current) =>
+                current.map((item) =>
+                    item.id === editingId
+                        ? {
+                            ...item,
+                            projectName: form.projectName,
+                            topic: form.topic,
+                            type: form.type as Consultation["type"],
+                            date: form.date,
+                            time: form.time,
+                            note: form.note,
+                            status: "Dijadwalkan Ulang",
+                            meetUrl: undefined,
+                        }
+                        : item,
+                ),
+            );
+
+            setNotice(
+                "Pengajuan reschedule berhasil dikirim. Tim VMatch akan mengonfirmasi ulang jadwal kamu.",
+            );
+            closeModal();
+            return;
+        }
+
+        const newConsultation: Consultation = {
+            id: `c-${Date.now()}`,
+            projectName: form.projectName,
+            topic: form.topic,
+            type: form.type as Consultation["type"],
+            date: form.date,
+            time: form.time,
+            note: form.note,
+            status: "Menunggu Konfirmasi",
+        };
+
+        setConsultations((current) => [newConsultation, ...current]);
+        setNotice(
+            "Pengajuan konsultasi berhasil dikirim. Tim VMatch akan mengonfirmasi jadwal kamu.",
+        );
+        closeModal();
+    };
+
+    const handleCancelSchedule = (id: string) => {
+        setConsultations((current) =>
+            current.map((item) =>
+                item.id === id
+                    ? {
+                        ...item,
+                        status: "Dibatalkan",
+                        meetUrl: undefined,
+                        resultSummary: "Jadwal konsultasi dibatalkan oleh customer.",
+                    }
+                    : item,
+            ),
+        );
+
+        setNotice("Jadwal konsultasi berhasil dibatalkan.");
+    };
+
+    return (
+        <div className="w-full space-y-6">
+            {notice && (
+                <div className="fixed right-5 top-20 z-50 flex max-w-[360px] items-start gap-3 rounded-2xl border border-[#E4D8CD] bg-white p-4 shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
+                    <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-[#725F54]" />
+
+                    <p className="flex-1 text-[13px] leading-6 text-[#31332C]">
+                        {notice}
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={() => setNotice("")}
+                        className="grid h-6 w-6 place-items-center rounded-full text-[#7B756E] transition hover:bg-[#FCFBF9]"
+                        aria-label="Tutup notifikasi"
+                    >
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
+
+            <section className="rounded-xl border border-[#E8E2D9] bg-white p-5 shadow-[0_8px_28px_rgba(49,51,44,0.03)] sm:p-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
+                            Consultation
+                        </p>
+
+                        <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
+                            Konsultasi
+                        </h1>
+
+                        <p className="mt-2 max-w-[760px] text-[14px] leading-7 text-[#7B756E]">
+                            Jadwalkan konsultasi dengan tim VMatch untuk membahas kebutuhan,
+                            brief proyek, estimasi, revisi, atau progress pengerjaan.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={openCreateModal}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                    >
+                        <Plus size={16} />
+                        Ajukan Konsultasi
+                    </button>
+                </div>
+            </section>
+
+            <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <SummaryCard
+                    icon={CalendarDays}
+                    label="Jadwal Aktif"
+                    value={String(activeConsultations.length)}
+                    desc="Menunggu / terkonfirmasi"
+                />
+
+                <SummaryCard
+                    icon={Clock}
+                    label="Menunggu"
+                    value={String(
+                        consultations.filter(
+                            (item) => item.status === "Menunggu Konfirmasi",
+                        ).length,
+                    )}
+                    desc="Menunggu tim VMatch"
+                />
+
+                <SummaryCard
+                    icon={Video}
+                    label="Terkonfirmasi"
+                    value={String(
+                        consultations.filter((item) => item.status === "Terkonfirmasi")
+                            .length,
+                    )}
+                    desc="Link meeting tersedia"
+                />
+
+                <SummaryCard
+                    icon={FileText}
+                    label="Riwayat"
+                    value={String(historyConsultations.length)}
+                    desc="Selesai / dibatalkan"
+                />
+            </section>
+
+            <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+                <div className="space-y-4">
+                    <SectionHeader
+                        title="Jadwal Konsultasi Aktif"
+                        description="Pantau pengajuan konsultasi yang masih berjalan atau sudah dikonfirmasi."
+                    />
+
+                    {activeConsultations.length > 0 ? (
+                        <div className="grid gap-4">
+                            {activeConsultations.map((item) => (
+                                <ConsultationCard
+                                    key={item.id}
+                                    item={item}
+                                    onReschedule={() => openRescheduleModal(item)}
+                                    onCancel={() => handleCancelSchedule(item.id)}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <EmptyState onCreate={openCreateModal} />
+                    )}
+                </div>
+
+                <div className="space-y-4">
+                    <SectionHeader
+                        title="Riwayat Konsultasi"
+                        description="Daftar konsultasi yang sudah selesai atau dibatalkan."
+                    />
+
+                    {historyConsultations.length > 0 ? (
+                        <div className="grid gap-3">
+                            {historyConsultations.map((item) => (
+                                <HistoryCard key={item.id} item={item} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-xl border border-dashed border-[#E4D8CD] bg-white p-8 text-center">
+                            <p className="text-[14px] font-semibold text-[#31332C]">
+                                Belum ada riwayat konsultasi.
+                            </p>
+                            <p className="mt-1 text-[13px] leading-6 text-[#7B756E]">
+                                Riwayat akan muncul setelah konsultasi selesai atau dibatalkan.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {isModalOpen && (
+                <ConsultationModal
+                    form={form}
+                    editing={Boolean(editingId)}
+                    error={formError}
+                    onChange={updateForm}
+                    onClose={closeModal}
+                    onSubmit={handleSubmit}
+                />
+            )}
+        </div>
+    );
+}
+
+function ConsultationCard({
+    item,
+    onReschedule,
+    onCancel,
+}: {
+    item: Consultation;
+    onReschedule: () => void;
+    onCancel: () => void;
+}) {
+    const confirmed = item.status === "Terkonfirmasi";
+
+    return (
+        <article className="rounded-xl border border-[#E8E2D9] bg-white p-5 shadow-[0_8px_28px_rgba(49,51,44,0.03)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <StatusPill status={item.status} />
+                        <span className="rounded-full bg-[#FCFBF9] px-3 py-1 text-[11px] font-medium text-[#7B756E]">
+                            {item.type}
+                        </span>
+                    </div>
+
+                    <h2 className="mt-3 font-serif text-[26px] leading-tight text-[#31332C]">
+                        {item.topic}
+                    </h2>
+
+                    <p className="mt-1 text-[13px] text-[#7B756E]">
+                        {item.projectName}
+                    </p>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 lg:w-[260px]">
+                    <InfoMini icon={CalendarDays} label="Tanggal" value={formatDate(item.date)} />
+                    <InfoMini icon={Clock} label="Jam" value={`${item.time} WIB`} />
+                </div>
+            </div>
+
+            {item.note && (
+                <div className="mt-4 rounded-xl bg-[#FCFBF9] p-4">
+                    <p className="text-[12px] font-semibold text-[#725F54]">
+                        Catatan Konsultasi
+                    </p>
+                    <p className="mt-1 text-[13px] leading-6 text-[#7B756E]">
+                        {item.note}
+                    </p>
+                </div>
+            )}
+
+            <div className="mt-4 rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] p-4">
+                <p className="text-[13px] leading-6 text-[#7B756E]">
+                    {confirmed
+                        ? "Jadwal sudah dikonfirmasi. Kamu bisa masuk melalui link Google Meet pada waktu yang ditentukan."
+                        : "Jadwal menunggu konfirmasi dari tim VMatch. Link meeting akan muncul setelah jadwal dikonfirmasi."}
+                </p>
+
+                {confirmed && item.meetUrl && (
+                    <a
+                        href={item.meetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                    >
+                        <Link2 size={14} />
+                        Masuk Google Meet
+                    </a>
+                )}
+            </div>
+
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <button
+                    type="button"
+                    onClick={onReschedule}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+                >
+                    <RotateCcw size={14} />
+                    Reschedule
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-4 text-[12px] font-semibold text-[#31332C] transition hover:bg-[#FCFBF9]"
+                >
+                    <Ban size={14} />
+                    Batalkan
+                </button>
+            </div>
+        </article>
+    );
+}
+
+function ConsultationModal({
+    form,
+    editing,
+    error,
+    onChange,
+    onClose,
+    onSubmit,
+}: {
+    form: ConsultationForm;
+    editing: boolean;
+    error: string;
+    onChange: (key: keyof ConsultationForm, value: string) => void;
+    onClose: () => void;
+    onSubmit: () => void;
+}) {
+    return (
+        <div className="fixed inset-0 z-50 grid place-items-end bg-black/35 p-0 backdrop-blur-sm sm:place-items-center sm:p-4">
+            <section className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-[#E4D8CD] bg-white p-5 shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:max-w-[620px] sm:rounded-2xl sm:p-6">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#725F54]">
+                            {editing ? "Reschedule Konsultasi" : "Ajukan Konsultasi"}
+                        </p>
+
+                        <h2 className="mt-2 font-serif text-[30px] leading-tight text-[#31332C]">
+                            {editing ? "Ubah Jadwal Konsultasi" : "Form Konsultasi"}
+                        </h2>
+
+                        <p className="mt-2 text-[13px] leading-6 text-[#7B756E]">
+                            Tim VMatch akan meninjau pengajuan jadwal kamu terlebih dahulu.
+                            Link meeting akan muncul setelah jadwal dikonfirmasi.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#7B756E] transition hover:bg-[#FCFBF9] hover:text-[#31332C]"
+                        aria-label="Tutup modal"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                {error && (
+                    <div className="mt-5 rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] p-3 text-[13px] font-medium text-[#725F54]">
+                        {error}
+                    </div>
+                )}
+
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <Field label="Pilih Proyek">
+                        <SelectInput
+                            value={form.projectName}
+                            onChange={(value) => onChange("projectName", value)}
+                        >
+                            <option value="">Pilih proyek</option>
+                            {projectOptions.map((item) => (
+                                <option key={item}>{item}</option>
+                            ))}
+                        </SelectInput>
+                    </Field>
+
+                    <Field label="Topik Konsultasi">
+                        <SelectInput
+                            value={form.topic}
+                            onChange={(value) => onChange("topic", value)}
+                        >
+                            <option value="">Pilih topik</option>
+                            {topicOptions.map((item) => (
+                                <option key={item}>{item}</option>
+                            ))}
+                        </SelectInput>
+                    </Field>
+
+                    <Field label="Tipe Konsultasi">
+                        <SelectInput
+                            value={form.type}
+                            onChange={(value) => onChange("type", value)}
+                        >
+                            <option value="">Pilih tipe</option>
+                            {typeOptions.map((item) => (
+                                <option key={item}>{item}</option>
+                            ))}
+                        </SelectInput>
+                    </Field>
+
+                    <Field label="Pilih Tanggal">
+                        <input
+                            type="date"
+                            value={form.date}
+                            onChange={(event) => onChange("date", event.target.value)}
+                            className={fieldClass}
+                        />
+                    </Field>
+
+                    <Field label="Pilih Jam">
+                        <SelectInput
+                            value={form.time}
+                            onChange={(value) => onChange("time", value)}
+                        >
+                            <option value="">Pilih jam</option>
+                            {timeOptions.map((item) => (
+                                <option key={item}>{item}</option>
+                            ))}
+                        </SelectInput>
+                    </Field>
+                </div>
+
+                <div className="mt-4">
+                    <Field label="Catatan Konsultasi">
+                        <textarea
+                            rows={5}
+                            value={form.note}
+                            onChange={(event) => onChange("note", event.target.value)}
+                            className={textareaClass}
+                            placeholder="Tulis hal yang ingin kamu bahas, misalnya ukuran ruangan, budget, material, revisi, atau kendala proyek."
+                        />
+                    </Field>
+                </div>
+
+                <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="h-11 rounded-xl border border-[#E4D8CD] px-5 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+                    >
+                        Batal
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={onSubmit}
+                        className="h-11 rounded-xl bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                    >
+                        Kirim Pengajuan
+                    </button>
+                </div>
+            </section>
+        </div>
+    );
+}
+
+function HistoryCard({ item }: { item: Consultation }) {
+    return (
+        <article className="rounded-xl border border-[#E8E2D9] bg-white p-4">
+            <div className="flex flex-wrap items-center gap-2">
+                <StatusPill status={item.status} />
+                <span className="text-[12px] text-[#7B756E]">
+                    {formatDate(item.date)}
+                </span>
+            </div>
+
+            <h3 className="mt-3 text-[14px] font-semibold text-[#31332C]">
+                {item.topic}
+            </h3>
+
+            <p className="mt-1 text-[12px] text-[#7B756E]">{item.projectName}</p>
+
+            <p className="mt-3 text-[13px] leading-6 text-[#7B756E]">
+                {item.resultSummary || item.note || "Tidak ada ringkasan tambahan."}
+            </p>
+        </article>
+    );
+}
+
+function EmptyState({ onCreate }: { onCreate: () => void }) {
+    return (
+        <section className="rounded-xl border border-dashed border-[#E4D8CD] bg-white p-8 text-center">
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54]">
+                <MessageCircle size={22} />
+            </div>
+
+            <h3 className="mt-4 text-[15px] font-semibold text-[#31332C]">
+                Belum ada jadwal konsultasi aktif.
+            </h3>
+
+            <p className="mx-auto mt-2 max-w-[420px] text-[13px] leading-6 text-[#7B756E]">
+                Kamu bisa mengajukan konsultasi untuk membahas kebutuhan proyek,
+                material, revisi, atau progress pengerjaan.
+            </p>
+
+            <button
+                type="button"
+                onClick={onCreate}
+                className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+            >
+                <Plus size={15} />
+                Ajukan Konsultasi
+            </button>
+        </section>
+    );
+}
+
+function SummaryCard({
+    icon: Icon,
+    label,
+    value,
+    desc,
+}: {
+    icon: LucideIcon;
+    label: string;
+    value: string;
+    desc: string;
+}) {
+    return (
+        <div className="rounded-xl border border-[#E8E2D9] bg-white p-4 text-center shadow-[0_8px_28px_rgba(49,51,44,0.03)] sm:p-5">
+            <div className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54] sm:h-11 sm:w-11">
+                <Icon size={17} />
+            </div>
+
+            <p className="mt-3 font-serif text-[28px] leading-none text-[#31332C] sm:mt-4 sm:text-[32px]">
+                {value}
+            </p>
+
+            <p className="mt-2 text-[12px] font-semibold leading-5 text-[#31332C] sm:text-[13px]">
+                {label}
+            </p>
+
+            <p className="mt-1 text-[11px] leading-4 text-[#7B756E] sm:text-[12px] sm:leading-5">
+                {desc}
+            </p>
+        </div>
+    );
+}
+
+function SectionHeader({
+    title,
+    description,
+}: {
+    title: string;
+    description: string;
+}) {
+    return (
+        <div>
+            <h2 className="font-serif text-[28px] leading-tight text-[#31332C]">
+                {title}
+            </h2>
+            <p className="mt-1 text-[13px] leading-6 text-[#7B756E]">
+                {description}
+            </p>
+        </div>
+    );
+}
+
+function InfoMini({
+    icon: Icon,
+    label,
+    value,
+}: {
+    icon: LucideIcon;
+    label: string;
+    value: string;
+}) {
+    return (
+        <div className="rounded-xl bg-[#FCFBF9] p-3">
+            <div className="flex items-center gap-2 text-[#725F54]">
+                <Icon size={14} />
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
+                    {label}
+                </p>
+            </div>
+            <p className="mt-1 text-[12px] font-semibold text-[#31332C]">{value}</p>
+        </div>
+    );
+}
+
+function SelectInput({
+    value,
+    onChange,
+    children,
+}: {
+    value: string;
+    onChange: (value: string) => void;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="relative">
+            <select
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 pr-11 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54]"
+            >
+                {children}
+            </select>
+
+            <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#725F54]"
+            />
+        </div>
+    );
+}
+
+function StatusPill({ status }: { status: ConsultationStatus }) {
+    const styleMap: Record<ConsultationStatus, string> = {
+        "Menunggu Konfirmasi": "bg-amber-50 text-amber-700",
+        Terkonfirmasi: "bg-emerald-50 text-emerald-700",
+        "Dijadwalkan Ulang": "bg-blue-50 text-blue-700",
+        Selesai: "bg-[#FCFBF9] text-[#725F54]",
+        Dibatalkan: "bg-red-50 text-red-700",
+    };
+
+    return (
+        <span
+            className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${styleMap[status]}`}
+        >
+            {status}
+        </span>
+    );
+}
+
+const fieldClass =
+    "h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54]";
+
+const textareaClass =
+    "w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] p-4 text-[13px] leading-6 text-[#31332C] outline-none transition focus:border-[#725F54]";
+
+function Field({
+    label,
+    children,
+}: {
+    label: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <label className="grid gap-1.5">
+            <span className="text-[12px] font-semibold text-[#725F54]">{label}</span>
+            {children}
+        </label>
+    );
+}
+
+function formatDate(value: string) {
+    if (!value) return "-";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return value;
+
+    return new Intl.DateTimeFormat("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    }).format(date);
+}

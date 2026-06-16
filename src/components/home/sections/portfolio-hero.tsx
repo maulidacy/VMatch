@@ -1,4 +1,5 @@
 "use client";
+
 import Image from "next/image";
 import { Navbar } from "@/components/home/navbar";
 import { useState } from "react";
@@ -20,26 +21,28 @@ const heroImages = [
 
 export function PortfolioHero() {
   const [activeImage, setActiveImage] = useState(heroImages[0]);
+
   return (
     <section className="relative overflow-hidden bg-[#f8f7f5]">
       <Navbar active="beranda" />
 
       <div className="relative min-h-screen overflow-hidden pt-[110px] lg:pt-0">
-        <div className="absolute inset-y-0 right-0 hidden w-[49%] animate-[heroImageIn_1s_ease-out_both] lg:block">
+        {/* Desktop image kanan, tidak mepet kanan */}
+        <div className="absolute bottom-8 right-6 top-8 hidden w-[46%] animate-[heroImageIn_1s_ease-out_both] overflow-hidden rounded-[28px] lg:block xl:right-10 2xl:right-[calc((100vw-1320px)/2)]">
           <Image
             key={activeImage.src}
             src={activeImage.src}
             alt={activeImage.alt}
             fill
             priority
-            sizes="49vw"
+            sizes="46vw"
             className="animate-[fadeIn_700ms_cubic-bezier(0.22,1,0.36,1)_both] object-cover object-center"
           />
           <div className="absolute inset-0 bg-black/10" />
         </div>
 
-        <div className="relative z-10 mx-auto grid min-h-screen max-w-[1320px] px-4 sm:px-6 lg:grid-cols-[52%_48%] lg:px-0">
-          <div className="flex flex-col justify-center pb-8 pt-10 sm:pt-16 lg:min-h-screen lg:pb-32 lg:pl-4 lg:pr-12 lg:pt-28 xl:pl-0">
+        <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1320px] px-4 sm:px-6 md:px-8 lg:grid-cols-[52%_48%] lg:px-10 xl:px-0">
+          <div className="flex min-w-0 flex-col justify-center pb-8 pt-10 sm:pt-16 lg:min-h-screen lg:pb-32 lg:pr-12 lg:pt-28 xl:pr-16">
             <p className="animate-[fadeUp_700ms_ease-out_150ms_both] text-[10px] uppercase tracking-[0.32em] text-[#8b8179] md:text-[11px]">
               Eksplorasi Katalog
             </p>
@@ -53,7 +56,8 @@ export function PortfolioHero() {
               inspirasi untuk kebutuhan Anda.
             </p>
 
-            <div className="mt-28 hidden h-[190px] items-center justify-center animate-[fadeUp_900ms_ease-out_550ms_both] lg:flex xl:mt-32">
+            {/* Thumbnail desktop */}
+            <div className="mt-20 hidden h-[190px] items-center justify-start pl-5 animate-[fadeUp_900ms_ease-out_550ms_both] lg:flex xl:mt-28 xl:pl-10">
               {heroImages.map((image) => {
                 const isActive = activeImage.src === image.src;
 
@@ -62,10 +66,11 @@ export function PortfolioHero() {
                     key={image.src}
                     type="button"
                     onClick={() => setActiveImage(image)}
-                    className={`relative -mx-5 overflow-hidden border-2 border-white bg-[#ddd] transition-[opacity,transform,box-shadow] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${isActive
+                    className={`relative -mx-4 overflow-hidden border-2 border-white bg-[#ddd] transition-[opacity,transform,box-shadow] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                      isActive
                         ? "z-20 h-[170px] w-[230px] scale-100 opacity-100 shadow-xl"
                         : "z-10 h-[120px] w-[180px] scale-100 opacity-85 hover:opacity-100"
-                      }`}
+                    }`}
                     aria-label={`Tampilkan ${image.alt}`}
                   >
                     <Image
@@ -81,10 +86,11 @@ export function PortfolioHero() {
             </div>
           </div>
 
+          {/* Mobile image */}
           <div className="relative z-10 mb-10 h-[360px] overflow-hidden rounded-[28px] sm:h-[460px] lg:hidden">
             <Image
-              src="/figma/project-library.webp"
-              alt="Interior ruang keluarga modern"
+              src={activeImage.src}
+              alt={activeImage.alt}
               fill
               priority
               sizes="100vw"
