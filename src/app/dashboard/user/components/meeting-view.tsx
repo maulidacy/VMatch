@@ -274,8 +274,8 @@ export function MeetingView() {
                 </div>
             )}
 
-            <section className="rounded-xl border border-[#E8E2D9] bg-white p-5 shadow-[0_8px_28px_rgba(49,51,44,0.03)] sm:p-6">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <section className="pb-2">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
                             Consultation
@@ -286,15 +286,15 @@ export function MeetingView() {
                         </h1>
 
                         <p className="mt-2 max-w-[760px] text-[14px] leading-7 text-[#7B756E]">
-                            Jadwalkan konsultasi dengan tim VMatch untuk membahas kebutuhan,
-                            brief proyek, estimasi, revisi, atau progress pengerjaan.
+                            Jadwalkan konsultasi dengan tim VMatch untuk membahas kebutuhan, brief
+                            proyek, estimasi, revisi, atau progress pengerjaan.
                         </p>
                     </div>
 
                     <button
                         type="button"
                         onClick={openCreateModal}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42] sm:w-fit"
                     >
                         <Plus size={16} />
                         Ajukan Konsultasi

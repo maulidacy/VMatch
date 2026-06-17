@@ -8,7 +8,6 @@ import {
     Send,
     X,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { fieldClass, FormField, SectionCard, textareaClass } from "./shared";
@@ -326,7 +325,7 @@ export function NewProjectForm() {
                 </div>
             )}
 
-            <section className="rounded-2xl border border-[#E8E2D9] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.03)] sm:p-6">
+            <section className="pb-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8B8179]">
                     Request Proyek
                 </p>
@@ -336,33 +335,43 @@ export function NewProjectForm() {
                 </h1>
 
                 <p className="mt-2 max-w-[760px] text-[14px] leading-7 text-[#7A7067]">
-                    Pilih mode input sesuai kebutuhan kamu. Data ini adalah brief awal,
-                    bukan solusi final.
+                    Pilih mode input sesuai kebutuhan kamu. Data ini adalah brief awal, bukan
+                    solusi final.
                 </p>
             </section>
 
-            <section className="grid gap-3 sm:grid-cols-2">
-                <ModeButton
-                    active={mode === "ai"}
-                    icon={Bot}
-                    title="Mode Cepat dengan VMatch AI"
-                    text="Cocok jika kamu ingin menjelaskan kebutuhan secara bebas."
-                    onClick={() => {
-                        setMode("ai");
-                        closeNotice();
-                    }}
-                />
+            <section className="rounded-2xl border border-[#E8E2D9] bg-white p-1.5 shadow-[0_8px_24px_rgba(49,51,44,0.04)]">
+                <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setMode("ai");
+                            closeNotice();
+                        }}
+                        className={`flex min-w-0 items-center justify-center gap-2 rounded-xl px-3 py-3 text-[12px] font-semibold transition sm:px-4 sm:text-[13px] ${mode === "ai"
+                                ? "bg-[#6B5B52] text-white shadow-[0_10px_24px_rgba(107,91,82,0.22)]"
+                                : "bg-white text-[#6B5B52] hover:bg-[#F8F6F2]"
+                            }`}
+                    >
+                        <Bot size={16} className="shrink-0" />
+                        <span className="truncate">VMatch AI</span>
+                    </button>
 
-                <ModeButton
-                    active={mode === "manual"}
-                    icon={FileText}
-                    title="Mode Manual Detail"
-                    text="Cocok jika detail proyek, budget, dan material sudah lebih jelas."
-                    onClick={() => {
-                        setMode("manual");
-                        closeNotice();
-                    }}
-                />
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setMode("manual");
+                            closeNotice();
+                        }}
+                        className={`flex min-w-0 items-center justify-center gap-2 rounded-xl px-3 py-3 text-[12px] font-semibold transition sm:px-4 sm:text-[13px] ${mode === "manual"
+                                ? "bg-[#6B5B52] text-white shadow-[0_10px_24px_rgba(107,91,82,0.22)]"
+                                : "bg-white text-[#6B5B52] hover:bg-[#F8F6F2]"
+                            }`}
+                    >
+                        <FileText size={16} className="shrink-0" />
+                        <span className="truncate">Manual Detail</span>
+                    </button>
+                </div>
             </section>
 
             {mode === "ai" ? (
@@ -406,47 +415,6 @@ export function NewProjectForm() {
                 />
             </section>
         </div>
-    );
-}
-
-function ModeButton({
-    active,
-    icon: Icon,
-    title,
-    text,
-    onClick,
-}: {
-    active: boolean;
-    icon: LucideIcon;
-    title: string;
-    text: string;
-    onClick: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`rounded-2xl border p-5 text-left transition ${active
-                ? "border-[#6B5B52] bg-[#6B5B52] text-white"
-                : "border-[#E8E2D9] bg-white text-[#3D3530] hover:bg-[#F8F6F2]"
-                }`}
-        >
-            <div
-                className={`grid h-11 w-11 place-items-center rounded-xl ${active ? "bg-white/15" : "bg-[#F5F0EA] text-[#6B5B52]"
-                    }`}
-            >
-                <Icon size={18} />
-            </div>
-
-            <h2 className="mt-4 text-[16px] font-semibold">{title}</h2>
-
-            <p
-                className={`mt-2 text-[13px] leading-6 ${active ? "text-white/75" : "text-[#7A7067]"
-                    }`}
-            >
-                {text}
-            </p>
-        </button>
     );
 }
 

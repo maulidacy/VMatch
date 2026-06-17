@@ -231,7 +231,7 @@ const commonMaterials = [
     "MDF",
     "Duco",
     "Solid surface",
-    "Kaca / cermin",
+    "Kaca/cermin",
     "Panel dinding",
     "Lighting interior",
 ];
@@ -328,31 +328,47 @@ export function CatalogDesign({
 
     return (
         <div className="w-full space-y-6">
-            <section className="rounded-xl border border-[#E8E2D9] bg-white p-5 shadow-[0_8px_28px_rgba(49,51,44,0.03)] sm:p-6">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
-                            INSPIRASI INTERIOR
-                        </p>
+            <section className="relative -mx-5 -mt-5 overflow-hidden sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8">
+                <div className="absolute inset-0">
+                    <Image
+                        src="/figma/project-library.webp"
+                        alt="Inspirasi desain interior"
+                        fill
+                        priority
+                        sizes="100vw"
+                        className="object-cover object-center"
+                    />
 
-                        <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
-                            Inspirasi Desain
-                        </h1>
+                    <div className="absolute inset-0 bg-black/50" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/60 to-black/45" />
+                </div>
 
-                        <p className="mt-2 max-w-[760px] text-[14px] leading-7 text-[#7B756E]">
-                            Temukan referensi desain dan material untuk membantu menyusun
-                            kebutuhan proyek interior kamu.
-                        </p>
+                <div className="relative z-10 px-5 py-12 sm:px-6 sm:py-14 lg:px-8 lg:py-16">
+                    <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
+                                INSPIRASI INTERIOR
+                            </p>
+
+                            <h1 className="mt-2 font-serif text-[34px] leading-tight text-white sm:text-[42px]">
+                                Inspirasi Desain
+                            </h1>
+
+                            <p className="mt-3 max-w-[760px] text-[14px] leading-7 text-white/78">
+                                Temukan referensi desain dan material untuk membantu menyusun kebutuhan
+                                proyek interior kamu.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => onChangePage?.("ajukan")}
+                            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-[13px] font-semibold text-[#31332C] transition hover:bg-[#F3EFE9] sm:w-fit"
+                        >
+                            Ajukan Proyek
+                            <ArrowRight size={15} />
+                        </button>
                     </div>
-
-                    <button
-                        type="button"
-                        onClick={() => onChangePage?.("ajukan")}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42]"
-                    >
-                        Ajukan Proyek
-                        <ArrowRight size={15} />
-                    </button>
                 </div>
             </section>
 
@@ -605,20 +621,21 @@ function MaterialTab({
 }) {
     return (
         <div className="space-y-5">
-            <section className="rounded-xl border border-[#E8E2D9] bg-white p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#725F54]">
-                    Material sebagai preferensi awal
-                </p>
+            <section className="pb-2">
+                <div className="flex flex-col gap-3 border-l-4 border-[#725F54] pl-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#725F54]">
+                        Preferensi Material
+                    </p>
 
-                <h2 className="mt-2 font-serif text-[30px] leading-tight text-[#31332C]">
-                    Material & Finishing
-                </h2>
+                    <h2 className="font-serif text-[30px] leading-tight text-[#31332C]">
+                        Material & Finishing
+                    </h2>
 
-                <p className="mt-2 max-w-[760px] text-[13px] leading-6 text-[#7B756E]">
-                    Pilihan material di sini membantu customer memahami arah kualitas dan
-                    finishing. Ini bukan toko material, bukan marketplace, dan tidak ada
-                    proses pembelian langsung.
-                </p>
+                    <p className="max-w-[680px] text-[13px] leading-6 text-[#7B756E]">
+                        Pilih referensi material dan finishing sebagai gambaran awal kualitas
+                        proyek. Pilihan ini hanya untuk kebutuhan brief, bukan proses pembelian.
+                    </p>
+                </div>
             </section>
 
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -631,32 +648,30 @@ function MaterialTab({
                 ))}
             </section>
 
-            <section className="rounded-xl border border-[#E8E2D9] bg-white p-5">
-                <div className="flex items-start gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54]">
-                        <Tag size={18} />
-                    </div>
+            <section className="pb-2">
+                <div className="flex flex-col gap-3 border-l-4 border-[#E4D8CD] pl-4">
+                    <div className="flex items-center gap-2">
+                        <Tag size={16} className="text-[#725F54]" />
 
-                    <div>
                         <h3 className="text-[15px] font-semibold text-[#31332C]">
                             Contoh Material Umum
                         </h3>
+                    </div>
 
-                        <p className="mt-1 text-[13px] leading-6 text-[#7B756E]">
-                            Material berikut hanya contoh preferensi awal. Tim VMatch tetap
-                            akan menyesuaikan pilihan final berdasarkan kebutuhan proyek.
-                        </p>
+                    <p className="max-w-[720px] text-[13px] leading-6 text-[#7B756E]">
+                        Material berikut hanya sebagai referensi awal. Pilihan final tetap
+                        disesuaikan dengan kebutuhan, budget, dan kondisi proyek.
+                    </p>
 
-                        <div className="mt-4 flex flex-wrap gap-2">
-                            {commonMaterials.map((item) => (
-                                <span
-                                    key={item}
-                                    className="rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-3 py-1.5 text-[12px] font-medium text-[#725F54]"
-                                >
-                                    {item}
-                                </span>
-                            ))}
-                        </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                        {commonMaterials.map((item) => (
+                            <span
+                                key={item}
+                                className="rounded-full border border-[#E4D8CD] bg-white px-3 py-1.5 text-[12px] font-medium text-[#725F54]"
+                            >
+                                {item}
+                            </span>
+                        ))}
                     </div>
                 </div>
             </section>

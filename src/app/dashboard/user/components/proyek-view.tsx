@@ -216,7 +216,7 @@ export function ProyekView() {
 
   return (
     <div className="w-full space-y-6">
-      <section className="rounded-[24px] border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.04)] sm:p-7">
+      <section className="pb-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#7B756E]">
           Project Tracking
         </p>
@@ -226,7 +226,8 @@ export function ProyekView() {
         </h1>
 
         <p className="mt-3 max-w-[760px] text-[14px] leading-7 text-[#7B756E]">
-          Pantau proyek interior yang sedang dikelola oleh tim VMatch dengan alur yang ringkas dan mudah dipahami.
+          Pantau proyek interior yang sedang dikelola oleh tim VMatch dengan alur yang
+          ringkas dan mudah dipahami.
         </p>
       </section>
 
@@ -240,11 +241,10 @@ export function ProyekView() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveFilter(tab.id)}
-                className={`h-11 rounded-[16px] border px-5 text-[13px] font-semibold transition ${
-                  active
+                className={`h-11 rounded-[16px] border px-5 text-[13px] font-semibold transition ${active
                     ? "border-[#725F54] bg-[#725F54] text-white"
                     : "border-[#E8E2D9] bg-white text-[#5A4A42] hover:bg-[#FCFBF9]"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -380,10 +380,10 @@ function ProjectDetail({
       current.map((item) =>
         item.id === invoice.id
           ? {
-              ...item,
-              status: item.title === "Pelunasan" ? "Lunas" : "Terverifikasi",
-              receiptNo: `VMR-2026-${Date.now().toString().slice(-4)}`,
-            }
+            ...item,
+            status: item.title === "Pelunasan" ? "Lunas" : "Terverifikasi",
+            receiptNo: `VMR-2026-${Date.now().toString().slice(-4)}`,
+          }
           : item,
       ),
     );
@@ -458,11 +458,10 @@ function ProjectDetail({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`h-11 rounded-[16px] border px-5 text-[13px] font-semibold transition ${
-                  active
+                className={`h-11 rounded-[16px] border px-5 text-[13px] font-semibold transition ${active
                     ? "border-[#725F54] bg-[#725F54] text-white"
                     : "border-[#E8E2D9] bg-white text-[#5A4A42] hover:bg-[#FCFBF9]"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -1289,11 +1288,10 @@ function InfoCard({
 }) {
   return (
     <div
-      className={`rounded-[20px] border p-4 shadow-[0_10px_28px_rgba(49,51,44,0.035)] ${
-        tone === "strong"
+      className={`rounded-[20px] border p-4 shadow-[0_10px_28px_rgba(49,51,44,0.035)] ${tone === "strong"
           ? "border-[#DCCBBC] bg-[#FFFDF9]"
           : "border-[#E8E2D9] bg-white"
-      }`}
+        }`}
     >
       <div className="grid h-10 w-10 place-items-center rounded-[14px] border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
         <Icon size={17} />
@@ -1417,11 +1415,10 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-[16px] px-4 text-[12px] font-semibold transition ${
-        primary
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-[16px] px-4 text-[12px] font-semibold transition ${primary
           ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
           : "border border-[#E4D8CD] bg-white text-[#725F54] hover:bg-[#FCFBF9]"
-      }`}
+        }`}
     >
       <Icon size={14} />
       {label}
@@ -1459,13 +1456,12 @@ function TimelineStep({
           )}
 
           <span
-            className={`relative h-4 w-4 rounded-full ${
-              isDone
+            className={`relative h-4 w-4 rounded-full ${isDone
                 ? "bg-[#725F54]"
                 : isRunning
                   ? "bg-amber-500"
                   : "border border-[#D8CCC2] bg-white"
-            }`}
+              }`}
           />
         </div>
 
@@ -1476,11 +1472,10 @@ function TimelineStep({
 
       <div className="pb-4">
         <div
-          className={`rounded-[18px] border p-4 ${
-            isRunning
+          className={`rounded-[18px] border p-4 ${isRunning
               ? "border-[#DCCBBC] bg-[#FFFDF9] shadow-[0_10px_24px_rgba(114,95,84,0.07)]"
               : "border-[#EFE7DD] bg-[#FCFBF9]"
-          }`}
+            }`}
         >
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[14px] font-semibold text-[#31332C]">

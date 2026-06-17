@@ -17,8 +17,8 @@ export function DashboardView({
 
   return (
     <div className="space-y-7">
-      <section className="rounded-2xl border border-[#E8E2D9] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.03)] sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <section className="pb-2">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8B8179]">
               VMatch Customer
@@ -29,14 +29,15 @@ export function DashboardView({
             </h1>
 
             <p className="mt-2 max-w-[680px] text-[14px] leading-7 text-[#7A7067]">
-              Pantau request, konsultasi, pembayaran, progress proyek, dan langkah berikutnya dalam satu dashboard.
+              Pantau request, konsultasi, pembayaran, progress proyek, dan langkah
+              berikutnya dalam satu dashboard.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => onChangePage("ajukan")}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6B5B52] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42]"
+            className="inline-flex h-11 w-fit items-center justify-center gap-2 rounded-xl bg-[#6B5B52] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42]"
           >
             <Plus size={16} />
             Ajukan Proyek Baru
