@@ -180,29 +180,35 @@ const materialPackages: MaterialPackage[] = [
         id: "basic",
         name: "Basic",
         description:
-            "Pilihan fungsional dan hemat budget untuk kebutuhan interior sederhana.",
+            "Pilihan ekonomis untuk kebutuhan interior sederhana, area kering, dan penggunaan ringan.",
         suitableFor: [
-            "Kamar kos",
-            "Storage sederhana",
+            "MDF board",
+            "Finishing melamine ekonomis",
+            "Storage ringan",
             "Furniture built-in kecil",
-            "Budget terbatas",
         ],
-        characters: ["Fungsional", "Hemat", "Mudah dirawat"],
+        characters: [
+            "Budget hemat",
+            "Area kering",
+            "Fungsional",
+            "Mudah dirawat",
+        ],
     },
     {
         id: "standard",
         name: "Standard",
-        description: "Pilihan seimbang antara tampilan, kualitas, dan budget.",
+        description:
+            "Pilihan seimbang untuk furniture rumah dengan material lebih kokoh dan tampilan tetap rapi.",
         suitableFor: [
-            "Kitchen set",
-            "Wardrobe",
-            "Interior rumah minimalis",
-            "Proyek rumah tinggal",
+            "Multiplek 15mm",
+            "Finishing HPL standar",
+            "Kitchen set ringan",
+            "Wardrobe dan storage rumah",
         ],
         characters: [
-            "Rapi",
+            "Lebih kokoh",
+            "Tampilan rapi",
             "Tahan pakai",
-            "Tampilan modern",
             "Budget masih terkontrol",
         ],
     },
@@ -210,32 +216,21 @@ const materialPackages: MaterialPackage[] = [
         id: "premium",
         name: "Premium",
         description:
-            "Pilihan untuk hasil interior yang lebih elegan, tahan lama, dan finishing lebih detail.",
+            "Pilihan lebih kuat untuk interior utama dengan finishing lebih detail dan daya tahan lebih baik.",
         suitableFor: [
-            "Kitchen set premium",
-            "Ruang tamu",
-            "Master bedroom",
-            "Interior rumah utama",
+            "Multiplek 18mm",
+            "Finishing HPL/melamine premium",
+            "Hardware soft close",
+            "Kitchen set premium dan master bedroom",
         ],
         characters: [
+            "Material lebih kuat",
             "Finishing lebih rapi",
-            "Material lebih tahan lama",
+            "Lebih tahan lama",
             "Tampilan lebih elegan",
         ],
     },
 ];
-
-const commonMaterials = [
-    "HPL",
-    "Plywood",
-    "MDF",
-    "Duco",
-    "Solid surface",
-    "Kaca/cermin",
-    "Panel dinding",
-    "Lighting interior",
-];
-
 export function CatalogDesign({
     onChangePage,
 }: {
@@ -614,6 +609,39 @@ function DesignCard({
     );
 }
 
+function MaterialGroup({
+    title,
+    items,
+}: {
+    title: string;
+    items: string[];
+}) {
+    return (
+        <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_10px_26px_rgba(49,51,44,0.05)]">
+            <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                    {title}
+                </p>
+
+                <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-[#7B756E] ring-1 ring-[#E8E2D9]">
+                    {items.length} item
+                </span>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+                {items.map((item) => (
+                    <span
+                        key={item}
+                        className="rounded-full border border-[#E4D8CD] bg-white px-3 py-1.5 text-[12px] font-medium text-[#725F54]"
+                    >
+                        {item}
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 function MaterialTab({
     onUseMaterial,
 }: {
@@ -649,31 +677,42 @@ function MaterialTab({
             </section>
 
             <section className="pb-2">
-                <div className="flex flex-col gap-3 border-l-4 border-[#E4D8CD] pl-4">
-                    <div className="flex items-center gap-2">
-                        <Tag size={16} className="text-[#725F54]" />
 
-                        <h3 className="text-[15px] font-semibold text-[#31332C]">
-                            Contoh Material Umum
-                        </h3>
+                <div className="flex items-start gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#725F54]">
+                        <Tag size={16} />
                     </div>
 
-                    <p className="max-w-[720px] text-[13px] leading-6 text-[#7B756E]">
-                        Material berikut hanya sebagai referensi awal. Pilihan final tetap
-                        disesuaikan dengan kebutuhan, budget, dan kondisi proyek.
-                    </p>
+                    <div className="min-w-0 flex-1">
+                        <h3 className="text-[15px] font-semibold text-[#31332C]">
+                            Catatan Pemilihan Material
+                        </h3>
 
-                    <div className="flex flex-wrap gap-2 pt-1">
-                        {commonMaterials.map((item) => (
-                            <span
-                                key={item}
-                                className="rounded-full border border-[#E4D8CD] bg-white px-3 py-1.5 text-[12px] font-medium text-[#725F54]"
-                            >
-                                {item}
-                            </span>
-                        ))}
+                        <p className="mt-2 max-w-[760px] text-[13px] leading-6 text-[#7B756E]">
+                            Material final akan disesuaikan dengan kebutuhan ruang, budget,
+                            dan kondisi proyek. Paket Basic, Standard, dan Premium hanya
+                            menjadi referensi awal sebelum dikonsultasikan.
+                        </p>
+
+                        <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <MaterialGroup
+                                title="Material inti"
+                                items={["MDF", "Multiplek 15mm", "Multiplek 18mm"]}
+                            />
+
+                            <MaterialGroup
+                                title="Finishing"
+                                items={["Melamine", "HPL", "Duco"]}
+                            />
+
+                            <MaterialGroup
+                                title="Tambahan"
+                                items={["Solid surface", "Kaca/cermin", "Lighting interior"]}
+                            />
+                        </div>
                     </div>
                 </div>
+
             </section>
         </div>
     );
