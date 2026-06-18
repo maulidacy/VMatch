@@ -263,7 +263,7 @@ export function BriefWorkPlanView({
                 </div>
               </VendorSectionCard>
 
-              <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
                 <div className="space-y-5">
                   <VendorSectionCard
                     title="File Brief"
@@ -437,10 +437,6 @@ function AdminBriefFileCard({ file }: { file: AdminBriefFile }) {
               {file.type}
             </span>
           </div>
-
-          <p className="mt-2 text-[12px] leading-6 text-[#7B756E]">
-            {file.description}
-          </p>
 
           <p className="mt-3 text-[11px] leading-5 text-[#A19B95]">
             Dikirim oleh {file.uploadedBy} • {file.uploadedAt} • {file.size}
