@@ -4,6 +4,7 @@ import {
     Bot,
     Camera,
     CheckCircle2,
+    ChevronDown,
     FileText,
     Send,
     X,
@@ -349,8 +350,8 @@ export function NewProjectForm() {
                             closeNotice();
                         }}
                         className={`flex min-w-0 items-center justify-center gap-2 rounded-xl px-3 py-3 text-[12px] font-semibold transition sm:px-4 sm:text-[13px] ${mode === "ai"
-                                ? "bg-[#6B5B52] text-white shadow-[0_10px_24px_rgba(107,91,82,0.22)]"
-                                : "bg-white text-[#6B5B52] hover:bg-[#F8F6F2]"
+                            ? "bg-[#6B5B52] text-white shadow-[0_10px_24px_rgba(107,91,82,0.22)]"
+                            : "bg-white text-[#6B5B52] hover:bg-[#F8F6F2]"
                             }`}
                     >
                         <Bot size={16} className="shrink-0" />
@@ -364,8 +365,8 @@ export function NewProjectForm() {
                             closeNotice();
                         }}
                         className={`flex min-w-0 items-center justify-center gap-2 rounded-xl px-3 py-3 text-[12px] font-semibold transition sm:px-4 sm:text-[13px] ${mode === "manual"
-                                ? "bg-[#6B5B52] text-white shadow-[0_10px_24px_rgba(107,91,82,0.22)]"
-                                : "bg-white text-[#6B5B52] hover:bg-[#F8F6F2]"
+                            ? "bg-[#6B5B52] text-white shadow-[0_10px_24px_rgba(107,91,82,0.22)]"
+                            : "bg-white text-[#6B5B52] hover:bg-[#F8F6F2]"
                             }`}
                     >
                         <FileText size={16} className="shrink-0" />
@@ -623,29 +624,43 @@ function ManualBriefForm({
             >
                 <div className="grid gap-4 sm:grid-cols-2">
                     <FormField label="Target mulai pengerjaan">
-                        <select
-                            value={form.startTarget}
-                            onChange={(event) => onChange("startTarget", event.target.value)}
-                            className={fieldClass}
-                        >
-                            <option>Secepatnya</option>
-                            <option>Minggu depan</option>
-                            <option>Bulan depan</option>
-                            <option>Pilih tanggal sendiri</option>
-                        </select>
+                        <div className="relative">
+                            <select
+                                value={form.startTarget}
+                                onChange={(event) => onChange("startTarget", event.target.value)}
+                                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] pl-4 pr-12 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                            >
+                                <option>Secepatnya</option>
+                                <option>Minggu depan</option>
+                                <option>Bulan depan</option>
+                                <option>Pilih tanggal sendiri</option>
+                            </select>
+
+                            <ChevronDown
+                                size={16}
+                                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#725F54]"
+                            />
+                        </div>
                     </FormField>
 
                     <FormField label="Target selesai">
-                        <select
-                            value={form.finishTarget}
-                            onChange={(event) => onChange("finishTarget", event.target.value)}
-                            className={fieldClass}
-                        >
-                            <option>Fleksibel</option>
-                            <option>Dalam 2 minggu</option>
-                            <option>Dalam 1 bulan</option>
-                            <option>Dalam 2-3 bulan</option>
-                        </select>
+                        <div className="relative">
+                            <select
+                                value={form.finishTarget}
+                                onChange={(event) => onChange("finishTarget", event.target.value)}
+                                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] pl-4 pr-12 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                            >
+                                <option>Fleksibel</option>
+                                <option>Dalam 2 minggu</option>
+                                <option>Dalam 1 bulan</option>
+                                <option>Dalam 2-3 bulan</option>
+                            </select>
+
+                            <ChevronDown
+                                size={16}
+                                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#725F54]"
+                            />
+                        </div>
                     </FormField>
                 </div>
             </SectionCard>

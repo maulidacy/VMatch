@@ -5,10 +5,8 @@ import {
     ChevronDown,
     CircleDollarSign,
     Gift,
-    ShieldCheck,
     Wallet,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 import { bonusInfos, paymentMilestones, vendorProjects } from "../mock-data";
 import {
@@ -56,8 +54,7 @@ export function PaymentBonusView() {
                     </h1>
 
                     <p className="mt-2 max-w-[720px] text-[14px] leading-7 text-[#7B756E]">
-                        Pantau status payout milestone, pembayaran proyek, dan potensi bonus
-                        vendor secara ringkas.
+                        Pantau tahap pembayaran proyek dan potensi bonus vendor secara ringkas.
                     </p>
                 </div>
 
@@ -87,38 +84,33 @@ export function PaymentBonusView() {
                 </div>
             </section>
 
-            <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <SimpleFinanceCard
-                    icon={Wallet}
-                    label="Tahap Pembayaran"
-                    value={`${paidPayment}/${totalPayment}`}
-                    description="Milestone selesai"
-                />
+            {selectedProject && (
+                <section className="flex flex-col gap-3 rounded-2xl border border-[#E8E2D9] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                            Proyek Dipilih
+                        </p>
 
-                <SimpleFinanceCard
-                    icon={Gift}
-                    label="Bonus"
-                    value={selectedBonus?.status ?? "-"}
-                    description={selectedBonus?.amount ?? "Belum tersedia"}
-                    highlight
-                />
+                        <h2 className="mt-1 truncate text-[15px] font-semibold text-[#31332C]">
+                            {selectedProject.name}
+                        </h2>
+                    </div>
 
-                <SimpleFinanceCard
-                    icon={ShieldCheck}
-                    label="QC"
-                    value="Wajib"
-                    description="Syarat tahap pembayaran final"
-                />
+                    <div className="flex flex-wrap items-center gap-2">
+                        <VendorStatusBadge status={selectedProject.status} />
 
-                <SimpleFinanceCard
-                    icon={CircleDollarSign}
-                    label="Proyek"
-                    value={selectedProject ? selectedProject.status : "-"}
-                    description={selectedProject ? selectedProject.name : "Belum dipilih"}
-                />
-            </section>
+                        <span className="rounded-full border border-[#E8E2D9] bg-[#FCFBF9] px-3 py-1.5 text-[11px] font-semibold text-[#7B756E]">
+                            {paidPayment}/{totalPayment} tahap pembayaran selesai
+                        </span>
 
-            <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+                        <span className="rounded-full border border-[#E8E2D9] bg-[#FCFBF9] px-3 py-1.5 text-[11px] font-semibold text-[#7B756E]">
+                            Deadline {selectedProject.deadline}
+                        </span>
+                    </div>
+                </section>
+            )}
+
+            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <VendorSectionCard
                     title="Tahap Pembayaran"
                     description="Pantau tahap pembayaran vendor berdasarkan progress proyek."
@@ -211,24 +203,6 @@ export function PaymentBonusView() {
                         )}
                     </VendorSectionCard>
 
-                    {selectedProject && (
-                        <VendorSectionCard title="Ringkasan Proyek">
-                            <div className="space-y-4">
-                                <SummaryItem label="Proyek" value={selectedProject.name} />
-
-                                <SummaryItem
-                                    label="Status Proyek"
-                                    value={selectedProject.status}
-                                    accent
-                                />
-
-                                <SummaryItem
-                                    label="Deadline"
-                                    value={selectedProject.deadline}
-                                />
-                            </div>
-                        </VendorSectionCard>
-                    )}
                 </div>
             </section>
 
@@ -259,70 +233,6 @@ export function PaymentBonusView() {
                     />
                 )}
             </VendorSectionCard>
-        </div>
-    );
-}
-
-function SimpleFinanceCard({
-    icon: Icon,
-    label,
-    value,
-    description,
-    highlight,
-}: {
-    icon: LucideIcon;
-    label: string;
-    value: string;
-    description: string;
-    highlight?: boolean;
-}) {
-    return (
-        <div
-            className={`rounded-2xl border bg-white p-4 shadow-[0_6px_18px_rgba(49,51,44,0.025)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(49,51,44,0.06)] ${highlight ? "border-[#D9C8BA]" : "border-[#E8E2D9]"
-                }`}
-        >
-            <div className="flex items-start justify-between gap-3">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
-                    <Icon size={16} />
-                </div>
-
-                <p className="max-w-[120px] text-right font-serif text-[19px] leading-[1.1] text-[#31332C] sm:text-[21px]">
-                    {value}
-                </p>
-            </div>
-
-            <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                {label}
-            </p>
-
-            <p className="mt-1 line-clamp-1 text-[11px] leading-5 text-[#7B756E]">
-                {description}
-            </p>
-        </div>
-    );
-}
-
-function SummaryItem({
-    label,
-    value,
-    accent,
-}: {
-    label: string;
-    value: string;
-    accent?: boolean;
-}) {
-    return (
-        <div className="border-b border-[#E8E2D9] pb-4 last:border-b-0 last:pb-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7B756E]">
-                {label}
-            </p>
-
-            <p
-                className={`mt-1 text-[13px] leading-6 ${accent ? "font-semibold text-[#725F54]" : "font-medium text-[#31332C]"
-                    }`}
-            >
-                {value}
-            </p>
         </div>
     );
 }
