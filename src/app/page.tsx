@@ -10,10 +10,12 @@ import { ProjectsSection } from "@/components/home/sections/projects-section";
 import { StatsStrip } from "@/components/home/sections/stats-strip";
 import { TestimonialsSection } from "@/components/home/sections/testimonials-section";
 import { FAQSection } from "@/components/home/sections/faq-section";
+import { PromoPopup } from "@/components/home/sections/promo-popup";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#FCFBF9]">
+      <PromoPopup />
       <HeroSection />
       <StatsStrip />
       <InspirationCategoriesSection />
