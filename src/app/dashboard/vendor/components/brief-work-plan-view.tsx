@@ -5,7 +5,10 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardList,
+  Download,
+  Eye,
   FileText,
+  Paperclip,
   Timer,
 } from "lucide-react";
 
@@ -20,6 +23,57 @@ import {
   VendorSectionCard,
   VendorStatusBadge,
 } from "./shared";
+
+type AdminBriefFile = {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  description: string;
+  url: string;
+};
+
+const adminBriefFiles: Record<string, AdminBriefFile[]> = {
+  "brief-1": [
+    {
+      id: "file-1",
+      name: "Project Brief - Wardrobe Kamar Utama.pdf",
+      type: "PDF",
+      size: "2.4 MB",
+      uploadedBy: "Admin VMatch",
+      uploadedAt: "28 Juni 2026",
+      description:
+        "Dokumen utama berisi scope pekerjaan, ukuran, material, timeline, dan standar hasil akhir.",
+      url: "#",
+    },
+    {
+      id: "file-2",
+      name: "Referensi Desain Wardrobe.png",
+      type: "Gambar",
+      size: "840 KB",
+      uploadedBy: "Admin VMatch",
+      uploadedAt: "28 Juni 2026",
+      description:
+        "Gambar referensi desain yang sudah disetujui customer dan VMatch.",
+      url: "#",
+    },
+  ],
+  "brief-2": [
+    {
+      id: "file-3",
+      name: "Project Brief - Kitchen Set Minimalis.pdf",
+      type: "PDF",
+      size: "3.1 MB",
+      uploadedBy: "Admin VMatch",
+      uploadedAt: "29 Juni 2026",
+      description:
+        "Dokumen pekerjaan kitchen set, pembagian area, material, dan catatan instalasi.",
+      url: "#",
+    },
+  ],
+};
 
 export function BriefWorkPlanView({
   onChangePage,
@@ -48,6 +102,10 @@ export function BriefWorkPlanView({
   const selectedStatus = selectedBrief
     ? briefStatuses[selectedBrief.id] ?? selectedBrief.status
     : "Belum Dibaca";
+
+  const selectedBriefFiles = selectedBrief
+    ? adminBriefFiles[selectedBrief.id] ?? []
+    : [];
 
   const handleSelectBrief = (id: string) => {
     setSelectedBriefId(id);
@@ -105,16 +163,15 @@ export function BriefWorkPlanView({
         </h1>
 
         <p className="mt-2 max-w-[760px] text-[14px] leading-7 text-[#7B756E]">
-          Baca scope, material, timeline, dan standar QC sebelum pekerjaan
-          dimulai.
+          Buka file brief dari admin, cek material, timeline, dan standar QC
+          sebelum pekerjaan dimulai.
         </p>
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[330px_1fr] xl:grid-cols-[360px_1fr]">
         <div
-          className={`space-y-4 ${
-            isMobileDetailOpen ? "hidden lg:block" : "block"
-          }`}
+          className={`space-y-4 ${isMobileDetailOpen ? "hidden lg:block" : "block"
+            }`}
         >
           <div className="grid gap-3 lg:max-h-[calc(100dvh-190px)] lg:overflow-y-auto lg:pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {workBriefs.map((brief) => {
@@ -134,9 +191,8 @@ export function BriefWorkPlanView({
         </div>
 
         <div
-          className={`min-w-0 ${
-            isMobileDetailOpen ? "block" : "hidden lg:block"
-          }`}
+          className={`min-w-0 ${isMobileDetailOpen ? "block" : "hidden lg:block"
+            }`}
         >
           {selectedBrief ? (
             <div className="space-y-5">
@@ -163,7 +219,7 @@ export function BriefWorkPlanView({
                         <VendorStatusBadge status={selectedStatus} />
 
                         <span className="rounded-full bg-[#FCFBF9] px-3 py-1 text-[11px] font-semibold text-[#7B756E]">
-                          Rencana Kerja VMatch
+                          Dokumen dari Admin
                         </span>
                       </div>
 
@@ -207,21 +263,40 @@ export function BriefWorkPlanView({
                 </div>
               </VendorSectionCard>
 
-              <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+              <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="space-y-5">
-                  <VendorSectionCard title="Scope Pekerjaan">
-                    <div className="space-y-3">
-                      {selectedBrief.scope.map((item, index) => (
-                        <ScopeItem
-                          key={`${item}-${index}`}
-                          number={index + 1}
-                          text={item}
-                        />
-                      ))}
-                    </div>
+                  <VendorSectionCard
+                    title="File Brief"
+                    description="Dokumen resmi sebagai acuan vendor dalam mengerjakan proyek."
+                  >
+                    {selectedBriefFiles.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedBriefFiles.map((file) => (
+                          <AdminBriefFileCard key={file.id} file={file} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center">
+                        <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-white text-[#725F54]">
+                          <Paperclip size={18} />
+                        </div>
+
+                        <p className="mt-3 text-[13px] font-semibold text-[#31332C]">
+                          File brief belum tersedia
+                        </p>
+
+                        <p className="mx-auto mt-1 max-w-[320px] text-[12px] leading-5 text-[#7B756E]">
+                          Admin VMatch belum mengirim dokumen brief untuk
+                          proyek ini.
+                        </p>
+                      </div>
+                    )}
                   </VendorSectionCard>
 
-                  <VendorSectionCard title="Material Disetujui">
+                  <VendorSectionCard
+                    title="Material Disetujui"
+                    description="Material yang menjadi acuan berdasarkan file brief admin."
+                  >
                     <div className="flex flex-wrap gap-2">
                       {selectedBrief.materialApproved.map((item) => (
                         <span
@@ -233,22 +308,13 @@ export function BriefWorkPlanView({
                       ))}
                     </div>
                   </VendorSectionCard>
-
-                  <VendorSectionCard title="Standar QC">
-                    <div className="grid gap-2.5 sm:grid-cols-2">
-                      {selectedBrief.qcChecklist.map((item) => (
-                        <VendorChecklistItem
-                          key={item}
-                          label={item}
-                          completed={selectedStatus === "Sudah Dibaca"}
-                        />
-                      ))}
-                    </div>
-                  </VendorSectionCard>
                 </div>
 
                 <div className="space-y-5">
-                  <VendorSectionCard title="Timeline Target">
+                  <VendorSectionCard
+                    title="Timeline"
+                    description="Target pengerjaan yang perlu diikuti vendor."
+                  >
                     <div className="space-y-3">
                       {selectedBrief.timeline.map((item, index) => (
                         <TimelineItem
@@ -256,6 +322,21 @@ export function BriefWorkPlanView({
                           index={index + 1}
                           label={item.label}
                           date={item.date}
+                        />
+                      ))}
+                    </div>
+                  </VendorSectionCard>
+
+                  <VendorSectionCard
+                    title="Standar QC"
+                    description="Poin pengecekan sebelum hasil disetujui VMatch."
+                  >
+                    <div className="grid gap-2.5">
+                      {selectedBrief.qcChecklist.map((item) => (
+                        <VendorChecklistItem
+                          key={item}
+                          label={item}
+                          completed={selectedStatus === "Sudah Dibaca"}
                         />
                       ))}
                     </div>
@@ -276,7 +357,7 @@ export function BriefWorkPlanView({
       {confirmOpen && selectedBrief && (
         <VendorModal
           title="Konfirmasi Brief"
-          description="Pastikan kamu sudah memahami scope, timeline, material, dan standar QC sebelum mulai bekerja."
+          description="Pastikan kamu sudah membaca file brief, material, timeline, dan standar QC sebelum mulai bekerja."
           onClose={() => setConfirmOpen(false)}
         >
           <div className="rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 text-[13px] leading-6 text-[#6F6860]">
@@ -314,11 +395,10 @@ function BriefListCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-2xl border p-4 text-left transition hover:bg-[#FCFBF9] ${
-        active
+      className={`w-full rounded-2xl border p-4 text-left transition hover:bg-[#FCFBF9] ${active
           ? "border-[#D9C8BA] bg-[#FFFDF9] ring-1 ring-[#D9C8BA]"
           : "border-[#E8E2D9] bg-white"
-      }`}
+        }`}
     >
       <div className="flex items-start justify-between gap-2">
         <VendorStatusBadge status={status} />
@@ -333,26 +413,59 @@ function BriefListCard({
       </h3>
 
       <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
-        {brief.scope[0]}
+        File brief dan rencana kerja dari admin VMatch.
       </p>
     </button>
   );
 }
 
-function ScopeItem({
-  number,
-  text,
-}: {
-  number: number;
-  text: string;
-}) {
+function AdminBriefFileCard({ file }: { file: AdminBriefFile }) {
   return (
-    <div className="flex gap-3 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-3">
-      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#725F54] text-[10px] font-bold text-white">
-        {number}
-      </span>
+    <div className="rounded-2xl border border-[#E8E2D9] bg-white p-4">
+      <div className="flex gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
+          <FileText size={17} />
+        </div>
 
-      <p className="text-[13px] leading-6 text-[#31332C]">{text}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-[14px] font-semibold leading-6 text-[#31332C]">
+              {file.name}
+            </h3>
+
+            <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-semibold text-[#725F54]">
+              {file.type}
+            </span>
+          </div>
+
+          <p className="mt-2 text-[12px] leading-6 text-[#7B756E]">
+            {file.description}
+          </p>
+
+          <p className="mt-3 text-[11px] leading-5 text-[#A19B95]">
+            Dikirim oleh {file.uploadedBy} • {file.uploadedAt} • {file.size}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[#E8E2D9] pt-4">
+        <a
+          href={file.url}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+        >
+          <Eye size={14} />
+          Lihat
+        </a>
+
+        <a
+          href={file.url}
+          download
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-3 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+        >
+          <Download size={14} />
+          Unduh
+        </a>
+      </div>
     </div>
   );
 }
