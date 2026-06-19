@@ -9,7 +9,6 @@ import {
   Eye,
   FileText,
   Paperclip,
-  Timer,
 } from "lucide-react";
 
 import { workBriefs } from "../mock-data";
@@ -264,140 +263,140 @@ export function BriefWorkPlanView({
               </VendorSectionCard>
 
               <section className="space-y-5">
-  <VendorSectionCard
-    title="File Brief"
-    description="Dokumen resmi sebagai acuan vendor dalam mengerjakan proyek."
-  >
-    {selectedBriefFiles.length > 0 ? (
-      <div className="grid gap-3">
-        {selectedBriefFiles.map((file) => (
-          <AdminBriefFileCard key={file.id} file={file} />
-        ))}
-      </div>
-    ) : (
-      <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center">
-        <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-white text-[#725F54]">
-          <Paperclip size={18} />
-        </div>
+                <VendorSectionCard
+                  title="File Brief"
+                  description="Dokumen resmi sebagai acuan vendor dalam mengerjakan proyek."
+                >
+                  {selectedBriefFiles.length > 0 ? (
+                    <div className="grid gap-3">
+                      {selectedBriefFiles.map((file) => (
+                        <AdminBriefFileCard key={file.id} file={file} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center">
+                      <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-white text-[#725F54]">
+                        <Paperclip size={18} />
+                      </div>
 
-        <p className="mt-3 text-[13px] font-semibold text-[#31332C]">
-          File brief belum tersedia
-        </p>
+                      <p className="mt-3 text-[13px] font-semibold text-[#31332C]">
+                        File brief belum tersedia
+                      </p>
 
-        <p className="mx-auto mt-1 max-w-[320px] text-[12px] leading-5 text-[#7B756E]">
-          Admin VMatch belum mengirim dokumen brief untuk proyek ini.
-        </p>
-      </div>
-    )}
-  </VendorSectionCard>
+                      <p className="mx-auto mt-1 max-w-[320px] text-[12px] leading-5 text-[#7B756E]">
+                        Admin VMatch belum mengirim dokumen brief untuk proyek ini.
+                      </p>
+                    </div>
+                  )}
+                </VendorSectionCard>
 
-  <VendorSectionCard
-  title="Acuan Pekerjaan"
-  description="Ringkasan material, timeline, dan standar pengecekan proyek sebagai panduan vendor sebelum mulai bekerja."
->
-  <div className="space-y-4">
-    <section className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 sm:p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-            Material Disetujui
-          </p>
+                <VendorSectionCard
+                  title="Acuan Pekerjaan"
+                  description="Ringkasan material, timeline, dan standar pengecekan proyek sebagai panduan vendor sebelum mulai bekerja."
+                >
+                  <div className="space-y-4">
+                    <section className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 sm:p-5">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                            Material Disetujui
+                          </p>
 
-          <p className="mt-1 max-w-[620px] text-[12px] leading-5 text-[#7B756E]">
-            Material berikut menjadi acuan utama vendor dalam pengerjaan proyek.
-          </p>
-        </div>
+                          <p className="mt-1 max-w-[620px] text-[12px] leading-5 text-[#7B756E]">
+                            Material berikut menjadi acuan utama vendor dalam pengerjaan proyek.
+                          </p>
+                        </div>
 
-        <span className="w-fit rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
-          {selectedBrief.materialApproved.length} material
-        </span>
-      </div>
+                        <span className="w-fit rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
+                          {selectedBrief.materialApproved.length} material
+                        </span>
+                      </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {selectedBrief.materialApproved.map((item) => (
-          <span
-            key={item}
-            className="rounded-full border border-[#E4D8CD] bg-white px-3 py-1.5 text-[12px] font-medium leading-5 text-[#725F54]"
-          >
-            {item}
-          </span>
-        ))}
-      </div>
-    </section>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {selectedBrief.materialApproved.map((item) => (
+                          <span
+                            key={item}
+                            className="rounded-full border border-[#E4D8CD] bg-white px-3 py-1.5 text-[12px] font-medium leading-5 text-[#725F54]"
+                          >
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </section>
 
-    <div className="grid gap-4 lg:grid-cols-2">
-      <section className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-              Timeline Target
-            </p>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <section className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 sm:p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                              Timeline Target
+                            </p>
 
-            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-              Tahapan pengerjaan yang perlu diikuti vendor.
-            </p>
-          </div>
+                            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                              Tahapan pengerjaan yang perlu diikuti vendor.
+                            </p>
+                          </div>
 
-          <span className="shrink-0 rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
-            {selectedBrief.timeline.length} tahap
-          </span>
-        </div>
+                          <span className="shrink-0 rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
+                            {selectedBrief.timeline.length} tahap
+                          </span>
+                        </div>
 
-        <div className="mt-4 space-y-2.5">
-          {selectedBrief.timeline.map((item, index) => (
-            <div
-              key={`${item.label}-${item.date}`}
-              className="flex gap-3 rounded-xl border border-[#E8E2D9] bg-white p-3"
-            >
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#FCFBF9] text-[11px] font-semibold text-[#725F54]">
-                {index + 1}
-              </div>
+                        <div className="mt-4 space-y-2.5">
+                          {selectedBrief.timeline.map((item, index) => (
+                            <div
+                              key={`${item.label}-${item.date}`}
+                              className="flex gap-3 rounded-xl border border-[#E8E2D9] bg-white p-3"
+                            >
+                              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#FCFBF9] text-[11px] font-semibold text-[#725F54]">
+                                {index + 1}
+                              </div>
 
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold leading-5 text-[#31332C]">
-                  {item.label}
-                </p>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[13px] font-semibold leading-5 text-[#31332C]">
+                                  {item.label}
+                                </p>
 
-                <p className="mt-0.5 text-[11px] leading-5 text-[#7B756E]">
-                  {item.date}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+                                <p className="mt-0.5 text-[11px] leading-5 text-[#7B756E]">
+                                  {item.date}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
 
-      <section className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-              Standar QC
-            </p>
+                      <section className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 sm:p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                              Standar QC
+                            </p>
 
-            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-              Poin pengecekan sebelum hasil disetujui VMatch.
-            </p>
-          </div>
+                            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                              Poin pengecekan sebelum hasil disetujui VMatch.
+                            </p>
+                          </div>
 
-          <span className="shrink-0 rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
-            QC
-          </span>
-        </div>
+                          <span className="shrink-0 rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
+                            QC
+                          </span>
+                        </div>
 
-        <div className="mt-4 grid gap-2.5">
-          {selectedBrief.qcChecklist.map((item) => (
-            <VendorChecklistItem
-              key={item}
-              label={item}
-              completed={selectedStatus === "Sudah Dibaca"}
-            />
-          ))}
-        </div>
-      </section>
-    </div>
-  </div>
-</VendorSectionCard>
-</section>
+                        <div className="mt-4 grid gap-2.5">
+                          {selectedBrief.qcChecklist.map((item) => (
+                            <VendorChecklistItem
+                              key={item}
+                              label={item}
+                              completed={selectedStatus === "Sudah Dibaca"}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    </div>
+                  </div>
+                </VendorSectionCard>
+              </section>
             </div>
           ) : (
             <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-8 text-center">
@@ -451,8 +450,8 @@ function BriefListCard({
       type="button"
       onClick={onClick}
       className={`w-full rounded-2xl border p-4 text-left transition hover:bg-[#FCFBF9] ${active
-          ? "border-[#D9C8BA] bg-[#FFFDF9] ring-1 ring-[#D9C8BA]"
-          : "border-[#E8E2D9] bg-white"
+        ? "border-[#D9C8BA] bg-[#FFFDF9] ring-1 ring-[#D9C8BA]"
+        : "border-[#E8E2D9] bg-white"
         }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -516,36 +515,6 @@ function AdminBriefFileCard({ file }: { file: AdminBriefFile }) {
           <Download size={14} />
           Unduh
         </a>
-      </div>
-    </div>
-  );
-}
-
-function TimelineItem({
-  index,
-  label,
-  date,
-}: {
-  index: number;
-  label: string;
-  date: string;
-}) {
-  return (
-    <div className="flex gap-3 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-3">
-      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-[#725F54]">
-        <Timer size={15} />
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-[10px] font-medium text-[#7B756E]">
-          Tahap {index}
-        </p>
-
-        <p className="mt-0.5 text-[13px] font-semibold text-[#31332C]">
-          {label}
-        </p>
-
-        <p className="mt-0.5 text-[11px] text-[#7B756E]">{date}</p>
       </div>
     </div>
   );

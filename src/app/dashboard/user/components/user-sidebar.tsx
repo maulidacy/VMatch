@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { LogOut, UserRound, X } from "lucide-react";
+
 import type { MenuItem, PageId } from "../types";
 
 export function UserSidebar({
@@ -19,54 +20,75 @@ export function UserSidebar({
 }) {
   return (
     <>
-      <div
-        className={`fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
-          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        onClick={onClose}
-      />
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="Tutup sidebar"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-black/35 backdrop-blur-sm lg:hidden"
+        />
+      )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-[100dvh] w-[250px] flex-col border-r border-white/10 bg-[#6B5B52] text-white transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[250px] flex-col bg-[#6B5B52] text-white shadow-[18px_0_50px_rgba(49,51,44,0.16)] transition-transform duration-300 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-16 items-center justify-between px-6">
-          <Link href="/" className="font-serif text-[22px] italic text-white">
-            VMatch
-          </Link>
+        <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
+          <div>
+            <Link
+              href="/"
+              className="font-serif text-[26px] italic leading-none text-white"
+            >
+              VMatch
+            </Link>
+
+            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
+              Customer Panel
+            </p>
+          </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white lg:hidden"
-            aria-label="Tutup sidebar"
+            className="grid h-9 w-9 place-items-center rounded-lg text-white/75 transition hover:bg-white/10 hover:text-white lg:hidden"
+            aria-label="Tutup menu"
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const active = activePage === item.id;
+        <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const active = activePage === item.id;
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onChangePage(item.id)}
-                className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-medium transition-all duration-200 ${
-                  active
-                    ? "bg-[#F8F6F2] text-[#6B5B52]"
-                    : "text-white/75 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <Icon size={16} strokeWidth={active ? 2 : 1.7} />
-                {item.label}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    onChangePage(item.id);
+                    onClose();
+                  }}
+                  className={`flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-semibold transition ${
+                    active
+                      ? "bg-[#FCFBF9] text-[#3D3530] shadow-sm"
+                      : "text-white/72 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <Icon
+                    size={17}
+                    strokeWidth={1.9}
+                    className={active ? "text-[#725F54]" : "text-white/72"}
+                  />
+
+                  <span className="min-w-0 truncate">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
         <div className="border-t border-white/10 p-3">
@@ -79,6 +101,7 @@ export function UserSidebar({
               <p className="truncate text-[13px] font-medium text-white">
                 Customer
               </p>
+
               <p className="truncate text-[11px] text-white/60">
                 customer@email.com
               </p>

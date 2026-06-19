@@ -5,7 +5,6 @@ import {
   CalendarDays,
   FolderOpen,
   ImageIcon,
-  LayoutDashboard,
   Plus,
   Settings,
 } from "lucide-react";
@@ -14,7 +13,7 @@ import { useMemo, useState } from "react";
 import type { MenuItem, PageId } from "./types";
 import { AiChatView } from "./components/ai-chat-view";
 import { CatalogDesign } from "./components/catalog-design";
-import { DashboardView } from "./components/dashboard-view";
+// import { DashboardView } from "./components/dashboard-view";
 import { MeetingView } from "./components/meeting-view";
 import { NewProjectForm } from "./components/new-project-form";
 import { ProyekView } from "./components/proyek-view";
@@ -25,17 +24,18 @@ import { NotificationBell } from "./components/notification-panel";
 import { FloatingWhatsApp } from "./components/floating-whatsapp";
 
 const menuItems: MenuItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  // { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "inspirasi", label: "Inspirasi Desain", icon: ImageIcon },
   { id: "ajukan", label: "Ajukan Proyek", icon: Plus },
   { id: "proyek", label: "Proyek Saya", icon: FolderOpen },
   { id: "konsultasi", label: "Konsultasi", icon: CalendarDays },
-  { id: "inspirasi", label: "Inspirasi Desain", icon: ImageIcon },
   { id: "ai", label: "VMatch AI", icon: Bot },
   { id: "pengaturan", label: "Pengaturan", icon: Settings },
 ];
 
 export default function UserDashboardPage() {
-  const [activePage, setActivePage] = useState<PageId>("dashboard");
+  // const [activePage, setActivePage] = useState<PageId>("dashboard");
+  const [activePage, setActivePage] = useState<PageId>("inspirasi");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const activeMenu = useMemo(
@@ -70,7 +70,9 @@ export default function UserDashboardPage() {
               onNavigate={(page) => {
                 if (page === "proyek") changePage("proyek");
                 if (page === "konsultasi") changePage("konsultasi");
-                if (page === "dashboard") changePage("dashboard");
+                // if (page === "dashboard") changePage("dashboard");
+                // Dashboard sedang disembunyikan, arahkan ke Proyek Saya.
+                if (page === "dashboard") changePage("proyek");
               }}
             />
           }
@@ -79,8 +81,8 @@ export default function UserDashboardPage() {
         {activePage === "ai" ? (
           <AiChatView />
         ) : (
-          <div className="w-full px-5 py-6 sm:px-6 lg:px-8">
-            {activePage === "dashboard" && <DashboardView onChangePage={changePage} />}
+          <div className="w-full px-5 py-6 sm:px-6">
+            {/* {activePage === "dashboard" && <DashboardView onChangePage={changePage} />} */}
             {activePage === "ajukan" && <NewProjectForm />}
             {activePage === "proyek" && <ProyekView />}
             {activePage === "konsultasi" && <MeetingView />}

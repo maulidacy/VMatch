@@ -2,7 +2,7 @@ import {
   ClipboardList,
   FileText,
   FolderKanban,
-  LayoutDashboard,
+  // LayoutDashboard,
   Settings,
   Wallet,
 } from "lucide-react";
@@ -17,11 +17,11 @@ import type {
 } from "./types";
 
 export const vendorMenuItems: VendorMenuItem[] = [
-  {
+  /*{
     id: "dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
-  },
+  },*/
   {
     id: "projects",
     label: "Proyek Saya",

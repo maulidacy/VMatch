@@ -3,20 +3,20 @@
 import Link from "next/link";
 import { LogOut, UserRound, X } from "lucide-react";
 
-import type { VendorMenuItem, VendorPageId } from "../types";
+import type { AdminMenuGroup, AdminPageId } from "../types";
 
-export function VendorSidebar({
-  menuItems,
+export function AdminSidebar({
+  menuGroups,
   activePage,
   isOpen,
   onClose,
   onChangePage,
 }: {
-  menuItems: VendorMenuItem[];
-  activePage: VendorPageId;
+  menuGroups: AdminMenuGroup[];
+  activePage: AdminPageId;
   isOpen: boolean;
   onClose: () => void;
-  onChangePage: (page: VendorPageId) => void;
+  onChangePage: (page: AdminPageId) => void;
 }) {
   return (
     <>
@@ -36,15 +36,12 @@ export function VendorSidebar({
       >
         <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
           <div>
-            <Link
-              href="/"
-              className="font-serif text-[26px] italic leading-none text-white"
-            >
+            <Link href="/" className="font-serif text-[26px] italic leading-none text-white">
               VMatch
             </Link>
 
             <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
-              Vendor Panel
+              Admin Panel
             </p>
           </div>
 
@@ -59,35 +56,42 @@ export function VendorSidebar({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const active = activePage === item.id;
+          <div className="space-y-5">
+            {menuGroups.map((group) => (
+              <div key={group.title}>
+                <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  {group.title}
+                </p>
 
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    onChangePage(item.id);
-                    onClose();
-                  }}
-                  className={`flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-semibold transition ${
-                    active
-                      ? "bg-[#FCFBF9] text-[#3D3530] shadow-sm"
-                      : "text-white/72 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <Icon
-                    size={17}
-                    strokeWidth={1.9}
-                    className={active ? "text-[#725F54]" : "text-white/72"}
-                  />
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const active = activePage === item.id;
+                    const Icon = item.icon;
 
-                  <span className="min-w-0 truncate">{item.label}</span>
-                </button>
-              );
-            })}
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => onChangePage(item.id)}
+                        className={`flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-semibold transition ${
+                          active
+                            ? "bg-[#FCFBF9] text-[#3D3530] shadow-sm"
+                            : "text-white/72 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        <Icon
+                          size={17}
+                          strokeWidth={1.9}
+                          className={active ? "text-[#725F54]" : "text-white/72"}
+                        />
+
+                        <span className="min-w-0 truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </nav>
 
@@ -99,11 +103,11 @@ export function VendorSidebar({
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-white">
-                Vendor Partner
+                Admin VMatch
               </p>
 
               <p className="truncate text-[11px] text-white/60">
-                vendor@email.com
+                admin@vmatch.com
               </p>
             </div>
           </div>

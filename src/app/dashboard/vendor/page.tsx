@@ -4,7 +4,7 @@ import { useState } from "react";
 import { vendorMenuItems } from "./mock-data";
 import type { VendorPageId } from "./types";
 import { BriefWorkPlanView } from "./components/brief-work-plan-view";
-import { DashboardView } from "./components/dashboard-view";
+// import { DashboardView } from "./components/dashboard-view";
 import { PaymentBonusView } from "./components/payment-bonus-view";
 import { ProgressLogView } from "./components/progress-log-view";
 import { ProjectView } from "./components/project-view";
@@ -14,7 +14,8 @@ import { VendorSidebar } from "./components/vendor-sidebar";
 import { VendorNotificationBell } from "./components/vendor-notification-bell";
 
 export default function VendorDashboardPage() {
-  const [activePage, setActivePage] = useState<VendorPageId>("dashboard");
+  // const [activePage, setActivePage] = useState<VendorPageId>("dashboard");
+  const [activePage, setActivePage] = useState<VendorPageId>("projects");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleChangePage = (page: VendorPageId) => {
@@ -39,10 +40,11 @@ export default function VendorDashboardPage() {
           rightAction={<VendorNotificationBell onNavigate={handleChangePage} />}
         />
 
-        <main className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
-          {activePage === "dashboard" && (
-            <DashboardView onChangePage={handleChangePage} />
-          )}
+        <main className="w-full px-5 py-6 sm:px-6">
+          {/* Dashboard disembunyikan sementara */}
+          {/* {activePage === "dashboard" && (
+  <DashboardView onChangePage={handleChangePage} />
+)} */}
 
           {activePage === "projects" && (
             <ProjectView onChangePage={handleChangePage} />

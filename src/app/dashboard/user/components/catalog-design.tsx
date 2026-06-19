@@ -8,7 +8,6 @@ import {
     ChevronRight,
     Home,
     ImageIcon,
-    Info,
     Layers,
     Search,
     Tag,
@@ -398,27 +397,6 @@ export function CatalogDesign({
             ) : (
                 <MaterialTab onUseMaterial={openUseMaterialPopup} />
             )}
-
-            <section className="rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] p-5">
-                <div className="flex items-start gap-3">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#725F54]">
-                        <Info size={18} />
-                    </div>
-
-                    <div>
-                        <p className="text-[14px] font-semibold text-[#31332C]">
-                            Catatan VMatch
-                        </p>
-
-                        <p className="mt-1 text-[13px] leading-6 text-[#7B756E]">
-                            Inspirasi ini bukan marketplace dan bukan tempat memilih vendor.
-                            Referensi yang kamu pilih akan digunakan sebagai preferensi awal,
-                            sedangkan solusi final tetap disusun dan divalidasi oleh tim
-                            VMatch.
-                        </p>
-                    </div>
-                </div>
-            </section>
 
             {pendingReference && (
                 <UseReferencePopup
