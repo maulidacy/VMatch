@@ -15,6 +15,17 @@ import { AdminHeader } from "./components/admin-header";
 import { AdminSidebar } from "./components/admin-sidebar";
 import { PromoCampaignView } from "./components/promo-campaign-view";
 import { RequestProjectView } from "./components/request-project-view";
+import { ActiveProjectsView } from "./components/active-projects-view";
+import { BriefDocumentsView } from "./components/brief-documents-view";
+import { ProgressQcView } from "./components/progress-qc-view";
+import { InvoicePaymentsView } from "./components/invoice-payments-view";
+import { RabBuilderView } from "./components/rab-builder-view";
+import { ConsultationView } from "./components/consultation-view";
+import { VendorPartnerView } from "./components/vendor-partner-view";
+import { CustomerView } from "./components/customer-view";
+import { AnalyticsView } from "./components/analytics-view";
+import { NotificationView } from "./components/notification-view";
+import { SettingsView } from "./components/settings-view";
 import {
   AdminIconBadge,
   AdminSectionCard,
@@ -54,7 +65,7 @@ export default function AdminDashboardPage() {
           onOpenSidebar={() => setSidebarOpen(true)}
         />
 
-          <main className="w-full px-5 py-6 sm:px-6">
+        <main className="w-full px-5 py-6 sm:px-6">
           {activePage === "dashboard" && (
             <DashboardOverview onChangePage={handleChangePage} />
           )}
@@ -65,9 +76,52 @@ export default function AdminDashboardPage() {
             <RequestProjectView onChangePage={handleChangePage} />
           )}
 
+          {activePage === "active-projects" && (
+            <ActiveProjectsView onChangePage={handleChangePage} />
+          )}
+          {activePage === "documents" && (
+            <BriefDocumentsView onChangePage={handleChangePage} />
+          )}
+          {activePage === "progress-qc" && (
+            <ProgressQcView onChangePage={handleChangePage} />
+          )}
+          {activePage === "payments" && (
+            <InvoicePaymentsView onChangePage={handleChangePage} />
+          )}
+          {activePage === "rab-builder" && (
+            <RabBuilderView onChangePage={handleChangePage} />
+          )}
+          {activePage === "consultations" && (
+            <ConsultationView onChangePage={handleChangePage} />
+          )}
+          {activePage === "vendors" && (
+            <VendorPartnerView onChangePage={handleChangePage} />
+          )}
+          {activePage === "customers" && (
+            <CustomerView onChangePage={handleChangePage} />
+          )}
+          {activePage === "analytics" && (
+            <AnalyticsView onChangePage={handleChangePage} />
+          )}
+          {activePage === "notifications" && (
+            <NotificationView onChangePage={handleChangePage} />
+          )}
+          {activePage === "settings" && <SettingsView />}
+
           {activePage !== "dashboard" &&
             activePage !== "promo" &&
-            activePage !== "requests" && (
+            activePage !== "requests" &&
+            activePage !== "consultations" &&
+            activePage !== "customers" &&
+            activePage !== "vendors" &&
+            activePage !== "active-projects" &&
+            activePage !== "documents" &&
+            activePage !== "progress-qc" &&
+            activePage !== "payments" &&
+            activePage !== "rab-builder" &&
+            activePage !== "analytics" && 
+            activePage !== "notifications" &&
+            activePage !== "settings" && (
               <AdminPlaceholder title={activeTitle} activePage={activePage} />
             )}
         </main>

@@ -11,7 +11,6 @@ import {
   FolderKanban,
   Hammer,
   LayoutDashboard,
-  Package,
   Settings,
   Users,
   WalletCards,
@@ -97,12 +96,6 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         label: "RAB Builder",
         description: "Estimasi biaya proyek",
         icon: BriefcaseBusiness,
-      },
-      {
-        id: "materials",
-        label: "Material & Supplier",
-        description: "Referensi material interior",
-        icon: Package,
       },
       {
         id: "payments",
