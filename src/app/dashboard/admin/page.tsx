@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
             <ActiveProjectsView onChangePage={handleChangePage} />
           )}
           {activePage === "documents" && (
-            <BriefDocumentsView onChangePage={handleChangePage} />
+            <BriefDocumentsView />
           )}
           {activePage === "progress-qc" && (
             <ProgressQcView onChangePage={handleChangePage} />
