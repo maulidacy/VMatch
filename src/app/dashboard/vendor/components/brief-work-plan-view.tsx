@@ -263,86 +263,141 @@ export function BriefWorkPlanView({
                 </div>
               </VendorSectionCard>
 
-              <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-                <div className="space-y-5">
-                  <VendorSectionCard
-                    title="File Brief"
-                    description="Dokumen resmi sebagai acuan vendor dalam mengerjakan proyek."
-                  >
-                    {selectedBriefFiles.length > 0 ? (
-                      <div className="space-y-3">
-                        {selectedBriefFiles.map((file) => (
-                          <AdminBriefFileCard key={file.id} file={file} />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center">
-                        <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-white text-[#725F54]">
-                          <Paperclip size={18} />
-                        </div>
+              <section className="space-y-5">
+  <VendorSectionCard
+    title="File Brief"
+    description="Dokumen resmi sebagai acuan vendor dalam mengerjakan proyek."
+  >
+    {selectedBriefFiles.length > 0 ? (
+      <div className="grid gap-3">
+        {selectedBriefFiles.map((file) => (
+          <AdminBriefFileCard key={file.id} file={file} />
+        ))}
+      </div>
+    ) : (
+      <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center">
+        <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-white text-[#725F54]">
+          <Paperclip size={18} />
+        </div>
 
-                        <p className="mt-3 text-[13px] font-semibold text-[#31332C]">
-                          File brief belum tersedia
-                        </p>
+        <p className="mt-3 text-[13px] font-semibold text-[#31332C]">
+          File brief belum tersedia
+        </p>
 
-                        <p className="mx-auto mt-1 max-w-[320px] text-[12px] leading-5 text-[#7B756E]">
-                          Admin VMatch belum mengirim dokumen brief untuk
-                          proyek ini.
-                        </p>
-                      </div>
-                    )}
-                  </VendorSectionCard>
+        <p className="mx-auto mt-1 max-w-[320px] text-[12px] leading-5 text-[#7B756E]">
+          Admin VMatch belum mengirim dokumen brief untuk proyek ini.
+        </p>
+      </div>
+    )}
+  </VendorSectionCard>
 
-                  <VendorSectionCard
-                    title="Material Disetujui"
-                    description="Material yang menjadi acuan berdasarkan file brief admin."
-                  >
-                    <div className="flex flex-wrap gap-2">
-                      {selectedBrief.materialApproved.map((item) => (
-                        <span
-                          key={item}
-                          className="rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-3 py-1.5 text-[12px] font-medium text-[#725F54]"
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  </VendorSectionCard>
-                </div>
+  <VendorSectionCard
+  title="Acuan Pekerjaan"
+  description="Ringkasan material, timeline, dan standar pengecekan proyek sebagai panduan vendor sebelum mulai bekerja."
+>
+  <div className="space-y-4">
+    <section className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+            Material Disetujui
+          </p>
 
-                <div className="space-y-5">
-                  <VendorSectionCard
-                    title="Timeline"
-                    description="Target pengerjaan yang perlu diikuti vendor."
-                  >
-                    <div className="space-y-3">
-                      {selectedBrief.timeline.map((item, index) => (
-                        <TimelineItem
-                          key={`${item.label}-${item.date}`}
-                          index={index + 1}
-                          label={item.label}
-                          date={item.date}
-                        />
-                      ))}
-                    </div>
-                  </VendorSectionCard>
+          <p className="mt-1 max-w-[620px] text-[12px] leading-5 text-[#7B756E]">
+            Material berikut menjadi acuan utama vendor dalam pengerjaan proyek.
+          </p>
+        </div>
 
-                  <VendorSectionCard
-                    title="Standar QC"
-                    description="Poin pengecekan sebelum hasil disetujui VMatch."
-                  >
-                    <div className="grid gap-2.5">
-                      {selectedBrief.qcChecklist.map((item) => (
-                        <VendorChecklistItem
-                          key={item}
-                          label={item}
-                          completed={selectedStatus === "Sudah Dibaca"}
-                        />
-                      ))}
-                    </div>
-                  </VendorSectionCard>
-                </div>
-              </section>
+        <span className="w-fit rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
+          {selectedBrief.materialApproved.length} material
+        </span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {selectedBrief.materialApproved.map((item) => (
+          <span
+            key={item}
+            className="rounded-full border border-[#E4D8CD] bg-white px-3 py-1.5 text-[12px] font-medium leading-5 text-[#725F54]"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    </section>
+
+    <div className="grid gap-4 lg:grid-cols-2">
+      <section className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+              Timeline Target
+            </p>
+
+            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+              Tahapan pengerjaan yang perlu diikuti vendor.
+            </p>
+          </div>
+
+          <span className="shrink-0 rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
+            {selectedBrief.timeline.length} tahap
+          </span>
+        </div>
+
+        <div className="mt-4 space-y-2.5">
+          {selectedBrief.timeline.map((item, index) => (
+            <div
+              key={`${item.label}-${item.date}`}
+              className="flex gap-3 rounded-xl border border-[#E8E2D9] bg-white p-3"
+            >
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#FCFBF9] text-[11px] font-semibold text-[#725F54]">
+                {index + 1}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold leading-5 text-[#31332C]">
+                  {item.label}
+                </p>
+
+                <p className="mt-0.5 text-[11px] leading-5 text-[#7B756E]">
+                  {item.date}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+              Standar QC
+            </p>
+
+            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+              Poin pengecekan sebelum hasil disetujui VMatch.
+            </p>
+          </div>
+
+          <span className="shrink-0 rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
+            QC
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-2.5">
+          {selectedBrief.qcChecklist.map((item) => (
+            <VendorChecklistItem
+              key={item}
+              label={item}
+              completed={selectedStatus === "Sudah Dibaca"}
+            />
+          ))}
+        </div>
+      </section>
+    </div>
+  </div>
+</VendorSectionCard>
+</section>
             </div>
           ) : (
             <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-8 text-center">

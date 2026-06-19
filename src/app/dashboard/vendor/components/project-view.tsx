@@ -92,9 +92,8 @@ export function ProjectView({
 
       <section className="grid gap-5 lg:grid-cols-[330px_1fr] xl:grid-cols-[360px_1fr]">
         <div
-          className={`space-y-4 ${
-            isMobileDetailOpen ? "hidden lg:block" : "block"
-          }`}
+          className={`space-y-4 ${isMobileDetailOpen ? "hidden lg:block" : "block"
+            }`}
         >
           <div className="grid grid-cols-4 gap-1 rounded-2xl border border-[#E8E2D9] bg-white p-1.5">
             {projectFilters.map((filter) => {
@@ -105,11 +104,10 @@ export function ProjectView({
                   key={filter.id}
                   type="button"
                   onClick={() => setActiveFilter(filter.id)}
-                  className={`h-9 rounded-xl px-2 text-[11px] font-semibold transition ${
-                    active
+                  className={`h-9 rounded-xl px-2 text-[11px] font-semibold transition ${active
                       ? "bg-[#725F54] text-white"
                       : "text-[#725F54] hover:bg-[#FCFBF9]"
-                  }`}
+                    }`}
                 >
                   {filter.label}
                 </button>
@@ -138,9 +136,8 @@ export function ProjectView({
         </div>
 
         <div
-          className={`min-w-0 ${
-            isMobileDetailOpen ? "block" : "hidden lg:block"
-          }`}
+          className={`min-w-0 ${isMobileDetailOpen ? "block" : "hidden lg:block"
+            }`}
         >
           {selectedProject ? (
             <div className="space-y-5">
@@ -232,79 +229,85 @@ export function ProjectView({
                 />
               </div>
 
-              <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-                <div className="space-y-5">
-                  <VendorSectionCard title="Brief Customer">
-                    <p className="whitespace-pre-line text-[13px] leading-7 text-[#6F6860]">
-                      {selectedProject.customerBrief}
-                    </p>
-                  </VendorSectionCard>
-
-                  {selectedProject.vmNotes && (
-                    <VendorSectionCard title="Catatan VMatch">
-                      <p className="text-[13px] leading-7 text-[#6F6860]">
-                        {selectedProject.vmNotes}
+              <section className="space-y-5">
+                <VendorSectionCard title="Informasi Pekerjaan">
+                  <div className="space-y-5">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                        Brief Customer
                       </p>
-                    </VendorSectionCard>
-                  )}
 
-                  <VendorSectionCard title="Tim Lapangan">
-                    {selectedProject.fieldTeam.length > 0 ? (
-                      <div className="divide-y divide-[#E8E2D9]">
-                        {selectedProject.fieldTeam.map((member) => (
-                          <div
-                            key={member.id}
-                            className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-[13px] font-semibold text-[#31332C]">
-                                {member.name}
-                              </p>
+                      <p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-[#6F6860]">
+                        {selectedProject.customerBrief}
+                      </p>
+                    </div>
 
-                              <p className="mt-0.5 truncate text-[11px] text-[#7B756E]">
-                                {member.role} • {member.phone}
-                              </p>
-                            </div>
+                    {selectedProject.vmNotes && (
+                      <div className="border-t border-[#E8E2D9] pt-5">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                          Catatan VMatch
+                        </p>
 
-                            <a
-                              href={`tel:${member.phone}`}
-                              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[#E4D8CD] bg-white px-2.5 text-[11px] font-medium text-[#725F54] transition hover:bg-[#FCFBF9]"
-                            >
-                              <Phone size={12} />
-                              Hubungi
-                            </a>
-                          </div>
-                        ))}
+                        <p className="mt-2 text-[13px] leading-7 text-[#6F6860]">
+                          {selectedProject.vmNotes}
+                        </p>
                       </div>
-                    ) : (
-                      <p className="py-2 text-center text-[12px] text-[#7B756E]">
-                        Belum ada tim terdaftar.
-                      </p>
                     )}
-                  </VendorSectionCard>
-                </div>
 
-                <div className="space-y-5">
-                  <VendorSectionCard title="Ringkasan Kerja">
-                    <div className="space-y-4">
-                      <SummaryItem
+                    <div className="grid gap-3 border-t border-[#E8E2D9] pt-5 sm:grid-cols-3">
+                      <WorkSummary
                         label="Material"
                         value={selectedProject.material}
                       />
 
-                      <SummaryItem
+                      <WorkSummary
                         label="Tugas Terdekat"
                         value={selectedProject.nextTask}
                         accent
                       />
 
-                      <SummaryItem
+                      <WorkSummary
                         label="Status Bonus"
                         value={selectedProject.bonusStatus}
                       />
                     </div>
-                  </VendorSectionCard>
-                </div>
+                  </div>
+                </VendorSectionCard>
+
+                <VendorSectionCard title="Tim Lapangan">
+                  {selectedProject.fieldTeam.length > 0 ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {selectedProject.fieldTeam.map((member) => (
+                        <div
+                          key={member.id}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E2D9] bg-white p-4"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-semibold text-[#31332C]">
+                              {member.name}
+                            </p>
+
+                            <p className="mt-1 truncate text-[11px] text-[#7B756E]">
+                              {member.role} • {member.phone}
+                            </p>
+                          </div>
+
+                          <a
+                            href={`tel:${member.phone}`}
+                            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-3 text-[11px] font-semibold text-[#725F54] transition hover:bg-white"
+                          >
+                            <Phone size={12} />
+                            Hubungi
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="py-3 text-center text-[12px] text-[#7B756E]">
+                      Belum ada tim terdaftar.
+                    </p>
+                  )}
+                </VendorSectionCard>
               </section>
             </div>
           ) : (
@@ -316,6 +319,31 @@ export function ProjectView({
           )}
         </div>
       </section>
+    </div>
+  );
+}
+
+function WorkSummary({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7B756E]">
+        {label}
+      </p>
+
+      <p
+        className={`mt-2 text-[13px] leading-6 ${accent ? "font-semibold text-[#725F54]" : "font-medium text-[#31332C]"
+          }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -333,11 +361,10 @@ function ProjectListCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-2xl border p-4 text-left transition hover:bg-[#FCFBF9] ${
-        active
+      className={`w-full rounded-2xl border p-4 text-left transition hover:bg-[#FCFBF9] ${active
           ? "border-[#D9C8BA] bg-[#FFFDF9] ring-1 ring-[#D9C8BA]"
           : "border-[#E8E2D9] bg-white"
-      }`}
+        }`}
     >
       <div className="flex items-start justify-between gap-2">
         <VendorStatusBadge status={project.status} />
@@ -375,9 +402,8 @@ function SimpleInfoCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border bg-white p-4 ${
-        highlight ? "border-[#D9C8BA]" : "border-[#E8E2D9]"
-      }`}
+      className={`rounded-2xl border bg-white p-4 ${highlight ? "border-[#D9C8BA]" : "border-[#E8E2D9]"
+        }`}
     >
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
         {label}
@@ -389,32 +415,6 @@ function SimpleInfoCard({
 
       <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
         {description}
-      </p>
-    </div>
-  );
-}
-
-function SummaryItem({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className="border-b border-[#E8E2D9] pb-4 last:border-b-0 last:pb-0">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7B756E]">
-        {label}
-      </p>
-
-      <p
-        className={`mt-1 text-[13px] leading-6 ${
-          accent ? "font-semibold text-[#725F54]" : "font-medium text-[#31332C]"
-        }`}
-      >
-        {value}
       </p>
     </div>
   );
