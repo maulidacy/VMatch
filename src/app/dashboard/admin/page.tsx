@@ -83,7 +83,7 @@ export default function AdminDashboardPage() {
             <BriefDocumentsView />
           )}
           {activePage === "progress-qc" && (
-            <ProgressQcView onChangePage={handleChangePage} />
+            <ProgressQcView />
           )}
           {activePage === "payments" && (
             <InvoicePaymentsView onChangePage={handleChangePage} />

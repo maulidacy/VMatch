@@ -2,16 +2,17 @@
 
 import {
   AlertTriangle,
-  ArrowRight,
+  ArrowLeft,
   Camera,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   Clock,
   FileCheck2,
-  Hammer,
   ImageIcon,
   MapPin,
   PackageCheck,
+  Search,
   UserRound,
   Users,
 } from "lucide-react";
@@ -19,7 +20,6 @@ import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AdminSectionCard } from "./shared";
-import type { AdminPageId } from "../types";
 
 type ProgressStatus =
   | "Berjalan"
@@ -346,38 +346,44 @@ const initialLogs: ProgressLog[] = [
   },
 ];
 
-export function ProgressQcView({
-  onChangePage,
-}: {
-  onChangePage?: (page: AdminPageId) => void;
-}) {
+export function ProgressQcView() {
   const [logs, setLogs] = useState<ProgressLog[]>(initialLogs);
   const [activeTab, setActiveTab] = useState<ProgressTab>("Semua");
+  const [keyword, setKeyword] = useState("");
   const [selectedLogId, setSelectedLogId] = useState(initialLogs[0]?.id ?? "");
-
-  const selectedLog = useMemo(() => {
-    return logs.find((log) => log.id === selectedLogId) ?? logs[0];
-  }, [logs, selectedLogId]);
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
 
   const filteredLogs = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+
     return logs.filter((log) => {
-      if (activeTab === "Semua") return true;
-      if (activeTab === "Berjalan") {
-        return log.status === "Berjalan" || log.status === "Menunggu Update";
-      }
-      if (activeTab === "QC") return log.status === "Butuh QC";
-      if (activeTab === "Kendala") return log.status === "Ada Kendala";
-      return log.status === "Selesai";
+      const matchTab =
+        activeTab === "Semua" ||
+        (activeTab === "Berjalan" &&
+          ["Berjalan", "Menunggu Update"].includes(log.status)) ||
+        (activeTab === "QC" && log.status === "Butuh QC") ||
+        (activeTab === "Kendala" && log.status === "Ada Kendala") ||
+        (activeTab === "Selesai" && log.status === "Selesai");
+
+      const matchKeyword =
+        normalizedKeyword.length === 0 ||
+        log.projectTitle.toLowerCase().includes(normalizedKeyword) ||
+        log.customerName.toLowerCase().includes(normalizedKeyword) ||
+        log.vendorName.toLowerCase().includes(normalizedKeyword) ||
+        log.location.toLowerCase().includes(normalizedKeyword) ||
+        log.projectType.toLowerCase().includes(normalizedKeyword);
+
+      return matchTab && matchKeyword;
     });
-  }, [activeTab, logs]);
+  }, [activeTab, keyword, logs]);
 
-  const runningCount = logs.filter(
-    (log) => log.status === "Berjalan" || log.status === "Menunggu Update",
-  ).length;
-
-  const qcCount = logs.filter((log) => log.status === "Butuh QC").length;
-  const issueCount = logs.filter((log) => log.status === "Ada Kendala").length;
-  const doneCount = logs.filter((log) => log.status === "Selesai").length;
+  const selectedLog = useMemo(() => {
+    return (
+      logs.find((log) => log.id === selectedLogId) ??
+      filteredLogs[0] ??
+      logs[0]
+    );
+  }, [filteredLogs, logs, selectedLogId]);
 
   const updateSelectedLog = (
     field: keyof ProgressLog,
@@ -427,15 +433,18 @@ export function ProgressQcView({
     if (status === "Selesai") {
       updateSelectedLog("progress", 100);
       setActiveTab("Selesai");
-    }
-
-    if (status === "Butuh QC") {
+    } else if (status === "Butuh QC") {
       setActiveTab("QC");
-    }
-
-    if (status === "Ada Kendala") {
+    } else if (status === "Ada Kendala") {
       setActiveTab("Kendala");
+    } else {
+      setActiveTab("Berjalan");
     }
+  };
+
+  const handleSelectLog = (id: string) => {
+    setSelectedLogId(id);
+    setIsMobileDetailOpen(true);
   };
 
   if (!selectedLog) {
@@ -443,394 +452,393 @@ export function ProgressQcView({
   }
 
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-4 pb-1 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
-            Manajemen Proyek
-          </p>
-
-          <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
-            Progress & QC
-          </h1>
-
-          <p className="mt-2 max-w-[760px] text-[14px] leading-7 text-[#7B756E]">
-            Pantau update vendor, dokumentasi progres, kendala pengerjaan, dan
-            checklist quality control sebelum proyek diserahterimakan.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => onChangePage?.("documents")}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-5 text-[13px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+    <div className="space-y-5">
+      <section className="grid gap-5 xl:grid-cols-[430px_minmax(0,1fr)] 2xl:grid-cols-[460px_minmax(0,1fr)]">
+        <div
+          className={`space-y-4 ${
+            isMobileDetailOpen ? "hidden xl:block" : "block"
+          }`}
         >
-          Dari Brief & Dokumen
-          <ArrowRight size={16} />
-        </button>
-      </section>
-
-      <section className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
-        <ProgressMiniStat
-          icon={Hammer}
-          label="Berjalan"
-          value={`${runningCount}`}
-          description="Proyek sedang dikerjakan"
-        />
-
-        <ProgressMiniStat
-          icon={ClipboardCheck}
-          label="Butuh QC"
-          value={`${qcCount}`}
-          description="Menunggu pengecekan admin"
-        />
-
-        <ProgressMiniStat
-          icon={AlertTriangle}
-          label="Kendala"
-          value={`${issueCount}`}
-          description="Perlu tindak lanjut"
-        />
-
-        <ProgressMiniStat
-          icon={CheckCircle2}
-          label="Selesai"
-          value={`${doneCount}`}
-          description="QC dan serah terima selesai"
-        />
-      </section>
-
-      <AdminSectionCard title="Daftar Progress">
-        <div className="rounded-2xl border border-[#E8E2D9] bg-white p-2">
-          <div className="grid grid-cols-5 gap-2">
-            {progressTabs.map((tab) => {
-              const active = activeTab === tab;
-
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex h-11 items-center justify-center rounded-xl px-2 text-[10px] font-semibold transition sm:text-[13px] ${
-                    active
-                      ? "bg-[#725F54] text-white shadow-sm"
-                      : "text-[#6F6860] hover:bg-[#F8F6F2]"
-                  }`}
-                >
-                  {tab}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {filteredLogs.length > 0 ? (
-            filteredLogs.map((log) => (
-              <ProgressCard
-                key={log.id}
-                log={log}
-                selected={selectedLog.id === log.id}
-                onClick={() => setSelectedLogId(log.id)}
-              />
-            ))
-          ) : (
-            <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center md:col-span-2 xl:col-span-3">
-              <p className="text-[13px] font-semibold text-[#31332C]">
-                Belum ada progress pada kategori ini.
-              </p>
-
-              <p className="mt-1 text-[12px] text-[#7B756E]">
-                Progress vendor akan muncul sesuai status pengerjaannya.
-              </p>
-            </div>
-          )}
-        </div>
-      </AdminSectionCard>
-
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <AdminSectionCard
-          title="Detail Progress"
-          action={<ProgressStatusBadge status={selectedLog.status} />}
-        >
-          <div className="space-y-5">
+          <div className="space-y-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                Update Vendor
-              </p>
+              <h1 className="font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
+                Daftar Progress
+              </h1>
 
-              <h2 className="mt-2 font-serif text-[30px] leading-tight text-[#31332C]">
-                {selectedLog.projectTitle}
-              </h2>
-
-              <p className="mt-2 text-[13px] leading-7 text-[#7B756E]">
-                Tahap saat ini: {selectedLog.currentStage}. Update terakhir{" "}
-                {selectedLog.updatedAt}.
+              <p className="mt-2 text-[12px] text-[#7B756E]">
+                Pilih progress untuk melihat dokumentasi, riwayat update, dan QC.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[12px] font-semibold text-[#31332C]">
-                    Progress Pengerjaan
-                  </p>
-
-                  <p className="mt-1 text-[11px] text-[#7B756E]">
-                    {selectedLog.currentStage}
-                  </p>
-                </div>
-
-                <p className="font-serif text-[28px] leading-none text-[#725F54]">
-                  {selectedLog.progress}%
-                </p>
-              </div>
-
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#E8E2D9]">
-                <div
-                  className="h-full rounded-full bg-[#725F54]"
-                  style={{ width: `${selectedLog.progress}%` }}
-                />
-              </div>
+            <div className="flex h-11 items-center gap-2 rounded-xl border border-[#E8E2D9] bg-white px-3">
+              <Search size={16} className="shrink-0 text-[#9A8F86]" />
 
               <input
-                type="range"
-                min={0}
-                max={100}
-                value={selectedLog.progress}
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder="Cari progress..."
+                className="h-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#31332C] outline-none placeholder:text-[#B8AEA5]"
+              />
+            </div>
+
+            <div className="relative sm:hidden">
+              <select
+                value={activeTab}
                 onChange={(event) =>
-                  updateSelectedLog("progress", Number(event.target.value))
+                  setActiveTab(event.target.value as ProgressTab)
                 }
-                className="mt-4 w-full accent-[#725F54]"
+                className="h-11 w-full appearance-none rounded-xl border border-[#E8E2D9] bg-white pl-4 pr-12 text-[13px] font-medium text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+              >
+                {progressTabs.map((tab) => (
+                  <option key={tab} value={tab}>
+                    {tab}
+                  </option>
+                ))}
+              </select>
+
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
               />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <InfoTile
-                icon={UserRound}
-                label="Customer"
-                value={selectedLog.customerName}
-                description={selectedLog.projectType}
-              />
+            <div className="hidden rounded-2xl border border-[#E8E2D9] bg-white p-1.5 sm:block">
+              <div className="grid grid-cols-5 gap-1.5">
+                {progressTabs.map((tab) => {
+                  const active = activeTab === tab;
 
-              <InfoTile
-                icon={Users}
-                label="Vendor"
-                value={selectedLog.vendorName}
-                description="Vendor partner"
-              />
-
-              <InfoTile
-                icon={MapPin}
-                label="Lokasi"
-                value={selectedLog.location}
-                description="Area pengerjaan"
-              />
-
-              <InfoTile
-                icon={PackageCheck}
-                label="Tahap"
-                value={selectedLog.currentStage}
-                description="Progress berjalan"
-              />
-
-              <InfoTile
-                icon={Clock}
-                label="Update"
-                value={selectedLog.updatedAt}
-                description="Terakhir diperbarui"
-              />
-
-              <InfoTile
-                icon={Camera}
-                label="Dokumentasi"
-                value={`${selectedLog.photos.length} foto`}
-                description="Foto progress"
-              />
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Dokumentasi Progress
-                </p>
-
-                <div className="mt-3 grid gap-3">
-                  {selectedLog.photos.map((photo) => (
-                    <div
-                      key={photo.id}
-                      className="flex gap-3 rounded-xl border border-[#E8E2D9] bg-white p-3"
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActiveTab(tab)}
+                      className={`flex h-10 w-full items-center justify-center whitespace-nowrap rounded-xl px-2 text-[12px] font-semibold transition ${
+                        active
+                          ? "bg-[#725F54] text-white shadow-sm"
+                          : "text-[#6F6860] hover:bg-[#F8F6F2]"
+                      }`}
                     >
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54] ring-1 ring-[#E8E2D9]">
-                        <ImageIcon size={17} />
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="truncate text-[13px] font-semibold text-[#31332C]">
-                          {photo.title}
-                        </p>
-
-                        <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
-                          {photo.description}
-                        </p>
-
-                        <p className="mt-1 text-[11px] text-[#9A8F86]">
-                          {photo.date}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Riwayat Update
-                </p>
-
-                <div className="mt-3 space-y-2.5">
-                  {selectedLog.timeline.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-xl border border-[#E8E2D9] bg-white p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-[13px] font-semibold text-[#31332C]">
-                          {item.title}
-                        </p>
-
-                        <TimelineTypeBadge type={item.type} />
-                      </div>
-
-                      <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-                        {item.description}
-                      </p>
-
-                      <p className="mt-2 text-[11px] text-[#9A8F86]">
-                        {item.time}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                      {tab}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <label className="block rounded-2xl border border-[#E8E2D9] bg-white p-4">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Catatan Admin
-                </span>
+            <div className="space-y-3 xl:max-h-[calc(100vh-210px)] xl:overflow-y-auto xl:pr-1">
+              {filteredLogs.length > 0 ? (
+                filteredLogs.map((log) => (
+                  <ProgressCard
+                    key={log.id}
+                    log={log}
+                    selected={selectedLog.id === log.id}
+                    onClick={() => handleSelectLog(log.id)}
+                  />
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center">
+                  <p className="text-[13px] font-semibold text-[#31332C]">
+                    Progress tidak ditemukan.
+                  </p>
 
-                <textarea
-                  value={selectedLog.adminNote}
-                  onChange={(event) =>
-                    updateSelectedLog("adminNote", event.target.value)
-                  }
-                  rows={4}
-                  className="mt-3 w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-                />
-              </label>
-
-              <label className="block rounded-2xl border border-[#E8E2D9] bg-white p-4">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Catatan Vendor
-                </span>
-
-                <textarea
-                  value={selectedLog.vendorNote}
-                  onChange={(event) =>
-                    updateSelectedLog("vendorNote", event.target.value)
-                  }
-                  rows={4}
-                  className="mt-3 w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-                />
-              </label>
+                  <p className="mt-1 text-[12px] text-[#7B756E]">
+                    Coba ubah filter atau kata pencarian.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
-        </AdminSectionCard>
+        </div>
 
-        <div className="space-y-5">
-          <AdminSectionCard title="Checklist QC">
-            <p className="mb-3 text-[12px] leading-5 text-[#7B756E]">
-              {selectedLog.qcSummary}
-            </p>
+        <div
+          className={`space-y-5 ${
+            isMobileDetailOpen ? "block" : "hidden xl:block"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setIsMobileDetailOpen(false)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9] xl:hidden"
+          >
+            <ArrowLeft size={15} />
+            Kembali ke daftar
+          </button>
 
-            <div className="space-y-2.5">
-              {selectedLog.qcChecklist.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => updateChecklist(item.id)}
-                  className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${
-                    item.checked
-                      ? "border-[#DCEBDD] bg-[#F5FAF6]"
-                      : "border-[#E8E2D9] bg-white hover:bg-[#FCFBF9]"
-                  }`}
-                >
-                  <div
-                    className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
-                      item.checked
-                        ? "border-[#4F7A5F] bg-[#4F7A5F] text-white"
-                        : "border-[#D9C8BA] bg-white text-transparent"
-                    }`}
-                  >
-                    <CheckCircle2 size={14} />
+          <section className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
+            <AdminSectionCard title="Detail Progress">
+              <div className="space-y-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                      {selectedLog.projectType}
+                    </p>
+
+                    <h2 className="mt-2 font-serif text-[28px] leading-tight text-[#31332C] sm:text-[30px]">
+                      {selectedLog.projectTitle}
+                    </h2>
+
+                    <p className="mt-2 text-[13px] leading-7 text-[#7B756E]">
+                      Tahap saat ini: {selectedLog.currentStage}. Update terakhir{" "}
+                      {selectedLog.updatedAt}.
+                    </p>
                   </div>
 
-                  <span className="text-[12px] leading-5 text-[#31332C]">
-                    {item.label}
-                  </span>
+                  <ProgressStatusBadge status={selectedLog.status} />
+                </div>
+
+                <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[12px] font-semibold text-[#31332C]">
+                        Progress Pengerjaan
+                      </p>
+
+                      <p className="mt-1 text-[11px] text-[#7B756E]">
+                        {selectedLog.currentStage}
+                      </p>
+                    </div>
+
+                    <p className="font-serif text-[28px] leading-none text-[#725F54]">
+                      {selectedLog.progress}%
+                    </p>
+                  </div>
+
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#E8E2D9]">
+                    <div
+                      className="h-full rounded-full bg-[#725F54]"
+                      style={{ width: `${selectedLog.progress}%` }}
+                    />
+                  </div>
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={selectedLog.progress}
+                    onChange={(event) =>
+                      updateSelectedLog("progress", Number(event.target.value))
+                    }
+                    className="mt-4 w-full accent-[#725F54]"
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <InfoTile
+                    icon={UserRound}
+                    label="Customer"
+                    value={selectedLog.customerName}
+                    description={selectedLog.projectType}
+                  />
+
+                  <InfoTile
+                    icon={Users}
+                    label="Vendor"
+                    value={selectedLog.vendorName}
+                    description="Vendor partner"
+                  />
+
+                  <InfoTile
+                    icon={MapPin}
+                    label="Lokasi"
+                    value={selectedLog.location}
+                    description="Area pengerjaan"
+                  />
+
+                  <InfoTile
+                    icon={PackageCheck}
+                    label="Tahap"
+                    value={selectedLog.currentStage}
+                    description="Progress berjalan"
+                  />
+
+                  <InfoTile
+                    icon={Clock}
+                    label="Update"
+                    value={selectedLog.updatedAt}
+                    description="Terakhir diperbarui"
+                  />
+
+                  <InfoTile
+                    icon={Camera}
+                    label="Dokumentasi"
+                    value={`${selectedLog.photos.length} foto`}
+                    description="Foto progress"
+                  />
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                      Dokumentasi Progress
+                    </p>
+
+                    <div className="mt-3 grid gap-3">
+                      {selectedLog.photos.map((photo) => (
+                        <div
+                          key={photo.id}
+                          className="flex gap-3 rounded-xl border border-[#E8E2D9] bg-white p-3 transition hover:border-[#725F54] hover:bg-[#F4EEE8]"
+                        >
+                          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54] ring-1 ring-[#E8E2D9]">
+                            <ImageIcon size={17} />
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-semibold text-[#31332C]">
+                              {photo.title}
+                            </p>
+
+                            <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
+                              {photo.description}
+                            </p>
+
+                            <p className="mt-1 text-[11px] text-[#9A8F86]">
+                              {photo.date}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                      Riwayat Update
+                    </p>
+
+                    <div className="mt-3 space-y-2.5">
+                      {selectedLog.timeline.map((item) => (
+                        <div
+                          key={item.id}
+                          className="rounded-xl border border-[#E8E2D9] bg-white p-3 transition hover:border-[#725F54] hover:bg-[#F4EEE8]"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="text-[13px] font-semibold text-[#31332C]">
+                              {item.title}
+                            </p>
+
+                            <TimelineTypeBadge type={item.type} />
+                          </div>
+
+                          <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                            {item.description}
+                          </p>
+
+                          <p className="mt-2 text-[11px] text-[#9A8F86]">
+                            {item.time}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <label className="block rounded-2xl border border-[#E8E2D9] bg-white p-4">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                      Catatan Admin
+                    </span>
+
+                    <textarea
+                      value={selectedLog.adminNote}
+                      onChange={(event) =>
+                        updateSelectedLog("adminNote", event.target.value)
+                      }
+                      rows={4}
+                      className="mt-3 w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                    />
+                  </label>
+
+                  <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                      Catatan Vendor
+                    </p>
+
+                    <p className="mt-3 rounded-xl border border-[#E8E2D9] bg-white px-4 py-3 text-[13px] leading-7 text-[#31332C]">
+                      {selectedLog.vendorNote}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </AdminSectionCard>
+
+            <div className="space-y-5">
+              <AdminSectionCard title="Checklist QC">
+                <p className="mb-3 text-[12px] leading-5 text-[#7B756E]">
+                  {selectedLog.qcSummary}
+                </p>
+
+                <div className="space-y-2.5">
+                  {selectedLog.qcChecklist.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => updateChecklist(item.id)}
+                      className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${
+                        item.checked
+                          ? "border-[#725F54] bg-[#F4EEE8]"
+                          : "border-[#E8E2D9] bg-white hover:border-[#725F54] hover:bg-[#F4EEE8]"
+                      }`}
+                    >
+                      <div
+                        className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
+                          item.checked
+                            ? "border-[#725F54] bg-[#725F54] text-white"
+                            : "border-[#D9C8BA] bg-white text-transparent"
+                        }`}
+                      >
+                        <CheckCircle2 size={14} />
+                      </div>
+
+                      <span className="text-[12px] leading-5 text-[#31332C]">
+                        {item.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </AdminSectionCard>
+
+              <div className="grid gap-2 sm:grid-cols-3 2xl:grid-cols-1">
+                <button
+                  type="button"
+                  onClick={() => updateStatus("Butuh QC")}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+                    selectedLog.status === "Butuh QC"
+                      ? "border-[#725F54] bg-[#725F54] text-white"
+                      : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                  }`}
+                >
+                  <ClipboardCheck size={15} />
+                  Butuh QC
                 </button>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={() => updateStatus("Ada Kendala")}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+                    selectedLog.status === "Ada Kendala"
+                      ? "border-[#725F54] bg-[#725F54] text-white"
+                      : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                  }`}
+                >
+                  <AlertTriangle size={15} />
+                  Kendala
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => updateStatus("Selesai")}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+                    selectedLog.status === "Selesai"
+                      ? "border-[#725F54] bg-[#725F54] text-white"
+                      : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                  }`}
+                >
+                  <FileCheck2 size={15} />
+                  QC Selesai
+                </button>
+              </div>
             </div>
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Aksi QC">
-            <div className="space-y-3">
-              <ActionButton
-                icon={ClipboardCheck}
-                title="Tandai Butuh QC"
-                description="Masukkan proyek ke antrean pengecekan."
-                onClick={() => updateStatus("Butuh QC")}
-              />
-
-              <ActionButton
-                icon={AlertTriangle}
-                title="Tandai Kendala"
-                description="Gunakan jika ada masalah pengerjaan."
-                onClick={() => updateStatus("Ada Kendala")}
-              />
-
-              <ActionButton
-                icon={FileCheck2}
-                title="QC Selesai"
-                description="Tandai proyek lolos QC."
-                onClick={() => updateStatus("Selesai")}
-              />
-            </div>
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Navigasi Cepat">
-            <div className="grid gap-2">
-              <button
-                type="button"
-                onClick={() => onChangePage?.("active-projects")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
-              >
-                Ke Proyek Aktif
-                <ArrowRight size={14} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChangePage?.("payments")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
-              >
-                Ke Invoice & Pembayaran
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          </AdminSectionCard>
+          </section>
         </div>
       </section>
     </div>
@@ -850,14 +858,14 @@ function ProgressCard({
     <button
       type="button"
       onClick={onClick}
-      className={`min-w-0 rounded-2xl border p-4 text-left transition ${
+      className={`w-full rounded-2xl border p-4 text-left transition ${
         selected
-          ? "border-[#D9C8BA] bg-[#FFFDF9]"
+          ? "border-[#D9C8BA] bg-[#FFFDF9] shadow-[0_8px_24px_rgba(49,51,44,0.04)]"
           : "border-[#E8E2D9] bg-[#FCFBF9] hover:bg-white"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-[#31332C]">
             {log.projectTitle}
           </p>
@@ -889,44 +897,10 @@ function ProgressCard({
         </div>
       </div>
 
-      <p className="mt-3 line-clamp-1 text-[12px] text-[#7B756E]">
+      <p className="mt-3 truncate text-[12px] text-[#7B756E]">
         {log.currentStage}
       </p>
     </button>
-  );
-}
-
-function ProgressMiniStat({
-  icon: Icon,
-  label,
-  value,
-  description,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.035)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
-          <Icon size={17} strokeWidth={2} />
-        </div>
-
-        <p className="min-w-0 truncate text-right font-serif text-[25px] leading-none text-[#31332C]">
-          {value}
-        </p>
-      </div>
-
-      <p className="mt-4 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-        {label}
-      </p>
-
-      <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
-        {description}
-      </p>
-    </div>
   );
 }
 
@@ -966,38 +940,6 @@ function InfoTile({
   );
 }
 
-function ActionButton({
-  icon: Icon,
-  title,
-  description,
-  onClick,
-}: {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-start gap-3 rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 text-left transition hover:border-[#D9C8BA] hover:bg-white"
-    >
-      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
-        <Icon size={16} />
-      </div>
-
-      <div>
-        <p className="text-[13px] font-semibold text-[#31332C]">{title}</p>
-
-        <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-          {description}
-        </p>
-      </div>
-    </button>
-  );
-}
-
 function TimelineTypeBadge({
   type,
 }: {
@@ -1020,7 +962,9 @@ function TimelineTypeBadge({
         : "bg-[#FCFBF9] text-[#725F54]";
 
   return (
-    <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${style}`}>
+    <span
+      className={`rounded-full px-2 py-1 text-[10px] font-semibold ${style}`}
+    >
       {label}
     </span>
   );
@@ -1038,7 +982,7 @@ function ProgressStatusBadge({ status }: { status: ProgressStatus }) {
 
   return (
     <span
-      className={`inline-flex h-7 shrink-0 items-center rounded-full border px-3 text-[11px] font-semibold ${style}`}
+      className={`inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-[10px] font-semibold sm:text-[11px] ${style}`}
     >
       {status}
     </span>

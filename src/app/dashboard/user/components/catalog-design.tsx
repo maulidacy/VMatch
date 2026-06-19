@@ -497,7 +497,7 @@ function DesignTab({
                 </div>
             </section>
 
-            <section className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {filteredDesigns.slice(0, 6).map((item, index) => (
                     <DesignCard
                         key={item.id}
