@@ -8,7 +8,9 @@ import {
   Download,
   Eye,
   FileText,
+  MessageSquare,
   Paperclip,
+  Save,
 } from "lucide-react";
 
 import { workBriefs } from "../mock-data";
@@ -74,6 +76,13 @@ const adminBriefFiles: Record<string, AdminBriefFile[]> = {
   ],
 };
 
+const vendorBriefScopes: Record<string, string> = {
+  "brief-1":
+    "Pembuatan wardrobe built-in full plafon untuk kamar utama. Pekerjaan mencakup pintu sliding, area gantung, rak lipat, dan storage tambahan. Vendor mengikuti ukuran dan referensi desain yang sudah dikirim oleh admin VMatch.",
+  "brief-2":
+    "Pembuatan kitchen set minimalis untuk area dapur kecil. Pekerjaan mencakup kabinet bawah, kabinet atas, area penyimpanan, dan finishing HPL. Vendor perlu memastikan area instalasi sesuai hasil survey dan file brief dari admin.",
+};
+
 export function BriefWorkPlanView({
   onChangePage,
 }: {
@@ -84,6 +93,10 @@ export function BriefWorkPlanView({
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+
+  const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
+  const [vendorNoteDraft, setVendorNoteDraft] = useState("");
+  const [isVendorNoteSaved, setIsVendorNoteSaved] = useState(false);
 
   const [briefStatuses, setBriefStatuses] = useState<
     Record<string, WorkPlanStatus>
@@ -106,8 +119,18 @@ export function BriefWorkPlanView({
     ? adminBriefFiles[selectedBrief.id] ?? []
     : [];
 
+  const selectedBriefScope = selectedBrief
+    ? vendorBriefScopes[selectedBrief.id] ?? ""
+    : "";
+
+  const isVendorNoteChanged = selectedBrief
+    ? vendorNoteDraft !== (vendorNotes[selectedBrief.id] ?? "")
+    : false;
+
   const handleSelectBrief = (id: string) => {
     setSelectedBriefId(id);
+    setVendorNoteDraft(vendorNotes[id] ?? "");
+    setIsVendorNoteSaved(false);
     setIsMobileDetailOpen(true);
   };
 
@@ -120,6 +143,17 @@ export function BriefWorkPlanView({
     }));
 
     setConfirmOpen(false);
+  };
+
+  const saveVendorNote = () => {
+    if (!selectedBrief) return;
+
+    setVendorNotes((current) => ({
+      ...current,
+      [selectedBrief.id]: vendorNoteDraft,
+    }));
+
+    setIsVendorNoteSaved(true);
   };
 
   if (workBriefs.length === 0) {
@@ -259,6 +293,82 @@ export function BriefWorkPlanView({
                       </p>
                     </div>
                   )}
+                  <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-white text-[#725F54]">
+                        <ClipboardList size={17} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                          Scope Pekerjaan
+                        </p>
+
+                        <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                          Ringkasan pekerjaan dari admin sebagai acuan vendor.
+                        </p>
+
+                        <div className="mt-4 rounded-xl border border-[#E8E2D9] bg-white px-4 py-3">
+                          <p className="text-[13px] leading-7 text-[#31332C]">
+                            {selectedBriefScope ||
+                              "Scope pekerjaan belum tersedia. Vendor dapat membaca detail melalui file brief yang dikirim admin."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-[#E8E2D9] bg-white p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                          Tanggapan Vendor
+                        </p>
+
+                        <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                          Catatan vendor jika ada bagian scope, material, timeline, atau file brief
+                          yang perlu dikonfirmasi ke admin.
+                        </p>
+                      </div>
+
+                      {isVendorNoteSaved && (
+                        <span className="shrink-0 rounded-full border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-1 text-[10px] font-semibold text-[#4F7A5F]">
+                          Tersimpan
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex gap-3">
+                      <div className="hidden h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54] sm:grid">
+                        <MessageSquare size={17} />
+                      </div>
+
+                      <textarea
+                        value={vendorNoteDraft}
+                        onChange={(event) => {
+                          setVendorNoteDraft(event.target.value);
+                          setIsVendorNoteSaved(false);
+                        }}
+                        rows={4}
+                        placeholder="Contoh: Vendor perlu konfirmasi ulang ukuran area kabinet atas sebelum produksi."
+                        className="min-w-0 flex-1 resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                      />
+                    </div>
+
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={saveVendorNote}
+                        disabled={!isVendorNoteChanged}
+                        className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${isVendorNoteChanged
+                          ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                          : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+                          }`}
+                      >
+                        <Save size={14} />
+                        Simpan Tanggapan
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </VendorSectionCard>
 

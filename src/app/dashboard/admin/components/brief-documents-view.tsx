@@ -26,6 +26,7 @@ import { useMemo, useState } from "react";
 import { AdminSectionCard } from "./shared";
 
 import { BriefMaterialForm } from "./brief-material-form";
+import { BriefQcForm } from "./brief-qc-form";
 import {
     BriefTimelineForm,
     type BriefTimelineInput,
@@ -67,6 +68,7 @@ type BriefDocument = {
     }[];
     materials: string[];
     files: BriefFile[];
+    qcChecklist: string[];
     checklist: {
         id: string;
         label: string;
@@ -88,6 +90,15 @@ const statusOptions: BriefStatus[] = [
     "Revisi",
     "Disetujui",
 ];
+
+const vendorResponses: Record<string, string> = {
+    "brief-1":
+        "Vendor perlu konfirmasi ulang ukuran kabinet atas sebelum masuk tahap produksi. Selain itu, vendor menyarankan pengecekan ulang area ventilasi agar tidak tertutup kabinet.",
+    "brief-2":
+        "Vendor sudah memahami brief dan siap melanjutkan ke tahap persiapan produksi. Tidak ada revisi tambahan saat ini.",
+    "brief-3":
+        "Vendor meminta revisi layout storage sisi kanan meja kerja agar ukuran lebih sesuai dengan ruang yang tersedia.",
+};
 
 const initialBriefs: BriefDocument[] = [
     {
@@ -168,6 +179,13 @@ const initialBriefs: BriefDocument[] = [
                 completed: false,
             },
         ],
+        qcChecklist: [
+            "Ukuran sesuai brief",
+            "Material sesuai persetujuan",
+            "Finishing rapi",
+            "Fungsi laci dan engsel berjalan baik",
+            "Area kerja bersih setelah instalasi",
+        ],
     },
     {
         id: "brief-2",
@@ -239,6 +257,13 @@ const initialBriefs: BriefDocument[] = [
                 completed: true,
             },
         ],
+        qcChecklist: [
+            "Ukuran sesuai brief",
+            "Material sesuai persetujuan",
+            "Finishing rapi",
+            "Fungsi furniture berjalan baik",
+            "Area kerja bersih setelah instalasi",
+        ],
     },
     {
         id: "brief-3",
@@ -301,6 +326,13 @@ const initialBriefs: BriefDocument[] = [
                 completed: false,
             },
         ],
+        qcChecklist: [
+            "Ukuran sesuai brief",
+            "Material sesuai persetujuan",
+            "Finishing rapi",
+            "Fungsi furniture berjalan baik",
+            "Area kerja bersih setelah instalasi",
+        ],
     },
 ];
 
@@ -324,6 +356,7 @@ export function BriefDocumentsView() {
 
     const [isMaterialFormOpen, setIsMaterialFormOpen] = useState(false);
     const [isTimelineFormOpen, setIsTimelineFormOpen] = useState(false);
+    const [isQcFormOpen, setIsQcFormOpen] = useState(false);
 
     const filteredBriefs = useMemo(() => {
         const normalizedKeyword = keyword.trim().toLowerCase();
@@ -473,6 +506,38 @@ export function BriefDocumentsView() {
         );
     };
 
+    const addQcItem = (qcItem: string) => {
+        if (!selectedBrief) return;
+
+        setBriefs((current) =>
+            current.map((brief) =>
+                brief.id === selectedBrief.id
+                    ? {
+                        ...brief,
+                        qcChecklist: [...brief.qcChecklist, qcItem],
+                        updatedAt: "Baru saja",
+                    }
+                    : brief,
+            ),
+        );
+    };
+
+    const deleteQcItem = (qcItem: string) => {
+        if (!selectedBrief) return;
+
+        setBriefs((current) =>
+            current.map((brief) =>
+                brief.id === selectedBrief.id
+                    ? {
+                        ...brief,
+                        qcChecklist: brief.qcChecklist.filter((item) => item !== qcItem),
+                        updatedAt: "Baru saja",
+                    }
+                    : brief,
+            ),
+        );
+    };
+
     const updateStatus = (status: BriefStatus) => {
         updateSelectedBrief("status", status);
         setActiveTab(status);
@@ -517,6 +582,8 @@ export function BriefDocumentsView() {
         scopeDraft !== selectedBrief.scope ||
         adminNoteDraft !== selectedBrief.adminNote ||
         vendorNoteDraft !== selectedBrief.vendorNote;
+
+    const selectedVendorResponse = vendorResponses[selectedBrief.id] ?? "";
 
     return (
         <div className="space-y-5">
@@ -806,8 +873,81 @@ export function BriefDocumentsView() {
                                                 }`}
                                         >
                                             <Save size={14} />
-                                            Simpan Dokumen
+                                            Simpan Perubahan
                                         </button>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 transition hover:border-[#725F54] hover:bg-[#F4EEE8]">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                                                Standar QC
+                                            </p>
+
+                                            <p className="mt-1 text-[12px] text-[#7B756E]">
+                                                Poin pengecekan kualitas sebagai acuan vendor dan admin.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsQcFormOpen(true)}
+                                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E4D8CD] bg-white px-3 text-[11px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                                        >
+                                            <Plus size={13} />
+                                            Tambah
+                                        </button>
+                                    </div>
+
+                                    <div className="mt-3 grid gap-2.5">
+                                        {selectedBrief.qcChecklist.map((item) => (
+                                            <div
+                                                key={item}
+                                                className="flex items-center justify-between gap-3 rounded-xl border border-[#E8E2D9] bg-white px-4 py-3 transition hover:border-[#725F54] hover:bg-[#F4EEE8]"
+                                            >
+                                                <div className="flex min-w-0 items-center gap-3">
+                                                    <CheckCircle2 size={16} className="shrink-0 text-[#725F54]" />
+
+                                                    <p className="truncate text-[13px] font-semibold text-[#31332C]">
+                                                        {item}
+                                                    </p>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => deleteQcItem(item)}
+                                                    className="shrink-0 text-[11px] font-semibold text-[#9A4A32] transition hover:text-[#6F2F1F]"
+                                                >
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                                                Tanggapan Vendor
+                                            </p>
+
+                                            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                                                Catatan dari vendor setelah membaca scope, file brief, material, dan timeline.
+                                            </p>
+                                        </div>
+
+                                        <span className="shrink-0 rounded-full border border-[#E4D8CD] bg-white px-3 py-1 text-[10px] font-semibold text-[#725F54]">
+                                            Read-only
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-4 rounded-xl border border-[#E8E2D9] bg-white px-4 py-3">
+                                        <p className="text-[13px] leading-7 text-[#31332C]">
+                                            {selectedVendorResponse ||
+                                                "Belum ada tanggapan dari vendor untuk brief ini."}
+                                        </p>
                                     </div>
                                 </div>
 
@@ -1056,6 +1196,12 @@ export function BriefDocumentsView() {
                 open={isTimelineFormOpen}
                 onClose={() => setIsTimelineFormOpen(false)}
                 onAddTimeline={addTimeline}
+            />
+
+            <BriefQcForm
+                open={isQcFormOpen}
+                onClose={() => setIsQcFormOpen(false)}
+                onAddQcItem={addQcItem}
             />
         </div>
     );
