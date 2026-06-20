@@ -4,7 +4,6 @@ import Image from "next/image";
 import {
     ArrowLeft,
     ArrowRight,
-    Bookmark,
     CalendarDays,
     CheckCircle2,
     ChevronLeft,
@@ -343,7 +342,7 @@ export function InspirationDetailView({
             <VendorPortfolioSection profile={inspiration.vendorProfile} />
 
             <section className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-                <SectionCard title="Mengenai Inspirasi Ini">
+                <SectionCard title="Deskripsi Inspirasi">
                     <p className="text-[13px] leading-7 text-[#6F6860] sm:text-[14px]">
                         {inspiration.fullDescription}
                     </p>
@@ -491,11 +490,9 @@ function InspirationImageGallery({
 
 function InspirationSummaryCard({
     inspiration,
-    isSaved,
     onUsePreference,
     onRequestProject,
     onConsult,
-    onSave,
 }: {
     inspiration: InspirationDetail;
     isSaved: boolean;
@@ -543,18 +540,6 @@ function InspirationSummaryCard({
                         Konsultasi
                     </button>
                 </div>
-
-                <button
-                    type="button"
-                    onClick={onSave}
-                    className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-semibold transition ${isSaved
-                        ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
-                        : "border-[#E4D8CD] bg-white text-[#725F54] hover:bg-[#FCFBF9]"
-                        }`}
-                >
-                    <Bookmark size={14} />
-                    {isSaved ? "Inspirasi Tersimpan" : "Simpan Inspirasi"}
-                </button>
             </div>
         </aside>
     );
