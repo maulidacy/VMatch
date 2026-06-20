@@ -34,6 +34,24 @@ import {
 
 export default function AdminDashboardPage() {
   const [activePage, setActivePage] = useState<AdminPageId>("dashboard");
+  const pageTitles: Partial<Record<AdminPageId, string>> = {
+    dashboard: "Dashboard",
+    promo: "Promo & Campaign",
+    requests: "Request Proyek",
+    "active-projects": "Proyek Aktif",
+    "brief-documents": "Brief & Dokumen",
+    "progress-qc": "Progress & QC",
+    payments: "Invoice & Pembayaran",
+    "rab-builder": "RAB Builder",
+    consultations: "Konsultasi",
+    vendors: "Vendor Partner",
+    customers: "Customer",
+    analytics: "Analytics",
+    notifications: "Notifikasi",
+    settings: "Pengaturan",
+  };
+
+  const currentTitle = pageTitles[activePage] ?? "Dashboard";
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const activeTitle = useMemo(() => {
@@ -61,8 +79,10 @@ export default function AdminDashboardPage() {
 
       <div className="min-h-screen lg:pl-[250px]">
         <AdminHeader
-          title={activeTitle}
+          title={currentTitle}
           onOpenSidebar={() => setSidebarOpen(true)}
+          notificationCount={3}
+          onOpenNotifications={() => handleChangePage("notifications")}
         />
 
         <main className="w-full px-5 py-6 sm:px-6">
@@ -79,32 +99,32 @@ export default function AdminDashboardPage() {
           {activePage === "active-projects" && (
             <ActiveProjectsView onChangePage={handleChangePage} />
           )}
-          {activePage === "documents" && (
+          {activePage === "brief-documents" && (
             <BriefDocumentsView />
           )}
           {activePage === "progress-qc" && (
             <ProgressQcView />
           )}
           {activePage === "payments" && (
-            <InvoicePaymentsView onChangePage={handleChangePage} />
+            <InvoicePaymentsView />
           )}
           {activePage === "rab-builder" && (
             <RabBuilderView onChangePage={handleChangePage} />
           )}
           {activePage === "consultations" && (
-            <ConsultationView onChangePage={handleChangePage} />
+            <ConsultationView />
           )}
           {activePage === "vendors" && (
-            <VendorPartnerView onChangePage={handleChangePage} />
+            <VendorPartnerView />
           )}
           {activePage === "customers" && (
-            <CustomerView onChangePage={handleChangePage} />
+            <CustomerView />
           )}
           {activePage === "analytics" && (
-            <AnalyticsView onChangePage={handleChangePage} />
+            <AnalyticsView />
           )}
           {activePage === "notifications" && (
-            <NotificationView onChangePage={handleChangePage} />
+            <NotificationView />
           )}
           {activePage === "settings" && <SettingsView />}
 
@@ -115,11 +135,11 @@ export default function AdminDashboardPage() {
             activePage !== "customers" &&
             activePage !== "vendors" &&
             activePage !== "active-projects" &&
-            activePage !== "documents" &&
+            activePage !== "brief-documents" &&
             activePage !== "progress-qc" &&
             activePage !== "payments" &&
             activePage !== "rab-builder" &&
-            activePage !== "analytics" && 
+            activePage !== "analytics" &&
             activePage !== "notifications" &&
             activePage !== "settings" && (
               <AdminPlaceholder title={activeTitle} activePage={activePage} />

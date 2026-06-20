@@ -17,7 +17,6 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { AdminSectionCard } from "./shared";
 import type { AdminPageId } from "../types";
 
 type RequestStatus =
@@ -158,15 +157,11 @@ export function RequestProjectView({
 }) {
     const [requests, setRequests] = useState<ProjectRequest[]>(initialRequests);
     const [activeTab, setActiveTab] = useState<RequestTab>("Semua");
-    const [selectedRequestId, setSelectedRequestId] = useState(
-        initialRequests[0]?.id ?? "",
-    );
     const [keyword, setKeyword] = useState("");
-    const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
-
-    const [adminNoteDraft, setAdminNoteDraft] = useState(
-        initialRequests[0]?.adminNote ?? "",
+    const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
+        null,
     );
+    const [adminNoteDraft, setAdminNoteDraft] = useState("");
     const [isNoteSaved, setIsNoteSaved] = useState(false);
 
     const filteredRequests = useMemo(() => {
@@ -177,8 +172,7 @@ export function RequestProjectView({
                 activeTab === "Semua" ||
                 (activeTab === "Baru" && request.status === "Baru Masuk") ||
                 (activeTab === "Review" && request.status === "Menunggu Review") ||
-                (activeTab === "Konsultasi" &&
-                    request.status === "Butuh Konsultasi") ||
+                (activeTab === "Konsultasi" && request.status === "Butuh Konsultasi") ||
                 (activeTab === "Disetujui" &&
                     ["Disetujui", "Menunggu Vendor", "Menjadi Proyek Aktif"].includes(
                         request.status,
@@ -189,26 +183,23 @@ export function RequestProjectView({
                 request.projectTitle.toLowerCase().includes(normalizedKeyword) ||
                 request.customerName.toLowerCase().includes(normalizedKeyword) ||
                 request.location.toLowerCase().includes(normalizedKeyword) ||
-                request.projectType.toLowerCase().includes(normalizedKeyword);
+                request.projectType.toLowerCase().includes(normalizedKeyword) ||
+                request.status.toLowerCase().includes(normalizedKeyword);
 
             return matchTab && matchKeyword;
         });
     }, [activeTab, keyword, requests]);
 
     const selectedRequest = useMemo(() => {
-        return (
-            requests.find((request) => request.id === selectedRequestId) ??
-            filteredRequests[0] ??
-            requests[0]
-        );
-    }, [filteredRequests, requests, selectedRequestId]);
+        if (!selectedRequestId) return null;
 
-    const updateSelectedStatus = (status: RequestStatus) => {
-        if (!selectedRequest) return;
+        return requests.find((request) => request.id === selectedRequestId) ?? null;
+    }, [requests, selectedRequestId]);
 
+    const updateRequestStatus = (id: string, status: RequestStatus) => {
         setRequests((current) =>
             current.map((request) =>
-                request.id === selectedRequest.id
+                request.id === id
                     ? {
                         ...request,
                         status,
@@ -218,12 +209,10 @@ export function RequestProjectView({
         );
     };
 
-    const updateAdminNote = (note: string) => {
-        if (!selectedRequest) return;
-
+    const updateAdminNote = (id: string, note: string) => {
         setRequests((current) =>
             current.map((request) =>
-                request.id === selectedRequest.id
+                request.id === id
                     ? {
                         ...request,
                         adminNote: note,
@@ -233,62 +222,209 @@ export function RequestProjectView({
         );
     };
 
-    const handleSelectRequest = (id: string) => {
-        const nextRequest = requests.find((request) => request.id === id);
-
-        setSelectedRequestId(id);
-        setAdminNoteDraft(nextRequest?.adminNote ?? "");
+    const openDetail = (request: ProjectRequest) => {
+        setSelectedRequestId(request.id);
+        setAdminNoteDraft(request.adminNote);
         setIsNoteSaved(false);
-        setIsMobileDetailOpen(true);
     };
 
-    if (!selectedRequest) {
-        return null;
+    const closeDetail = () => {
+        setSelectedRequestId(null);
+        setAdminNoteDraft("");
+        setIsNoteSaved(false);
+    };
+
+    if (selectedRequest) {
+        return (
+            <RequestDetailPage
+                request={selectedRequest}
+                adminNoteDraft={adminNoteDraft}
+                isNoteSaved={isNoteSaved}
+                onBack={closeDetail}
+                onChangeNote={(value) => {
+                    setAdminNoteDraft(value);
+                    setIsNoteSaved(false);
+                }}
+                onSaveNote={() => {
+                    updateAdminNote(selectedRequest.id, adminNoteDraft);
+                    setIsNoteSaved(true);
+                }}
+                onUpdateStatus={(status) => updateRequestStatus(selectedRequest.id, status)}
+                onChangePage={onChangePage}
+            />
+        );
     }
 
-    const isAdminNoteChanged = adminNoteDraft !== selectedRequest.adminNote;
+    return (
+        <div className="space-y-5">
+            <section className="pb-1">
+                <div className="max-w-[820px]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#725F54]">
+                        Request Customer
+                    </p>
+
+                    <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
+                        Daftar Request
+                    </h1>
+
+                    <p className="mt-2 text-[13px] leading-6 text-[#7B756E] sm:text-[14px]">
+                        Kelola pengajuan proyek interior dari customer, mulai dari review kebutuhan,
+                        informasi budget, referensi desain, hingga penentuan status dan tindak lanjut.
+                    </p>
+                </div>
+            </section>
+
+            <section className="rounded-3xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)]">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                    <div className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-3">
+                        <Search size={16} className="shrink-0 text-[#9A8F86]" />
+
+                        <input
+                            value={keyword}
+                            onChange={(event) => setKeyword(event.target.value)}
+                            placeholder="Cari request, customer, lokasi, atau status..."
+                            className="h-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#31332C] outline-none placeholder:text-[#B8AEA5]"
+                        />
+                    </div>
+
+                    <div className="relative sm:hidden">
+                        <select
+                            value={activeTab}
+                            onChange={(event) => setActiveTab(event.target.value as RequestTab)}
+                            className="h-11 w-full appearance-none rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] pl-4 pr-12 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                        >
+                            {requestTabs.map((tab) => (
+                                <option key={tab} value={tab}>
+                                    {tab}
+                                </option>
+                            ))}
+                        </select>
+
+                        <ChevronDown
+                            size={16}
+                            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
+                        />
+                    </div>
+
+                    <div className="hidden rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-1.5 sm:block lg:col-span-2">
+                        <div className="flex gap-1.5 overflow-x-auto">
+                            {requestTabs.map((tab) => {
+                                const active = activeTab === tab;
+
+                                return (
+                                    <button
+                                        key={tab}
+                                        type="button"
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`inline-flex h-10 shrink-0 items-center justify-center rounded-xl px-4 text-[12px] font-semibold transition ${active
+                                                ? "bg-[#725F54] text-white shadow-sm"
+                                                : "text-[#6F6860] hover:bg-white"
+                                            }`}
+                                    >
+                                        {tab}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                {filteredRequests.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                        {filteredRequests.map((request) => (
+                            <RequestCard
+                                key={request.id}
+                                request={request}
+                                onClick={() => openDetail(request)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-white p-8 text-center">
+                        <p className="text-[14px] font-semibold text-[#31332C]">
+                            Request tidak ditemukan.
+                        </p>
+
+                        <p className="mt-2 text-[13px] text-[#7B756E]">
+                            Coba ubah filter atau kata pencarian.
+                        </p>
+                    </div>
+                )}
+            </section>
+        </div>
+    );
+}
+
+function RequestDetailPage({
+    request,
+    adminNoteDraft,
+    isNoteSaved,
+    onBack,
+    onChangeNote,
+    onSaveNote,
+    onUpdateStatus,
+    onChangePage,
+}: {
+    request: ProjectRequest;
+    adminNoteDraft: string;
+    isNoteSaved: boolean;
+    onBack: () => void;
+    onChangeNote: (value: string) => void;
+    onSaveNote: () => void;
+    onUpdateStatus: (status: RequestStatus) => void;
+    onChangePage?: (page: AdminPageId) => void;
+}) {
+    const isAdminNoteChanged = adminNoteDraft !== request.adminNote;
 
     return (
-        <div className="space-y-6">
-            <section className="grid gap-5 xl:grid-cols-[430px_minmax(0,1fr)] 2xl:grid-cols-[460px_minmax(0,1fr)]">
-                <div
-                    className={`space-y-4 ${isMobileDetailOpen ? "hidden xl:block" : "block"
-                        }`}
-                >
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
-                                    Daftar Request
-                                </h1>
+        <div className="space-y-5">
+            <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+            >
+                <ArrowLeft size={15} />
+                Kembali ke daftar request
+            </button>
 
-                                <p className="mt-2 text-[12px] text-[#7B756E]">
-                                    Pilih pengajuan untuk melihat detail.
-                                </p>
-                            </div>
+            <section className="overflow-hidden rounded-3xl border border-[#E8E2D9] bg-white shadow-[0_12px_34px_rgba(49,51,44,0.035)]">
+                <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
+                                {request.projectType}
+                            </p>
+
+                            <RequestStatusBadge status={request.status} />
                         </div>
 
-                        <div className="flex h-11 items-center gap-2 rounded-xl border border-[#E8E2D9] bg-white px-3">
-                            <Search size={16} className="shrink-0 text-[#9A8F86]" />
+                        <h1 className="mt-3 max-w-[760px] font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
+                            {request.projectTitle}
+                        </h1>
 
-                            <input
-                                value={keyword}
-                                onChange={(event) => setKeyword(event.target.value)}
-                                placeholder="Cari request..."
-                                className="h-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#31332C] outline-none placeholder:text-[#B8AEA5]"
-                            />
-                        </div>
+                        <p className="mt-3 max-w-[820px] text-[13px] leading-7 text-[#7B756E] sm:text-[14px]">
+                            {request.description}
+                        </p>
+                    </div>
 
-                        {/* Mobile */}
-                        <div className="relative sm:hidden">
+                    <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                            Status Request
+                        </label>
+
+                        <div className="relative mt-3">
                             <select
-                                value={activeTab}
-                                onChange={(event) => setActiveTab(event.target.value as RequestTab)}
-                                className="h-11 w-full appearance-none rounded-xl border border-[#E8E2D9] bg-white pl-4 pr-12 text-[13px] font-medium text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                                value={request.status}
+                                onChange={(event) =>
+                                    onUpdateStatus(event.target.value as RequestStatus)
+                                }
+                                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
                             >
-                                {requestTabs.map((tab) => (
-                                    <option key={tab} value={tab}>
-                                        {tab}
+                                {statusOptions.map((status) => (
+                                    <option key={status} value={status}>
+                                        {status}
                                     </option>
                                 ))}
                             </select>
@@ -298,226 +434,122 @@ export function RequestProjectView({
                                 className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
                             />
                         </div>
+                    </div>
+                </div>
 
-                        {/* Desktop */}
-                        <div className="hidden rounded-2xl border border-[#E8E2D9] bg-white p-1.5 sm:block">
-                            <div className="grid grid-cols-5 gap-1.5">
-                                {requestTabs.map((tab) => {
-                                    const active = activeTab === tab;
+                <div className="border-t border-[#E8E2D9] bg-[#FCFBF9]/70 p-5 sm:p-6">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        <InfoTile
+                            icon={UserRound}
+                            label="Customer"
+                            value={request.customerName}
+                            description={request.customerEmail}
+                        />
 
-                                    return (
-                                        <button
-                                            key={tab}
-                                            type="button"
-                                            onClick={() => setActiveTab(tab)}
-                                            className={`flex h-10 w-full items-center justify-center rounded-xl px-2 text-[12px] font-semibold whitespace-nowrap transition ${active
-                                                ? "bg-[#725F54] text-white shadow-sm"
-                                                : "text-[#6F6860] hover:bg-[#F8F6F2]"
-                                                }`}
-                                        >
-                                            {tab}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                        <InfoTile
+                            icon={Phone}
+                            label="Kontak"
+                            value={request.customerPhone}
+                            description="Nomor aktif"
+                        />
+
+                        <InfoTile
+                            icon={MapPin}
+                            label="Lokasi"
+                            value={request.location}
+                            description={request.roomSize}
+                        />
+
+                        <InfoTile
+                            icon={Wallet}
+                            label="Budget"
+                            value={request.budget}
+                            description={request.projectType}
+                        />
+
+                        <InfoTile
+                            icon={FileText}
+                            label="Gaya"
+                            value={request.style}
+                            description="Preferensi desain"
+                        />
+
+                        <InfoTile
+                            icon={CalendarDays}
+                            label="Target"
+                            value={request.targetTime}
+                            description={request.submittedAt}
+                        />
+                    </div>
+                </div>
+
+                <div className="grid gap-0 border-t border-[#E8E2D9] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                    <div className="border-b border-[#E8E2D9] p-5 sm:p-6 lg:border-b-0 lg:border-r">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                            Referensi Customer
+                        </p>
+
+                        <p className="mt-3 text-[13px] leading-7 text-[#6F6860]">
+                            {request.referenceNote}
+                        </p>
+                    </div>
+
+                    <div className="p-5 sm:p-6">
+                        <div className="flex items-start justify-between gap-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                                Catatan Admin
+                            </p>
+
+                            {isNoteSaved && (
+                                <span className="rounded-full border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-1 text-[10px] font-semibold text-[#4F7A5F]">
+                                    Tersimpan
+                                </span>
+                            )}
                         </div>
 
-                        <div className="space-y-3 xl:max-h-[calc(100vh-210px)] xl:overflow-y-auto xl:pr-1">
-                            {filteredRequests.length > 0 ? (
-                                filteredRequests.map((request) => (
-                                    <RequestCard
-                                        key={request.id}
-                                        request={request}
-                                        selected={selectedRequest.id === request.id}
-                                        onClick={() => handleSelectRequest(request.id)}
-                                    />
-                                ))
-                            ) : (
-                                <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center">
-                                    <p className="text-[13px] font-semibold text-[#31332C]">
-                                        Request tidak ditemukan.
-                                    </p>
+                        <textarea
+                            value={adminNoteDraft}
+                            onChange={(event) => onChangeNote(event.target.value)}
+                            placeholder="Tambahkan catatan review admin..."
+                            rows={6}
+                            className="mt-3 w-full resize-none rounded-2xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                        />
 
-                                    <p className="mt-1 text-[12px] text-[#7B756E]">
-                                        Coba ubah filter atau kata pencarian.
-                                    </p>
-                                </div>
-                            )}
+                        <div className="mt-3 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={onSaveNote}
+                                disabled={!isAdminNoteChanged}
+                                className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${isAdminNoteChanged
+                                        ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                                        : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+                                    }`}
+                            >
+                                <Save size={14} />
+                                Simpan Catatan
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div
-                    className={`space-y-5 ${isMobileDetailOpen ? "block" : "hidden xl:block"
-                        }`}
-                >
-                    <button
-                        type="button"
-                        onClick={() => setIsMobileDetailOpen(false)}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9] xl:hidden"
-                    >
-                        <ArrowLeft size={15} />
-                        Kembali ke daftar
-                    </button>
+                <div className="border-t border-[#E8E2D9] bg-[#FCFBF9] p-5 sm:p-6">
+                    <div className="mb-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                            Aksi Lanjutan
+                        </p>
 
-                    <AdminSectionCard
-                        title="Detail Request"
-                        action={<RequestStatusBadge status={selectedRequest.status} />}
-                    >
-                        <div className="space-y-5">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                                        {selectedRequest.projectType}
-                                    </p>
+                        <p className="mt-1 text-[12px] text-[#7B756E]">
+                            Pilih aksi sesuai hasil review request customer.
+                        </p>
+                    </div>
 
-                                    <h2 className="mt-2 font-serif text-[30px] leading-tight text-[#31332C]">
-                                        {selectedRequest.projectTitle}
-                                    </h2>
-
-                                    <p className="mt-3 text-[13px] leading-7 text-[#7B756E]">
-                                        {selectedRequest.description}
-                                    </p>
-                                </div>
-
-                                <div className="w-full rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 lg:w-[240px]">
-                                    <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                                        Status Request
-                                    </label>
-
-                                    <div className="relative mt-3">
-                                        <select
-                                            value={selectedRequest.status}
-                                            onChange={(event) =>
-                                                updateSelectedStatus(event.target.value as RequestStatus)
-                                            }
-                                            className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-                                        >
-                                            {statusOptions.map((status) => (
-                                                <option key={status} value={status}>
-                                                    {status}
-                                                </option>
-                                            ))}
-                                        </select>
-
-                                        <ChevronDown
-                                            size={16}
-                                            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                <InfoTile
-                                    icon={UserRound}
-                                    label="Customer"
-                                    value={selectedRequest.customerName}
-                                    description={selectedRequest.customerEmail}
-                                />
-
-                                <InfoTile
-                                    icon={Phone}
-                                    label="Kontak"
-                                    value={selectedRequest.customerPhone}
-                                    description="Nomor aktif"
-                                />
-
-                                <InfoTile
-                                    icon={MapPin}
-                                    label="Lokasi"
-                                    value={selectedRequest.location}
-                                    description={selectedRequest.roomSize}
-                                />
-
-                                <InfoTile
-                                    icon={Wallet}
-                                    label="Budget"
-                                    value={selectedRequest.budget}
-                                    description={selectedRequest.projectType}
-                                />
-
-                                <InfoTile
-                                    icon={FileText}
-                                    label="Gaya"
-                                    value={selectedRequest.style}
-                                    description="Preferensi desain"
-                                />
-
-                                <InfoTile
-                                    icon={CalendarDays}
-                                    label="Target"
-                                    value={selectedRequest.targetTime}
-                                    description={selectedRequest.submittedAt}
-                                />
-                            </div>
-
-                            <div className="grid gap-4 lg:grid-cols-2">
-                                <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                                        Referensi Customer
-                                    </p>
-
-                                    <p className="mt-3 text-[13px] leading-6 text-[#6F6860]">
-                                        {selectedRequest.referenceNote}
-                                    </p>
-                                </div>
-
-                                <div className="rounded-2xl border border-[#E8E2D9] bg-white p-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                                                Catatan Admin
-                                            </p>
-                                        </div>
-
-                                        {isNoteSaved && (
-                                            <span className="rounded-full border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-1 text-[10px] font-semibold text-[#4F7A5F]">
-                                                Tersimpan
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <textarea
-                                        value={adminNoteDraft}
-                                        onChange={(event) => {
-                                            setAdminNoteDraft(event.target.value);
-                                            setIsNoteSaved(false);
-                                        }}
-                                        placeholder="Tambahkan catatan review admin..."
-                                        rows={5}
-                                        className="mt-3 w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-                                    />
-
-                                    <div className="mt-3 flex justify-end">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                updateAdminNote(adminNoteDraft);
-                                                setIsNoteSaved(true);
-                                            }}
-                                            disabled={!isAdminNoteChanged}
-                                            className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${isAdminNoteChanged
-                                                ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
-                                                : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
-                                                }`}
-                                        >
-                                            <Save size={14} />
-                                            Simpan Catatan
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </AdminSectionCard>
-
-                    <div className="grid gap-4 lg:grid-cols-3">
+                    <div className="grid gap-3 lg:grid-cols-3">
                         <ActionButton
                             icon={MessageCircle}
                             title="Jadwalkan Konsultasi"
                             description="Ubah request menjadi butuh konsultasi."
                             onClick={() => {
-                                updateSelectedStatus("Butuh Konsultasi");
+                                onUpdateStatus("Butuh Konsultasi");
                                 onChangePage?.("consultations");
                             }}
                         />
@@ -527,8 +559,8 @@ export function RequestProjectView({
                             title="Buat Brief Awal"
                             description="Lanjutkan ke brief dan dokumen proyek."
                             onClick={() => {
-                                updateSelectedStatus("Disetujui");
-                                onChangePage?.("documents");
+                                onUpdateStatus("Disetujui");
+                                onChangePage?.("brief-documents");
                             }}
                         />
 
@@ -537,7 +569,7 @@ export function RequestProjectView({
                             title="Jadikan Proyek Aktif"
                             description="Pindahkan ke proyek aktif."
                             onClick={() => {
-                                updateSelectedStatus("Menjadi Proyek Aktif");
+                                onUpdateStatus("Menjadi Proyek Aktif");
                                 onChangePage?.("active-projects");
                             }}
                         />
@@ -550,24 +582,19 @@ export function RequestProjectView({
 
 function RequestCard({
     request,
-    selected,
     onClick,
 }: {
     request: ProjectRequest;
-    selected: boolean;
     onClick: () => void;
 }) {
     return (
         <button
             type="button"
             onClick={onClick}
-            className={`w-full rounded-2xl border p-4 text-left transition ${selected
-                ? "border-[#D9C8BA] bg-[#FFFDF9] shadow-[0_8px_24px_rgba(49,51,44,0.04)]"
-                : "border-[#E8E2D9] bg-[#FCFBF9] hover:bg-white"
-                }`}
+            className="group w-full rounded-2xl border border-[#E8E2D9] bg-white p-4 text-left shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:border-[#725F54] hover:bg-[#FCFBF9]"
         >
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
                     <p className="truncate text-[14px] font-semibold text-[#31332C]">
                         {request.projectTitle}
                     </p>
@@ -580,12 +607,16 @@ function RequestCard({
                 <RequestStatusBadge status={request.status} />
             </div>
 
+            <p className="mt-3 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
+                {request.description}
+            </p>
+
             <div className="mt-4 flex items-center justify-between gap-3">
-                <p className="truncate text-[11px] text-[#9A8F86]">
+                <p className="min-w-0 truncate text-[11px] text-[#9A8F86]">
                     {request.submittedAt}
                 </p>
 
-                <span className="text-[11px] font-semibold text-[#725F54]">
+                <span className="shrink-0 rounded-full bg-[#F5F0EA] px-3 py-1 text-[11px] font-semibold text-[#725F54]">
                     {request.projectType}
                 </span>
             </div>
@@ -605,18 +636,18 @@ function InfoTile({
     description: string;
 }) {
     return (
-        <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-            <div className="flex items-start gap-3">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-white text-[#725F54]">
+        <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 transition hover:border-[#725F54] hover:bg-[#FCFBF9]">
+            <div className="flex min-w-0 items-start gap-3">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
                     <Icon size={16} />
                 </div>
 
-                <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                <div className="min-w-0 flex-1">
+                    <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
                         {label}
                     </p>
 
-                    <p className="mt-1 truncate text-[13px] font-semibold text-[#31332C]">
+                    <p className="mt-1 line-clamp-2 text-[13px] font-semibold leading-5 text-[#31332C]">
                         {value}
                     </p>
 
@@ -644,13 +675,13 @@ function ActionButton({
         <button
             type="button"
             onClick={onClick}
-            className="flex min-w-0 items-start gap-3 rounded-2xl border border-[#E8E2D9] bg-white p-4 text-left transition hover:border-[#D9C8BA] hover:bg-[#FCFBF9]"
+            className="flex w-full min-w-0 items-start gap-3 rounded-2xl border border-[#E8E2D9] bg-white p-4 text-left transition hover:border-[#725F54] hover:bg-[#F4EEE8]"
         >
             <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54] ring-1 ring-[#E8E2D9]">
                 <Icon size={16} />
             </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-[#31332C]">{title}</p>
 
                 <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
@@ -674,7 +705,7 @@ function RequestStatusBadge({ status }: { status: RequestStatus }) {
 
     return (
         <span
-            className={`inline-flex h-7 shrink-0 items-center rounded-full border px-3 text-[11px] font-semibold ${styles[status]}`}
+            className={`inline-flex h-7 max-w-full shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-[10px] font-semibold sm:text-[11px] ${styles[status]}`}
         >
             {status}
         </span>

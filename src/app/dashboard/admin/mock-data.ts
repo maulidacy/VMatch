@@ -52,7 +52,7 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         icon: FolderKanban,
       },
       {
-        id: "documents",
+        id: "brief-documents",
         label: "Brief & Dokumen",
         description: "File kerja dan dokumen proyek",
         icon: FileText,

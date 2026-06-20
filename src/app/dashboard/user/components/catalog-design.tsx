@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
+import { InspirationDetailView } from "./inspiration-detail-view";
 
 type CatalogPageTarget = "ajukan" | "ai-ide" | "konsultasi" | "catalog";
 
@@ -320,6 +321,15 @@ export function CatalogDesign({
         onChangePage?.("ajukan");
     };
 
+    if (detailItem) {
+  return (
+    <InspirationDetailView
+      onBack={() => setDetailItem(null)}
+      onChangePage={onChangePage}
+    />
+  );
+}
+
     return (
         <div className="w-full space-y-6">
             <section className="relative -mx-5 -mt-5 overflow-hidden sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8">
@@ -413,17 +423,6 @@ export function CatalogDesign({
                         }
                     }}
                     onUseAndEdit={handleUseAndEditRequest}
-                />
-            )}
-
-            {detailItem && (
-                <DesignDetailModal
-                    item={detailItem}
-                    onClose={() => setDetailItem(null)}
-                    onUseDesign={() => {
-                        openUseDesignPopup(detailItem);
-                        setDetailItem(null);
-                    }}
                 />
             )}
         </div>
@@ -868,77 +867,6 @@ function MaterialPackageCard({
     );
 }
 
-function DesignDetailModal({
-    item,
-    onClose,
-    onUseDesign,
-}: {
-    item: DesignItem;
-    onClose: () => void;
-    onUseDesign: () => void;
-}) {
-    return (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 px-4 py-6 backdrop-blur-sm">
-            <section className="max-h-[90dvh] w-full max-w-[900px] overflow-y-auto rounded-xl bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E8E2D9] bg-white px-5 py-4">
-                    <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#725F54]">
-                            Detail Inspirasi
-                        </p>
-                        <h2 className="font-serif text-[26px] leading-tight text-[#31332C]">
-                            {item.name}
-                        </h2>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="grid h-9 w-9 place-items-center rounded-xl text-[#7B756E] transition hover:bg-[#FCFBF9] hover:text-[#31332C]"
-                        aria-label="Tutup detail"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
-
-                <div className="grid gap-5 p-5 lg:grid-cols-[0.95fr_1.05fr]">
-                    <ImageBox src={item.image} alt={item.name} title={item.name} />
-
-                    <div>
-                        <PackageBadge label={item.packageType} />
-
-                        <p className="mt-4 text-[14px] leading-7 text-[#7B756E]">
-                            {item.notes}
-                        </p>
-
-                        <div className="mt-5 grid gap-3">
-                            <DetailRow label="Style" value={item.style} />
-                            <DetailRow label="Estimasi budget" value={item.budget} />
-                            <DetailRow label="Cocok untuk" value={item.suitableFor} />
-                            <DetailRow label="Material umum" value={item.materials} />
-                        </div>
-
-                        <div className="mt-5 rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] p-4">
-                            <p className="text-[13px] leading-6 text-[#7B756E]">
-                                Inspirasi ini akan digunakan sebagai referensi awal. Tim VMatch
-                                tetap akan menyesuaikan solusi berdasarkan ukuran, budget,
-                                material, dan kondisi ruangan.
-                            </p>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={onUseDesign}
-                            className="mt-5 h-11 w-full rounded-xl bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
-                        >
-                            Gunakan untuk Proyek
-                        </button>
-                    </div>
-                </div>
-            </section>
-        </div>
-    );
-}
-
 function ImageBox({
     src,
     alt,
@@ -1088,17 +1016,6 @@ function CheckLine({ text, light }: { text: string; light?: boolean }) {
             >
                 {text}
             </p>
-        </div>
-    );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="rounded-xl border border-[#E8E2D9] bg-white p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
-                {label}
-            </p>
-            <p className="mt-1 text-[13px] leading-6 text-[#31332C]">{value}</p>
         </div>
     );
 }

@@ -2,17 +2,16 @@ import type { LucideIcon } from "lucide-react";
 
 export type AdminPageId =
   | "dashboard"
+  | "promo"
   | "requests"
   | "active-projects"
-  | "documents"
+  | "brief-documents"
   | "progress-qc"
-  | "customers"
-  | "vendors"
-  | "consultations"
-  | "rab-builder"
-  | "materials"
   | "payments"
-  | "promo"
+  | "rab-builder"
+  | "consultations"
+  | "vendors"
+  | "customers"
   | "analytics"
   | "notifications"
   | "settings";

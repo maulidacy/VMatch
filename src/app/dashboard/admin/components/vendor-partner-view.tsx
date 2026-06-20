@@ -2,23 +2,23 @@
 
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   CalendarDays,
-  CheckCircle2,
-  ClipboardCheck,
-  Hammer,
+  ChevronDown,
+  Mail,
   MapPin,
   Phone,
+  Save,
+  Search,
   ShieldCheck,
-  Star,
   UserRound,
-  Users,
+  Wallet,
   XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
-import { AdminSectionCard } from "./shared";
 import type { AdminPageId } from "../types";
 
 type VendorStatus =
@@ -38,7 +38,6 @@ type VendorPartner = {
   city: string;
   serviceArea: string;
   specialty: string[];
-  rating: string;
   completedProjects: number;
   activeProjects: number;
   status: VendorStatus;
@@ -63,6 +62,13 @@ const vendorTabs: VendorTab[] = [
   "Nonaktif",
 ];
 
+const statusOptions: VendorStatus[] = [
+  "Aktif",
+  "Menunggu Review",
+  "Perlu Evaluasi",
+  "Nonaktif",
+];
+
 const initialVendors: VendorPartner[] = [
   {
     id: "vendor-1",
@@ -73,7 +79,6 @@ const initialVendors: VendorPartner[] = [
     city: "Semarang",
     serviceArea: "Semarang, Ungaran, Kendal",
     specialty: ["Kitchen Set", "Kabinet", "Backdrop TV"],
-    rating: "4.8",
     completedProjects: 18,
     activeProjects: 2,
     status: "Aktif",
@@ -109,7 +114,6 @@ const initialVendors: VendorPartner[] = [
     city: "Yogyakarta",
     serviceArea: "Yogyakarta, Sleman, Bantul",
     specialty: ["Wardrobe", "Partisi", "Storage"],
-    rating: "4.6",
     completedProjects: 12,
     activeProjects: 1,
     status: "Perlu Evaluasi",
@@ -138,7 +142,6 @@ const initialVendors: VendorPartner[] = [
     city: "Solo",
     serviceArea: "Solo, Sukoharjo, Karanganyar",
     specialty: ["Ruang Kerja", "Meja Custom", "Rak Buku"],
-    rating: "4.9",
     completedProjects: 21,
     activeProjects: 1,
     status: "Aktif",
@@ -167,7 +170,6 @@ const initialVendors: VendorPartner[] = [
     city: "Semarang",
     serviceArea: "Semarang",
     specialty: ["Kitchen Set", "Wardrobe"],
-    rating: "Belum ada",
     completedProjects: 0,
     activeProjects: 0,
     status: "Menunggu Review",
@@ -188,48 +190,75 @@ export function VendorPartnerView({
 }) {
   const [vendors, setVendors] = useState<VendorPartner[]>(initialVendors);
   const [activeTab, setActiveTab] = useState<VendorTab>("Semua");
-  const [selectedVendorId, setSelectedVendorId] = useState(
-    initialVendors[0]?.id ?? "",
-  );
-
-  const selectedVendor = useMemo(() => {
-    return vendors.find((vendor) => vendor.id === selectedVendorId) ?? vendors[0];
-  }, [vendors, selectedVendorId]);
+  const [keyword, setKeyword] = useState("");
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [vendorNameDraft, setVendorNameDraft] = useState("");
+  const [serviceAreaDraft, setServiceAreaDraft] = useState("");
+  const [adminNoteDraft, setAdminNoteDraft] = useState("");
+  const [isVendorSaved, setIsVendorSaved] = useState(false);
 
   const filteredVendors = useMemo(() => {
-    return vendors.filter((vendor) => {
-      if (activeTab === "Semua") return true;
-      if (activeTab === "Aktif") return vendor.status === "Aktif";
-      if (activeTab === "Review") return vendor.status === "Menunggu Review";
-      if (activeTab === "Evaluasi") return vendor.status === "Perlu Evaluasi";
-      return vendor.status === "Nonaktif";
-    });
-  }, [activeTab, vendors]);
+    const normalizedKeyword = keyword.trim().toLowerCase();
 
-  const activeCount = vendors.filter((vendor) => vendor.status === "Aktif").length;
-  const reviewCount = vendors.filter(
-    (vendor) => vendor.status === "Menunggu Review",
-  ).length;
-  const evaluationCount = vendors.filter(
-    (vendor) => vendor.status === "Perlu Evaluasi",
-  ).length;
-  const totalActiveProjects = vendors.reduce(
-    (total, vendor) => total + vendor.activeProjects,
-    0,
+    return vendors.filter((vendor) => {
+      const matchTab =
+        activeTab === "Semua" ||
+        (activeTab === "Aktif" && vendor.status === "Aktif") ||
+        (activeTab === "Review" && vendor.status === "Menunggu Review") ||
+        (activeTab === "Evaluasi" && vendor.status === "Perlu Evaluasi") ||
+        (activeTab === "Nonaktif" && vendor.status === "Nonaktif");
+
+      const matchKeyword =
+        normalizedKeyword.length === 0 ||
+        vendor.name.toLowerCase().includes(normalizedKeyword) ||
+        vendor.ownerName.toLowerCase().includes(normalizedKeyword) ||
+        vendor.email.toLowerCase().includes(normalizedKeyword) ||
+        vendor.phone.toLowerCase().includes(normalizedKeyword) ||
+        vendor.city.toLowerCase().includes(normalizedKeyword) ||
+        vendor.serviceArea.toLowerCase().includes(normalizedKeyword) ||
+        vendor.status.toLowerCase().includes(normalizedKeyword) ||
+        vendor.specialty.join(" ").toLowerCase().includes(normalizedKeyword);
+
+      return matchTab && matchKeyword;
+    });
+  }, [activeTab, keyword, vendors]);
+
+  const selectedVendor = useMemo(() => {
+    if (!selectedVendorId) return null;
+
+    return vendors.find((vendor) => vendor.id === selectedVendorId) ?? null;
+  }, [selectedVendorId, vendors]);
+
+  const evaluationCount = useMemo(
+    () => vendors.filter((vendor) => vendor.status === "Perlu Evaluasi").length,
+    [vendors],
   );
 
-  const updateSelectedVendor = (
-    field: keyof VendorPartner,
-    value: string | number | VendorStatus,
-  ) => {
-    if (!selectedVendor) return;
+  const openDetail = (vendor: VendorPartner) => {
+    setSelectedVendorId(vendor.id);
+    setVendorNameDraft(vendor.name);
+    setServiceAreaDraft(vendor.serviceArea);
+    setAdminNoteDraft(vendor.adminNote);
+    setIsVendorSaved(false);
+  };
 
+  const closeDetail = () => {
+    setSelectedVendorId(null);
+    setVendorNameDraft("");
+    setServiceAreaDraft("");
+    setAdminNoteDraft("");
+    setIsVendorSaved(false);
+  };
+
+  const updateVendor = (
+    id: string,
+    updater: (vendor: VendorPartner) => VendorPartner,
+  ) => {
     setVendors((current) =>
       current.map((vendor) =>
-        vendor.id === selectedVendor.id
+        vendor.id === id
           ? {
-              ...vendor,
-              [field]: value,
+              ...updater(vendor),
               lastActivity: "Baru saja",
             }
           : vendor,
@@ -237,8 +266,11 @@ export function VendorPartnerView({
     );
   };
 
-  const updateStatus = (status: VendorStatus) => {
-    updateSelectedVendor("status", status);
+  const updateStatus = (id: string, status: VendorStatus) => {
+    updateVendor(id, (vendor) => ({
+      ...vendor,
+      status,
+    }));
 
     if (status === "Aktif") setActiveTab("Aktif");
     if (status === "Menunggu Review") setActiveTab("Review");
@@ -246,422 +278,566 @@ export function VendorPartnerView({
     if (status === "Nonaktif") setActiveTab("Nonaktif");
   };
 
-  if (!selectedVendor) return null;
+  const saveVendorChanges = () => {
+    if (!selectedVendor) return;
+
+    updateVendor(selectedVendor.id, (vendor) => ({
+      ...vendor,
+      name: vendorNameDraft,
+      serviceArea: serviceAreaDraft,
+      adminNote: adminNoteDraft,
+    }));
+
+    setIsVendorSaved(true);
+  };
+
+  if (selectedVendor) {
+    return (
+      <VendorDetailPage
+        vendor={selectedVendor}
+        vendorNameDraft={vendorNameDraft}
+        serviceAreaDraft={serviceAreaDraft}
+        adminNoteDraft={adminNoteDraft}
+        isVendorSaved={isVendorSaved}
+        evaluationCount={evaluationCount}
+        onBack={closeDetail}
+        onChangeVendorName={(value) => {
+          setVendorNameDraft(value);
+          setIsVendorSaved(false);
+        }}
+        onChangeServiceArea={(value) => {
+          setServiceAreaDraft(value);
+          setIsVendorSaved(false);
+        }}
+        onChangeAdminNote={(value) => {
+          setAdminNoteDraft(value);
+          setIsVendorSaved(false);
+        }}
+        onSave={saveVendorChanges}
+        onStatusChange={(status) => updateStatus(selectedVendor.id, status)}
+        onChangePage={onChangePage}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-4 pb-1 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
-            Relasi Pengguna
+    <div className="space-y-5">
+      <section className="pb-1">
+        <div className="max-w-[820px]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#725F54]">
+            Vendor Partner
           </p>
 
           <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
-            Vendor Partner
+            Daftar Vendor
           </h1>
 
-          <p className="mt-2 max-w-[760px] text-[14px] leading-7 text-[#7B756E]">
-            Kelola data vendor partner, status kerja sama, area layanan,
-            spesialisasi, performa proyek, dan catatan evaluasi admin.
+          <p className="mt-2 text-[13px] leading-6 text-[#7B756E] sm:text-[14px]">
+            Kelola data vendor partner, area layanan, spesialisasi pekerjaan,
+            proyek aktif, status kerja sama, dan catatan evaluasi admin.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={() => onChangePage?.("active-projects")}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-5 text-[13px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
-        >
-          Lihat Proyek Aktif
-          <ArrowRight size={16} />
-        </button>
       </section>
 
-      <section className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
-        <VendorMiniStat
-          icon={Users}
-          label="Total Vendor"
-          value={`${vendors.length}`}
-          description="Vendor partner terdaftar"
-        />
+      <section className="rounded-3xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-3">
+            <Search size={16} className="shrink-0 text-[#9A8F86]" />
 
-        <VendorMiniStat
-          icon={ShieldCheck}
-          label="Vendor Aktif"
-          value={`${activeCount}`}
-          description="Siap menerima proyek"
-        />
+            <input
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="Cari vendor, PIC, kota, area layanan, spesialisasi, atau status..."
+              className="h-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#31332C] outline-none placeholder:text-[#B8AEA5]"
+            />
+          </div>
 
-        <VendorMiniStat
-          icon={ClipboardCheck}
-          label="Menunggu Review"
-          value={`${reviewCount}`}
-          description="Perlu dicek admin"
-        />
-
-        <VendorMiniStat
-          icon={Hammer}
-          label="Proyek Aktif"
-          value={`${totalActiveProjects}`}
-          description="Sedang dikerjakan vendor"
-        />
-      </section>
-
-      <AdminSectionCard title="Daftar Vendor">
-        <div className="rounded-2xl border border-[#E8E2D9] bg-white p-2">
-          <div className="grid grid-cols-5 gap-2">
-            {vendorTabs.map((tab) => {
-              const active = activeTab === tab;
-
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex h-11 items-center justify-center rounded-xl px-2 text-[10px] font-semibold transition sm:text-[13px] ${
-                    active
-                      ? "bg-[#725F54] text-white shadow-sm"
-                      : "text-[#6F6860] hover:bg-[#F8F6F2]"
-                  }`}
-                >
+          <div className="relative sm:hidden">
+            <select
+              value={activeTab}
+              onChange={(event) => setActiveTab(event.target.value as VendorTab)}
+              className="h-11 w-full appearance-none rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] pl-4 pr-12 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+            >
+              {vendorTabs.map((tab) => (
+                <option key={tab} value={tab}>
                   {tab}
-                </button>
-              );
-            })}
+                </option>
+              ))}
+            </select>
+
+            <ChevronDown
+              size={16}
+              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
+            />
+          </div>
+
+          <div className="hidden rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-1.5 sm:block lg:col-span-2">
+            <div className="flex gap-1.5 overflow-x-auto">
+              {vendorTabs.map((tab) => {
+                const active = activeTab === tab;
+
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`inline-flex h-10 shrink-0 items-center justify-center rounded-xl px-4 text-[12px] font-semibold transition ${
+                      active
+                        ? "bg-[#725F54] text-white shadow-sm"
+                        : "text-[#6F6860] hover:bg-white"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
+      </section>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {filteredVendors.length > 0 ? (
-            filteredVendors.map((vendor) => (
+      <section>
+        {filteredVendors.length > 0 ? (
+          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            {filteredVendors.map((vendor) => (
               <VendorCard
                 key={vendor.id}
                 vendor={vendor}
-                selected={selectedVendor.id === vendor.id}
-                onClick={() => setSelectedVendorId(vendor.id)}
+                onClick={() => openDetail(vendor)}
               />
-            ))
-          ) : (
-            <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center md:col-span-2 xl:col-span-3">
-              <p className="text-[13px] font-semibold text-[#31332C]">
-                Belum ada vendor pada kategori ini.
-              </p>
-
-              <p className="mt-1 text-[12px] text-[#7B756E]">
-                Vendor partner akan muncul sesuai status kerja samanya.
-              </p>
-            </div>
-          )}
-        </div>
-      </AdminSectionCard>
-
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <AdminSectionCard
-          title="Detail Vendor"
-          action={<VendorStatusBadge status={selectedVendor.status} />}
-        >
-          <div className="space-y-5">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                Profil Vendor Partner
-              </p>
-
-              <h2 className="mt-2 font-serif text-[30px] leading-tight text-[#31332C]">
-                {selectedVendor.name}
-              </h2>
-
-              <p className="mt-2 text-[13px] leading-7 text-[#7B756E]">
-                {selectedVendor.vendorSummary}
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <AmountTile
-                label="Rating"
-                value={selectedVendor.rating}
-                description="Nilai performa"
-              />
-
-              <AmountTile
-                label="Selesai"
-                value={`${selectedVendor.completedProjects}`}
-                description="Proyek selesai"
-              />
-
-              <AmountTile
-                label="Aktif"
-                value={`${selectedVendor.activeProjects}`}
-                description="Proyek berjalan"
-                highlight
-              />
-
-              <AmountTile
-                label="Evaluasi"
-                value={`${evaluationCount}`}
-                description="Perlu ditinjau"
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <InfoTile
-                icon={UserRound}
-                label="PIC"
-                value={selectedVendor.ownerName}
-                description={selectedVendor.email}
-              />
-
-              <InfoTile
-                icon={Phone}
-                label="Kontak"
-                value={selectedVendor.phone}
-                description="Nomor vendor"
-              />
-
-              <InfoTile
-                icon={MapPin}
-                label="Kota"
-                value={selectedVendor.city}
-                description={selectedVendor.serviceArea}
-              />
-
-              <InfoTile
-                icon={CalendarDays}
-                label="Bergabung"
-                value={selectedVendor.joinedAt}
-                description={selectedVendor.lastActivity}
-              />
-            </div>
-
-            <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                Spesialisasi Vendor
-              </p>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {selectedVendor.specialty.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-full border border-[#E4D8CD] bg-white px-3 py-1.5 text-[12px] font-medium text-[#725F54]"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <label className="block rounded-2xl border border-[#E8E2D9] bg-white p-4">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Nama Vendor
-                </span>
-
-                <input
-                  value={selectedVendor.name}
-                  onChange={(event) =>
-                    updateSelectedVendor("name", event.target.value)
-                  }
-                  className="mt-3 h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 text-[13px] font-medium text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-                />
-              </label>
-
-              <label className="block rounded-2xl border border-[#E8E2D9] bg-white p-4">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Area Layanan
-                </span>
-
-                <input
-                  value={selectedVendor.serviceArea}
-                  onChange={(event) =>
-                    updateSelectedVendor("serviceArea", event.target.value)
-                  }
-                  className="mt-3 h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 text-[13px] font-medium text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-                />
-              </label>
-            </div>
-
-            <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                    Proyek Sedang Berjalan
-                  </p>
-
-                  <p className="mt-1 text-[12px] text-[#7B756E]">
-                    Proyek yang sedang ditangani oleh vendor ini.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onChangePage?.("active-projects")}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3 text-[11px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
-                >
-                  Lihat Proyek
-                  <ArrowRight size={13} />
-                </button>
-              </div>
-
-              <div className="mt-4 grid gap-3">
-                {selectedVendor.currentProjects.length > 0 ? (
-                  selectedVendor.currentProjects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="rounded-xl border border-[#E8E2D9] bg-white p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-[13px] font-semibold text-[#31332C]">
-                            {project.title}
-                          </p>
-
-                          <p className="mt-1 truncate text-[11px] text-[#7B756E]">
-                            {project.customerName} • {project.status}
-                          </p>
-                        </div>
-
-                        <span className="shrink-0 text-[12px] font-semibold text-[#725F54]">
-                          {project.progress}%
-                        </span>
-                      </div>
-
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E8E2D9]">
-                        <div
-                          className="h-full rounded-full bg-[#725F54]"
-                          style={{ width: `${project.progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-[#E8E2D9] bg-white p-4 text-center">
-                    <p className="text-[12px] text-[#7B756E]">
-                      Belum ada proyek aktif.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <label className="block rounded-2xl border border-[#E8E2D9] bg-white p-4">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                Catatan Evaluasi Admin
-              </span>
-
-              <textarea
-                value={selectedVendor.adminNote}
-                onChange={(event) =>
-                  updateSelectedVendor("adminNote", event.target.value)
-                }
-                rows={4}
-                className="mt-3 w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-              />
-            </label>
+            ))}
           </div>
-        </AdminSectionCard>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-white p-8 text-center">
+            <p className="text-[14px] font-semibold text-[#31332C]">
+              Vendor tidak ditemukan.
+            </p>
 
-        <div className="space-y-5">
-          <AdminSectionCard title="Aksi Vendor">
-            <div className="space-y-3">
-              <ActionButton
-                icon={ShieldCheck}
-                title="Aktifkan Vendor"
-                description="Vendor bisa menerima proyek baru."
-                onClick={() => updateStatus("Aktif")}
-              />
-
-              <ActionButton
-                icon={AlertTriangle}
-                title="Tandai Perlu Evaluasi"
-                description="Vendor perlu ditinjau performanya."
-                onClick={() => updateStatus("Perlu Evaluasi")}
-              />
-
-              <ActionButton
-                icon={XCircle}
-                title="Nonaktifkan"
-                description="Vendor tidak menerima proyek sementara."
-                onClick={() => updateStatus("Nonaktif")}
-              />
-            </div>
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Ubah Status">
-            <div className="grid gap-2">
-              {statusOptions.map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => updateStatus(status)}
-                  className={`flex h-10 items-center justify-between rounded-xl border px-3 text-left text-[12px] font-semibold transition ${
-                    selectedVendor.status === status
-                      ? "border-[#D9C8BA] bg-[#FFFDF9] text-[#725F54]"
-                      : "border-[#E8E2D9] bg-white text-[#6F6860] hover:bg-[#FCFBF9]"
-                  }`}
-                >
-                  <span>{status}</span>
-
-                  {selectedVendor.status === status && (
-                    <CheckCircle2 size={15} />
-                  )}
-                </button>
-              ))}
-            </div>
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Navigasi Cepat">
-            <div className="grid gap-2">
-              <button
-                type="button"
-                onClick={() => onChangePage?.("active-projects")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
-              >
-                Ke Proyek Aktif
-                <ArrowRight size={14} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChangePage?.("progress-qc")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
-              >
-                Ke Progress & QC
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          </AdminSectionCard>
-        </div>
+            <p className="mt-2 text-[13px] text-[#7B756E]">
+              Coba ubah filter atau kata pencarian.
+            </p>
+          </div>
+        )}
       </section>
     </div>
   );
 }
 
-const statusOptions: VendorStatus[] = [
-  "Aktif",
-  "Menunggu Review",
-  "Perlu Evaluasi",
-  "Nonaktif",
-];
+function VendorDetailPage({
+  vendor,
+  vendorNameDraft,
+  serviceAreaDraft,
+  adminNoteDraft,
+  isVendorSaved,
+  evaluationCount,
+  onBack,
+  onChangeVendorName,
+  onChangeServiceArea,
+  onChangeAdminNote,
+  onSave,
+  onStatusChange,
+  onChangePage,
+}: {
+  vendor: VendorPartner;
+  vendorNameDraft: string;
+  serviceAreaDraft: string;
+  adminNoteDraft: string;
+  isVendorSaved: boolean;
+  evaluationCount: number;
+  onBack: () => void;
+  onChangeVendorName: (value: string) => void;
+  onChangeServiceArea: (value: string) => void;
+  onChangeAdminNote: (value: string) => void;
+  onSave: () => void;
+  onStatusChange: (status: VendorStatus) => void;
+  onChangePage?: (page: AdminPageId) => void;
+}) {
+  const isVendorChanged =
+    vendorNameDraft !== vendor.name ||
+    serviceAreaDraft !== vendor.serviceArea ||
+    adminNoteDraft !== vendor.adminNote;
+
+  return (
+    <div className="space-y-5">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+      >
+        <ArrowLeft size={15} />
+        Kembali ke daftar vendor
+      </button>
+
+      <section className="overflow-hidden rounded-3xl border border-[#E8E2D9] bg-white shadow-[0_12px_34px_rgba(49,51,44,0.035)]">
+        <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
+                Profil Vendor Partner
+              </p>
+
+              <VendorStatusBadge status={vendor.status} />
+            </div>
+
+            <h1 className="mt-3 max-w-[760px] font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
+              {vendor.name}
+            </h1>
+
+            <p className="mt-3 max-w-[820px] text-[13px] leading-7 text-[#7B756E] sm:text-[14px]">
+              {vendor.vendorSummary}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+              Status Vendor
+            </label>
+
+            <div className="relative mt-3">
+              <select
+                value={vendor.status}
+                onChange={(event) =>
+                  onStatusChange(event.target.value as VendorStatus)
+                }
+                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+              >
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-[#E8E2D9] bg-[#FCFBF9]/70 p-5 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <InfoTile
+              icon={UserRound}
+              label="PIC"
+              value={vendor.ownerName}
+              description="Penanggung jawab"
+            />
+
+            <InfoTile
+              icon={Mail}
+              label="Email"
+              value={vendor.email}
+              description="Kontak vendor"
+            />
+
+            <InfoTile
+              icon={Phone}
+              label="Telepon"
+              value={vendor.phone}
+              description="Nomor vendor"
+            />
+
+            <InfoTile
+              icon={MapPin}
+              label="Kota"
+              value={vendor.city}
+              description={vendor.serviceArea}
+            />
+
+            <InfoTile
+              icon={CalendarDays}
+              label="Bergabung"
+              value={vendor.joinedAt}
+              description={vendor.lastActivity}
+            />
+
+            <InfoTile
+              icon={ShieldCheck}
+              label="Status"
+              value={vendor.status}
+              description="Kerja sama vendor"
+            />
+
+            <InfoTile
+              icon={Wallet}
+              label="Proyek Aktif"
+              value={`${vendor.activeProjects} proyek`}
+              description="Sedang berjalan"
+            />
+
+            <InfoTile
+              icon={ShieldCheck}
+              label="Selesai"
+              value={`${vendor.completedProjects} proyek`}
+              description="Selesai dikerjakan"
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-[#E8E2D9] bg-[#FCFBF9]/70 p-5 sm:p-6">
+          <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
+            <AmountTile
+              label="Selesai"
+              value={`${vendor.completedProjects}`}
+              description="Proyek selesai"
+            />
+
+            <AmountTile
+              label="Aktif"
+              value={`${vendor.activeProjects}`}
+              description="Proyek berjalan"
+              highlight
+            />
+
+            <AmountTile
+              label="Evaluasi"
+              value={`${evaluationCount}`}
+              description="Vendor ditinjau"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-0 border-t border-[#E8E2D9] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <DetailBlock
+            title="Spesialisasi Vendor"
+            description="Bidang pekerjaan yang paling sesuai untuk vendor ini."
+          >
+            <div className="flex flex-wrap gap-2">
+              {vendor.specialty.map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-3 py-1.5 text-[12px] font-medium text-[#725F54]"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </DetailBlock>
+
+          <DetailBlock
+            title="Data Vendor"
+            description="Informasi yang dapat diperbarui oleh admin."
+            badge={isVendorSaved ? "Tersimpan" : undefined}
+            withRightBorder={false}
+          >
+            <div className="grid gap-3">
+              <label className="block">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+                  Nama Vendor
+                </span>
+
+                <input
+                  value={vendorNameDraft}
+                  onChange={(event) => onChangeVendorName(event.target.value)}
+                  className="mt-2 h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 text-[13px] font-medium text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+                  Area Layanan
+                </span>
+
+                <input
+                  value={serviceAreaDraft}
+                  onChange={(event) => onChangeServiceArea(event.target.value)}
+                  className="mt-2 h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 text-[13px] font-medium text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                />
+              </label>
+            </div>
+          </DetailBlock>
+        </div>
+
+        <div className="grid gap-0 border-t border-[#E8E2D9] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <DetailBlock
+            title="Proyek Sedang Berjalan"
+            description="Proyek yang sedang ditangani vendor."
+          >
+            <div className="grid gap-3">
+              {vendor.currentProjects.length > 0 ? (
+                vendor.currentProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    className="rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-semibold text-[#31332C]">
+                          {project.title}
+                        </p>
+
+                        <p className="mt-1 truncate text-[11px] text-[#7B756E]">
+                          {project.customerName} • {project.status}
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 text-[12px] font-semibold text-[#725F54]">
+                        {project.progress}%
+                      </span>
+                    </div>
+
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E8E2D9]">
+                      <div
+                        className="h-full rounded-full bg-[#725F54]"
+                        style={{ width: `${project.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-4 text-center">
+                  <p className="text-[12px] text-[#7B756E]">
+                    Belum ada proyek aktif.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onChangePage?.("active-projects")}
+              className="mt-4 inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3 text-[11px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+            >
+              Lihat Proyek
+              <ArrowRight size={13} />
+            </button>
+          </DetailBlock>
+
+          <DetailBlock
+            title="Catatan Evaluasi Admin"
+            description="Catatan internal admin untuk evaluasi vendor."
+            badge={isVendorSaved ? "Tersimpan" : undefined}
+            withRightBorder={false}
+          >
+            <textarea
+              value={adminNoteDraft}
+              onChange={(event) => onChangeAdminNote(event.target.value)}
+              rows={5}
+              className="w-full resize-none rounded-2xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+            />
+
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={!isVendorChanged}
+                className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
+                  isVendorChanged
+                    ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                    : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+                }`}
+              >
+                <Save size={14} />
+                Simpan Perubahan
+              </button>
+            </div>
+          </DetailBlock>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => onStatusChange("Aktif")}
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+            vendor.status === "Aktif"
+              ? "border-[#725F54] bg-[#725F54] text-white"
+              : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+          }`}
+        >
+          <ShieldCheck size={15} />
+          Aktifkan
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onStatusChange("Perlu Evaluasi")}
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+            vendor.status === "Perlu Evaluasi"
+              ? "border-[#725F54] bg-[#725F54] text-white"
+              : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+          }`}
+        >
+          <AlertTriangle size={15} />
+          Evaluasi
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onStatusChange("Nonaktif")}
+          className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${
+            vendor.status === "Nonaktif"
+              ? "border-[#725F54] bg-[#725F54] text-white"
+              : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+          }`}
+        >
+          <XCircle size={15} />
+          Nonaktifkan
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DetailBlock({
+  title,
+  description,
+  children,
+  badge,
+  withRightBorder = true,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+  badge?: string;
+  withRightBorder?: boolean;
+}) {
+  return (
+    <div
+      className={`min-w-0 border-b border-[#E8E2D9] p-5 sm:p-6 lg:border-b-0 ${
+        withRightBorder ? "lg:border-r" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+            {title}
+          </p>
+
+          <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+            {description}
+          </p>
+        </div>
+
+        {badge && (
+          <span className="shrink-0 rounded-full border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-1 text-[10px] font-semibold text-[#4F7A5F]">
+            {badge}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
 
 function VendorCard({
   vendor,
-  selected,
   onClick,
 }: {
   vendor: VendorPartner;
-  selected: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-w-0 rounded-2xl border p-4 text-left transition ${
-        selected
-          ? "border-[#D9C8BA] bg-[#FFFDF9]"
-          : "border-[#E8E2D9] bg-[#FCFBF9] hover:bg-white"
-      }`}
+      className="group w-full rounded-2xl border border-[#E8E2D9] bg-white p-4 text-left shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:border-[#725F54] hover:bg-[#FCFBF9]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-[#31332C]">
             {vendor.name}
           </p>
@@ -674,56 +850,26 @@ function VendorCard({
         <VendorStatusBadge status={vendor.status} />
       </div>
 
+      <p className="mt-3 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
+        {vendor.vendorSummary}
+      </p>
+
       <div className="mt-4 flex items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] font-medium text-[#7B756E]">Rating</p>
+          <p className="text-[11px] font-medium text-[#7B756E]">Selesai</p>
 
           <p className="mt-1 text-[14px] font-semibold text-[#31332C]">
-            {vendor.rating}
+            {vendor.completedProjects} proyek
           </p>
         </div>
 
         <p className="text-right text-[11px] leading-5 text-[#9A8F86]">
-          {vendor.completedProjects} proyek selesai
+          {vendor.activeProjects} proyek aktif
           <br />
-          {vendor.activeProjects} aktif
+          {vendor.status}
         </p>
       </div>
     </button>
-  );
-}
-
-function VendorMiniStat({
-  icon: Icon,
-  label,
-  value,
-  description,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.035)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
-          <Icon size={17} strokeWidth={2} />
-        </div>
-
-        <p className="min-w-0 truncate text-right font-serif text-[25px] leading-none text-[#31332C]">
-          {value}
-        </p>
-      </div>
-
-      <p className="mt-4 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-        {label}
-      </p>
-
-      <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
-        {description}
-      </p>
-    </div>
   );
 }
 
@@ -740,24 +886,21 @@ function AmountTile({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 ${
-        highlight
-          ? "border-[#D9C8BA] bg-[#FFFDF9]"
-          : "border-[#E8E2D9] bg-[#FCFBF9]"
-      }`}
+      className={`min-w-0 rounded-2xl border p-4 transition ${
+        highlight ? "border-[#D9C8BA] bg-white" : "border-[#E8E2D9] bg-white"
+      } hover:border-[#725F54] hover:bg-[#FCFBF9]`}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
         {label}
       </p>
 
-      <p className="mt-2 flex items-center gap-1 font-serif text-[25px] leading-none text-[#31332C]">
-        {label === "Rating" && value !== "Belum ada" && (
-          <Star size={18} className="text-[#725F54]" />
-        )}
+      <p className="mt-2 truncate font-serif text-[24px] leading-none text-[#31332C]">
         {value}
       </p>
 
-      <p className="mt-2 text-[11px] text-[#7B756E]">{description}</p>
+      <p className="mt-2 truncate text-[11px] text-[#7B756E]">
+        {description}
+      </p>
     </div>
   );
 }
@@ -774,18 +917,18 @@ function InfoTile({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-      <div className="flex items-start gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-white text-[#725F54]">
+    <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 transition hover:border-[#725F54] hover:bg-[#FCFBF9]">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
           <Icon size={16} />
         </div>
 
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
             {label}
           </p>
 
-          <p className="mt-1 truncate text-[13px] font-semibold text-[#31332C]">
+          <p className="mt-1 line-clamp-2 text-[13px] font-semibold leading-5 text-[#31332C]">
             {value}
           </p>
 
@@ -795,38 +938,6 @@ function InfoTile({
         </div>
       </div>
     </div>
-  );
-}
-
-function ActionButton({
-  icon: Icon,
-  title,
-  description,
-  onClick,
-}: {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-start gap-3 rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 text-left transition hover:border-[#D9C8BA] hover:bg-white"
-    >
-      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
-        <Icon size={16} />
-      </div>
-
-      <div>
-        <p className="text-[13px] font-semibold text-[#31332C]">{title}</p>
-
-        <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-          {description}
-        </p>
-      </div>
-    </button>
   );
 }
 
@@ -842,7 +953,7 @@ function VendorStatusBadge({ status }: { status: VendorStatus }) {
 
   return (
     <span
-      className={`inline-flex h-7 shrink-0 items-center rounded-full border px-3 text-[11px] font-semibold ${style}`}
+      className={`inline-flex h-7 max-w-full shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-[10px] font-semibold sm:text-[11px] ${style}`}
     >
       {status}
     </span>

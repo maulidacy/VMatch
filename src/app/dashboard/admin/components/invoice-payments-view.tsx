@@ -1,24 +1,22 @@
 "use client";
 
 import {
-  ArrowRight,
+  AlertTriangle,
+  ArrowLeft,
   Banknote,
   CalendarDays,
   CheckCircle2,
-  Clock,
+  ChevronDown,
   CreditCard,
   FileText,
-  ReceiptText,
+  Save,
+  Search,
   Send,
   UserRound,
   Wallet,
-  AlertTriangle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
-
-import { AdminSectionCard } from "./shared";
-import type { AdminPageId } from "../types";
+import { useMemo, useState, type ReactNode } from "react";
 
 type PaymentStatus =
   | "Draft"
@@ -61,9 +59,24 @@ type InvoicePayment = {
   }[];
 };
 
+type InvoiceDraft = {
+  dueDate: string;
+  paymentMethod: string;
+  adminNote: string;
+  customerNote: string;
+};
+
 const paymentTabs: PaymentTab[] = [
   "Semua",
   "Menunggu",
+  "Terbayar",
+  "Terlambat",
+  "Refund",
+];
+
+const statusOptions: PaymentStatus[] = [
+  "Draft",
+  "Menunggu Pembayaran",
   "Terbayar",
   "Terlambat",
   "Refund",
@@ -253,487 +266,656 @@ const initialInvoices: InvoicePayment[] = [
   },
 ];
 
-export function InvoicePaymentsView({
-  onChangePage,
-}: {
-  onChangePage?: (page: AdminPageId) => void;
-}) {
-  const [invoices, setInvoices] =
-    useState<InvoicePayment[]>(initialInvoices);
-  const [activeTab, setActiveTab] = useState<PaymentTab>("Semua");
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState(
-    initialInvoices[0]?.id ?? "",
-  );
+function createDraft(invoice: InvoicePayment): InvoiceDraft {
+  return {
+    dueDate: invoice.dueDate,
+    paymentMethod: invoice.paymentMethod,
+    adminNote: invoice.adminNote,
+    customerNote: invoice.customerNote,
+  };
+}
 
-  const selectedInvoice = useMemo(() => {
-    return (
-      invoices.find((invoice) => invoice.id === selectedInvoiceId) ??
-      invoices[0]
-    );
-  }, [invoices, selectedInvoiceId]);
+export function InvoicePaymentsView() {
+  const [invoices, setInvoices] = useState<InvoicePayment[]>(initialInvoices);
+  const [activeTab, setActiveTab] = useState<PaymentTab>("Semua");
+  const [keyword, setKeyword] = useState("");
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
+    null,
+  );
+  const [invoiceDraft, setInvoiceDraft] = useState<InvoiceDraft | null>(null);
+  const [isInvoiceSaved, setIsInvoiceSaved] = useState(false);
 
   const filteredInvoices = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+
     return invoices.filter((invoice) => {
-      if (activeTab === "Semua") return true;
-      if (activeTab === "Menunggu") {
-        return (
-          invoice.status === "Draft" ||
-          invoice.status === "Menunggu Pembayaran"
-        );
-      }
-      if (activeTab === "Terbayar") return invoice.status === "Terbayar";
-      if (activeTab === "Terlambat") return invoice.status === "Terlambat";
-      return invoice.status === "Refund";
+      const matchTab =
+        activeTab === "Semua" ||
+        (activeTab === "Menunggu" &&
+          (invoice.status === "Draft" ||
+            invoice.status === "Menunggu Pembayaran")) ||
+        (activeTab === "Terbayar" && invoice.status === "Terbayar") ||
+        (activeTab === "Terlambat" && invoice.status === "Terlambat") ||
+        (activeTab === "Refund" && invoice.status === "Refund");
+
+      const matchKeyword =
+        normalizedKeyword.length === 0 ||
+        invoice.invoiceNumber.toLowerCase().includes(normalizedKeyword) ||
+        invoice.projectTitle.toLowerCase().includes(normalizedKeyword) ||
+        invoice.customerName.toLowerCase().includes(normalizedKeyword) ||
+        invoice.vendorName.toLowerCase().includes(normalizedKeyword) ||
+        invoice.paymentStage.toLowerCase().includes(normalizedKeyword) ||
+        invoice.status.toLowerCase().includes(normalizedKeyword);
+
+      return matchTab && matchKeyword;
     });
-  }, [activeTab, invoices]);
+  }, [activeTab, invoices, keyword]);
 
-  const waitingCount = invoices.filter(
-    (invoice) =>
-      invoice.status === "Draft" || invoice.status === "Menunggu Pembayaran",
-  ).length;
+  const selectedInvoice = useMemo(() => {
+    if (!selectedInvoiceId) return null;
 
-  const paidCount = invoices.filter(
-    (invoice) => invoice.status === "Terbayar",
-  ).length;
+    return invoices.find((invoice) => invoice.id === selectedInvoiceId) ?? null;
+  }, [invoices, selectedInvoiceId]);
 
-  const lateCount = invoices.filter(
-    (invoice) => invoice.status === "Terlambat",
-  ).length;
+  const openDetail = (invoice: InvoicePayment) => {
+    setSelectedInvoiceId(invoice.id);
+    setInvoiceDraft(createDraft(invoice));
+    setIsInvoiceSaved(false);
+  };
 
-  const refundCount = invoices.filter(
-    (invoice) => invoice.status === "Refund",
-  ).length;
+  const closeDetail = () => {
+    setSelectedInvoiceId(null);
+    setInvoiceDraft(null);
+    setIsInvoiceSaved(false);
+  };
 
-  const updateSelectedInvoice = (
-    field: keyof InvoicePayment,
-    value: string | PaymentStatus,
+  const updateInvoice = (
+    id: string,
+    updater: (invoice: InvoicePayment) => InvoicePayment,
   ) => {
-    if (!selectedInvoice) return;
-
     setInvoices((current) =>
-      current.map((invoice) =>
-        invoice.id === selectedInvoice.id
-          ? {
-              ...invoice,
-              [field]: value,
-            }
-          : invoice,
-      ),
+      current.map((invoice) => (invoice.id === id ? updater(invoice) : invoice)),
     );
   };
 
-  const updateStatus = (status: PaymentStatus) => {
-    updateSelectedInvoice("status", status);
+  const updateStatus = (id: string, status: PaymentStatus) => {
+    updateInvoice(id, (invoice) => {
+      if (status === "Terbayar") {
+        return {
+          ...invoice,
+          status,
+          paidAmount: invoice.totalAmount,
+          remainingAmount: "Rp0",
+        };
+      }
 
-    if (status === "Terbayar") {
-      updateSelectedInvoice("paidAmount", selectedInvoice.totalAmount);
-      updateSelectedInvoice("remainingAmount", "Rp0");
-      setActiveTab("Terbayar");
+      return {
+        ...invoice,
+        status,
+      };
+    });
+
+    if (status === "Draft" || status === "Menunggu Pembayaran") {
+      setActiveTab("Menunggu");
     }
 
-    if (status === "Terlambat") {
-      setActiveTab("Terlambat");
-    }
-
-    if (status === "Refund") {
-      setActiveTab("Refund");
-    }
+    if (status === "Terbayar") setActiveTab("Terbayar");
+    if (status === "Terlambat") setActiveTab("Terlambat");
+    if (status === "Refund") setActiveTab("Refund");
   };
 
-  if (!selectedInvoice) {
-    return null;
+  const saveInvoiceChanges = () => {
+    if (!selectedInvoice || !invoiceDraft) return;
+
+    updateInvoice(selectedInvoice.id, (invoice) => ({
+      ...invoice,
+      dueDate: invoiceDraft.dueDate,
+      paymentMethod: invoiceDraft.paymentMethod,
+      adminNote: invoiceDraft.adminNote,
+      customerNote: invoiceDraft.customerNote,
+    }));
+
+    setIsInvoiceSaved(true);
+  };
+
+  if (selectedInvoice && invoiceDraft) {
+    return (
+      <InvoiceDetailPage
+        invoice={selectedInvoice}
+        invoiceDraft={invoiceDraft}
+        isInvoiceSaved={isInvoiceSaved}
+        onBack={closeDetail}
+        onChangeDraft={(draft) => {
+          setInvoiceDraft(draft);
+          setIsInvoiceSaved(false);
+        }}
+        onSave={saveInvoiceChanges}
+        onStatusChange={(status) => updateStatus(selectedInvoice.id, status)}
+      />
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-4 pb-1 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
-            Keuangan & Perencanaan
+    <div className="space-y-5">
+      <section className="pb-1">
+        <div className="max-w-[820px]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#725F54]">
+            Invoice & Pembayaran
           </p>
 
           <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
-            Invoice & Pembayaran
+            Daftar Invoice
           </h1>
 
-          <p className="mt-2 max-w-[760px] text-[14px] leading-7 text-[#7B756E]">
-            Kelola invoice customer, tahap pembayaran, status pelunasan, dan
-            tindak lanjut pembayaran proyek.
+          <p className="mt-2 text-[13px] leading-6 text-[#7B756E] sm:text-[14px]">
+            Kelola invoice proyek, termin pembayaran, status tagihan, metode
+            pembayaran, jatuh tempo, dan catatan follow up customer.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={() => onChangePage?.("progress-qc")}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-5 text-[13px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
-        >
-          Dari Progress & QC
-          <ArrowRight size={16} />
-        </button>
       </section>
 
-      <section className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
-        <PaymentMiniStat
-          icon={ReceiptText}
-          label="Total Invoice"
-          value={`${invoices.length}`}
-          description="Invoice proyek"
-        />
+      <section className="rounded-3xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-3">
+            <Search size={16} className="shrink-0 text-[#9A8F86]" />
 
-        <PaymentMiniStat
-          icon={Clock}
-          label="Menunggu"
-          value={`${waitingCount}`}
-          description="Draft atau belum dibayar"
-        />
+            <input
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="Cari invoice, proyek, customer, vendor, termin, atau status..."
+              className="h-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#31332C] outline-none placeholder:text-[#B8AEA5]"
+            />
+          </div>
 
-        <PaymentMiniStat
-          icon={CheckCircle2}
-          label="Terbayar"
-          value={`${paidCount}`}
-          description="Pembayaran selesai"
-        />
-
-        <PaymentMiniStat
-          icon={AlertTriangle}
-          label="Terlambat"
-          value={`${lateCount}`}
-          description="Perlu follow up"
-        />
-      </section>
-
-      <AdminSectionCard title="Daftar Invoice">
-        <div className="rounded-2xl border border-[#E8E2D9] bg-white p-2">
-          <div className="grid grid-cols-5 gap-2">
-            {paymentTabs.map((tab) => {
-              const active = activeTab === tab;
-
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex h-11 items-center justify-center rounded-xl px-2 text-[10px] font-semibold transition sm:text-[13px] ${
-                    active
-                      ? "bg-[#725F54] text-white shadow-sm"
-                      : "text-[#6F6860] hover:bg-[#F8F6F2]"
-                  }`}
-                >
+          <div className="relative sm:hidden">
+            <select
+              value={activeTab}
+              onChange={(event) => setActiveTab(event.target.value as PaymentTab)}
+              className="h-11 w-full appearance-none rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] pl-4 pr-12 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+            >
+              {paymentTabs.map((tab) => (
+                <option key={tab} value={tab}>
                   {tab}
-                </button>
-              );
-            })}
+                </option>
+              ))}
+            </select>
+
+            <ChevronDown
+              size={16}
+              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
+            />
+          </div>
+
+          <div className="hidden rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-1.5 sm:block lg:col-span-2">
+            <div className="flex gap-1.5 overflow-x-auto">
+              {paymentTabs.map((tab) => {
+                const active = activeTab === tab;
+
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`inline-flex h-10 shrink-0 items-center justify-center rounded-xl px-4 text-[12px] font-semibold transition ${
+                      active
+                        ? "bg-[#725F54] text-white shadow-sm"
+                        : "text-[#6F6860] hover:bg-white"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
+      </section>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {filteredInvoices.length > 0 ? (
-            filteredInvoices.map((invoice) => (
+      <section>
+        {filteredInvoices.length > 0 ? (
+          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            {filteredInvoices.map((invoice) => (
               <InvoiceCard
                 key={invoice.id}
                 invoice={invoice}
-                selected={selectedInvoice.id === invoice.id}
-                onClick={() => setSelectedInvoiceId(invoice.id)}
+                onClick={() => openDetail(invoice)}
               />
-            ))
-          ) : (
-            <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center md:col-span-2 xl:col-span-3">
-              <p className="text-[13px] font-semibold text-[#31332C]">
-                Belum ada invoice pada kategori ini.
-              </p>
-
-              <p className="mt-1 text-[12px] text-[#7B756E]">
-                Invoice akan muncul sesuai status pembayarannya.
-              </p>
-            </div>
-          )}
-        </div>
-      </AdminSectionCard>
-
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <AdminSectionCard
-          title="Detail Invoice"
-          action={<PaymentStatusBadge status={selectedInvoice.status} />}
-        >
-          <div className="space-y-5">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                {selectedInvoice.invoiceNumber}
-              </p>
-
-              <h2 className="mt-2 font-serif text-[30px] leading-tight text-[#31332C]">
-                {selectedInvoice.projectTitle}
-              </h2>
-
-              <p className="mt-2 text-[13px] leading-7 text-[#7B756E]">
-                Invoice untuk tahap pembayaran{" "}
-                <span className="font-semibold text-[#725F54]">
-                  {selectedInvoice.paymentStage}
-                </span>
-                .
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <AmountTile
-                label="Total Invoice"
-                value={selectedInvoice.totalAmount}
-                description="Nilai tagihan"
-              />
-
-              <AmountTile
-                label="Sudah Dibayar"
-                value={selectedInvoice.paidAmount}
-                description="Pembayaran masuk"
-              />
-
-              <AmountTile
-                label="Sisa Tagihan"
-                value={selectedInvoice.remainingAmount}
-                description="Belum dibayar"
-                highlight
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <InfoTile
-                icon={UserRound}
-                label="Customer"
-                value={selectedInvoice.customerName}
-                description="Penerima invoice"
-              />
-
-              <InfoTile
-                icon={Wallet}
-                label="Vendor"
-                value={selectedInvoice.vendorName}
-                description="Vendor partner"
-              />
-
-              <InfoTile
-                icon={CalendarDays}
-                label="Jatuh Tempo"
-                value={selectedInvoice.dueDate}
-                description={selectedInvoice.issuedAt}
-              />
-
-              <InfoTile
-                icon={CreditCard}
-                label="Metode"
-                value={selectedInvoice.paymentMethod}
-                description="Metode pembayaran"
-              />
-
-              <InfoTile
-                icon={FileText}
-                label="Tahap"
-                value={selectedInvoice.paymentStage}
-                description="Termin pembayaran"
-              />
-
-              <InfoTile
-                icon={Banknote}
-                label="Refund"
-                value={`${refundCount} data`}
-                description="Data refund"
-              />
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Rincian Tagihan
-                </p>
-
-                <div className="mt-3 space-y-2.5">
-                  {selectedInvoice.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-[#E8E2D9] bg-white p-3"
-                    >
-                      <p className="text-[12px] font-medium text-[#31332C]">
-                        {item.label}
-                      </p>
-
-                      <p className="shrink-0 text-[12px] font-semibold text-[#725F54]">
-                        {item.amount}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Riwayat Pembayaran
-                </p>
-
-                <div className="mt-3 space-y-2.5">
-                  {selectedInvoice.timeline.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-xl border border-[#E8E2D9] bg-white p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-[13px] font-semibold text-[#31332C]">
-                          {item.title}
-                        </p>
-
-                        <PaymentTimelineBadge type={item.type} />
-                      </div>
-
-                      <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-                        {item.description}
-                      </p>
-
-                      <p className="mt-2 text-[11px] text-[#9A8F86]">
-                        {item.time}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <label className="block rounded-2xl border border-[#E8E2D9] bg-white p-4">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Catatan Admin
-                </span>
-
-                <textarea
-                  value={selectedInvoice.adminNote}
-                  onChange={(event) =>
-                    updateSelectedInvoice("adminNote", event.target.value)
-                  }
-                  rows={4}
-                  className="mt-3 w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-                />
-              </label>
-
-              <label className="block rounded-2xl border border-[#E8E2D9] bg-white p-4">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                  Catatan Customer
-                </span>
-
-                <textarea
-                  value={selectedInvoice.customerNote}
-                  onChange={(event) =>
-                    updateSelectedInvoice("customerNote", event.target.value)
-                  }
-                  rows={4}
-                  className="mt-3 w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-                />
-              </label>
-            </div>
+            ))}
           </div>
-        </AdminSectionCard>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-white p-8 text-center">
+            <p className="text-[14px] font-semibold text-[#31332C]">
+              Invoice tidak ditemukan.
+            </p>
 
-        <div className="space-y-5">
-          <AdminSectionCard title="Aksi Invoice">
-            <div className="space-y-3">
-              <ActionButton
-                icon={Send}
-                title="Kirim Invoice"
-                description="Ubah status menjadi menunggu pembayaran."
-                onClick={() => updateStatus("Menunggu Pembayaran")}
-              />
-
-              <ActionButton
-                icon={CheckCircle2}
-                title="Tandai Terbayar"
-                description="Tandai invoice sudah lunas."
-                onClick={() => updateStatus("Terbayar")}
-              />
-
-              <ActionButton
-                icon={AlertTriangle}
-                title="Tandai Terlambat"
-                description="Gunakan jika melewati jatuh tempo."
-                onClick={() => updateStatus("Terlambat")}
-              />
-            </div>
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Ubah Status">
-            <div className="grid gap-2">
-              {statusOptions.map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => updateStatus(status)}
-                  className={`flex h-10 items-center justify-between rounded-xl border px-3 text-left text-[12px] font-semibold transition ${
-                    selectedInvoice.status === status
-                      ? "border-[#D9C8BA] bg-[#FFFDF9] text-[#725F54]"
-                      : "border-[#E8E2D9] bg-white text-[#6F6860] hover:bg-[#FCFBF9]"
-                  }`}
-                >
-                  <span>{status}</span>
-
-                  {selectedInvoice.status === status && (
-                    <CheckCircle2 size={15} />
-                  )}
-                </button>
-              ))}
-            </div>
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Navigasi Cepat">
-            <div className="grid gap-2">
-              <button
-                type="button"
-                onClick={() => onChangePage?.("progress-qc")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
-              >
-                Ke Progress & QC
-                <ArrowRight size={14} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChangePage?.("rab-builder")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
-              >
-                Ke RAB Builder
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          </AdminSectionCard>
-        </div>
+            <p className="mt-2 text-[13px] text-[#7B756E]">
+              Coba ubah filter atau kata pencarian.
+            </p>
+          </div>
+        )}
       </section>
     </div>
   );
 }
 
-const statusOptions: PaymentStatus[] = [
-  "Draft",
-  "Menunggu Pembayaran",
-  "Terbayar",
-  "Terlambat",
-  "Refund",
-];
+function InvoiceDetailPage({
+  invoice,
+  invoiceDraft,
+  isInvoiceSaved,
+  onBack,
+  onChangeDraft,
+  onSave,
+  onStatusChange,
+}: {
+  invoice: InvoicePayment;
+  invoiceDraft: InvoiceDraft;
+  isInvoiceSaved: boolean;
+  onBack: () => void;
+  onChangeDraft: (draft: InvoiceDraft) => void;
+  onSave: () => void;
+  onStatusChange: (status: PaymentStatus) => void;
+}) {
+  const isInvoiceChanged =
+    invoiceDraft.dueDate !== invoice.dueDate ||
+    invoiceDraft.paymentMethod !== invoice.paymentMethod ||
+    invoiceDraft.adminNote !== invoice.adminNote ||
+    invoiceDraft.customerNote !== invoice.customerNote;
+
+  return (
+    <div className="space-y-5">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+      >
+        <ArrowLeft size={15} />
+        Kembali ke daftar invoice
+      </button>
+
+      <section className="overflow-hidden rounded-3xl border border-[#E8E2D9] bg-white shadow-[0_12px_34px_rgba(49,51,44,0.035)]">
+        <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
+                {invoice.invoiceNumber}
+              </p>
+
+              <PaymentStatusBadge status={invoice.status} />
+            </div>
+
+            <h1 className="mt-3 max-w-[760px] font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
+              {invoice.projectTitle}
+            </h1>
+
+            <p className="mt-3 max-w-[820px] text-[13px] leading-7 text-[#7B756E] sm:text-[14px]">
+              Invoice untuk tahap pembayaran{" "}
+              <span className="font-semibold text-[#725F54]">
+                {invoice.paymentStage}
+              </span>
+              .
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+              Status Invoice
+            </label>
+
+            <div className="relative mt-3">
+              <select
+                value={invoice.status}
+                onChange={(event) =>
+                  onStatusChange(event.target.value as PaymentStatus)
+                }
+                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+              >
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-[#E8E2D9] bg-[#FCFBF9]/70 p-5 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <AmountTile
+              label="Total Invoice"
+              value={invoice.totalAmount}
+              description="Nilai tagihan"
+            />
+
+            <AmountTile
+              label="Sudah Dibayar"
+              value={invoice.paidAmount}
+              description="Pembayaran masuk"
+            />
+
+            <AmountTile
+              label="Sisa Tagihan"
+              value={invoice.remainingAmount}
+              description="Belum dibayar"
+              highlight
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-[#E8E2D9] bg-[#FCFBF9]/70 p-5 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <InfoTile
+              icon={UserRound}
+              label="Customer"
+              value={invoice.customerName}
+              description="Penerima invoice"
+            />
+
+            <InfoTile
+              icon={Wallet}
+              label="Vendor"
+              value={invoice.vendorName}
+              description="Vendor partner"
+            />
+
+            <InfoTile
+              icon={CalendarDays}
+              label="Jatuh Tempo"
+              value={invoice.dueDate}
+              description={invoice.issuedAt}
+            />
+
+            <InfoTile
+              icon={CreditCard}
+              label="Metode"
+              value={invoice.paymentMethod}
+              description="Metode pembayaran"
+            />
+
+            <InfoTile
+              icon={FileText}
+              label="Tahap"
+              value={invoice.paymentStage}
+              description="Termin pembayaran"
+            />
+
+            <InfoTile
+              icon={Banknote}
+              label="Status"
+              value={invoice.status}
+              description="Status pembayaran"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-0 border-t border-[#E8E2D9] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <DetailBlock
+            title="Rincian Tagihan"
+            description="Komponen biaya yang masuk dalam invoice."
+          >
+            <div className="grid gap-2.5">
+              {invoice.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-3"
+                >
+                  <p className="min-w-0 text-[12px] font-medium leading-5 text-[#31332C]">
+                    {item.label}
+                  </p>
+
+                  <p className="shrink-0 text-[12px] font-semibold text-[#725F54]">
+                    {item.amount}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </DetailBlock>
+
+          <DetailBlock
+            title="Riwayat Pembayaran"
+            description="Timeline status invoice dan pembayaran customer."
+            withRightBorder={false}
+          >
+            <div className="grid gap-2.5">
+              {invoice.timeline.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-[13px] font-semibold text-[#31332C]">
+                      {item.title}
+                    </p>
+
+                    <PaymentTimelineBadge type={item.type} />
+                  </div>
+
+                  <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                    {item.description}
+                  </p>
+
+                  <p className="mt-2 text-[11px] text-[#9A8F86]">
+                    {item.time}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </DetailBlock>
+        </div>
+
+        <div className="grid gap-0 border-t border-[#E8E2D9] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <DetailBlock
+            title="Pengaturan Invoice"
+            description="Atur jatuh tempo dan metode pembayaran invoice."
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="Jatuh Tempo">
+                <input
+                  value={invoiceDraft.dueDate}
+                  onChange={(event) =>
+                    onChangeDraft({
+                      ...invoiceDraft,
+                      dueDate: event.target.value,
+                    })
+                  }
+                  className="h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 text-[13px] font-medium text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                />
+              </FormField>
+
+              <FormField label="Metode Pembayaran">
+                <input
+                  value={invoiceDraft.paymentMethod}
+                  onChange={(event) =>
+                    onChangeDraft({
+                      ...invoiceDraft,
+                      paymentMethod: event.target.value,
+                    })
+                  }
+                  className="h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 text-[13px] font-medium text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                />
+              </FormField>
+            </div>
+          </DetailBlock>
+
+          <DetailBlock
+            title="Catatan Invoice"
+            description="Catatan internal admin dan pesan untuk customer."
+            badge={isInvoiceSaved ? "Tersimpan" : undefined}
+            withRightBorder={false}
+          >
+            <FormField label="Catatan Admin">
+              <textarea
+                value={invoiceDraft.adminNote}
+                onChange={(event) =>
+                  onChangeDraft({
+                    ...invoiceDraft,
+                    adminNote: event.target.value,
+                  })
+                }
+                rows={4}
+                className="w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+              />
+            </FormField>
+
+            <div className="mt-3">
+              <FormField label="Catatan Customer">
+                <textarea
+                  value={invoiceDraft.customerNote}
+                  onChange={(event) =>
+                    onChangeDraft({
+                      ...invoiceDraft,
+                      customerNote: event.target.value,
+                    })
+                  }
+                  rows={4}
+                  className="w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                />
+              </FormField>
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={!isInvoiceChanged}
+                className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
+                  isInvoiceChanged
+                    ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                    : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+                }`}
+              >
+                <Save size={14} />
+                Simpan Perubahan
+              </button>
+            </div>
+          </DetailBlock>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => onStatusChange("Menunggu Pembayaran")}
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+            invoice.status === "Menunggu Pembayaran"
+              ? "border-[#725F54] bg-[#725F54] text-white"
+              : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+          }`}
+        >
+          <Send size={15} />
+          Kirim
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onStatusChange("Terbayar")}
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+            invoice.status === "Terbayar"
+              ? "border-[#725F54] bg-[#725F54] text-white"
+              : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+          }`}
+        >
+          <CheckCircle2 size={15} />
+          Terbayar
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onStatusChange("Terlambat")}
+          className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${
+            invoice.status === "Terlambat"
+              ? "border-[#725F54] bg-[#725F54] text-white"
+              : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+          }`}
+        >
+          <AlertTriangle size={15} />
+          Terlambat
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DetailBlock({
+  title,
+  description,
+  children,
+  badge,
+  withRightBorder = true,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+  badge?: string;
+  withRightBorder?: boolean;
+}) {
+  return (
+    <div
+      className={`min-w-0 border-b border-[#E8E2D9] p-5 sm:p-6 lg:border-b-0 ${
+        withRightBorder ? "lg:border-r" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+            {title}
+          </p>
+
+          <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+            {description}
+          </p>
+        </div>
+
+        {badge && (
+          <span className="shrink-0 rounded-full border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-1 text-[10px] font-semibold text-[#4F7A5F]">
+            {badge}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
+
+function FormField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+        {label}
+      </span>
+
+      {children}
+    </label>
+  );
+}
 
 function InvoiceCard({
   invoice,
-  selected,
   onClick,
 }: {
   invoice: InvoicePayment;
-  selected: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-w-0 rounded-2xl border p-4 text-left transition ${
-        selected
-          ? "border-[#D9C8BA] bg-[#FFFDF9]"
-          : "border-[#E8E2D9] bg-[#FCFBF9] hover:bg-white"
-      }`}
+      className="group w-full rounded-2xl border border-[#E8E2D9] bg-white p-4 text-left shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:border-[#725F54] hover:bg-[#FCFBF9]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-[#31332C]">
             {invoice.projectTitle}
           </p>
@@ -745,6 +927,10 @@ function InvoiceCard({
 
         <PaymentStatusBadge status={invoice.status} />
       </div>
+
+      <p className="mt-3 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
+        {invoice.paymentStage} • {invoice.customerName}
+      </p>
 
       <div className="mt-4 flex items-end justify-between gap-3">
         <div>
@@ -767,40 +953,6 @@ function InvoiceCard({
   );
 }
 
-function PaymentMiniStat({
-  icon: Icon,
-  label,
-  value,
-  description,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.035)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
-          <Icon size={17} strokeWidth={2} />
-        </div>
-
-        <p className="min-w-0 truncate text-right font-serif text-[25px] leading-none text-[#31332C]">
-          {value}
-        </p>
-      </div>
-
-      <p className="mt-4 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-        {label}
-      </p>
-
-      <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
-        {description}
-      </p>
-    </div>
-  );
-}
-
 function AmountTile({
   label,
   value,
@@ -812,23 +964,30 @@ function AmountTile({
   description: string;
   highlight?: boolean;
 }) {
+  const isLongValue = value.length > 8;
+
   return (
     <div
-      className={`rounded-2xl border p-4 ${
-        highlight
-          ? "border-[#D9C8BA] bg-[#FFFDF9]"
-          : "border-[#E8E2D9] bg-[#FCFBF9]"
-      }`}
+      className={`min-w-0 rounded-2xl border p-4 transition ${
+        highlight ? "border-[#D9C8BA] bg-white" : "border-[#E8E2D9] bg-white"
+      } hover:border-[#725F54] hover:bg-[#FCFBF9]`}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
         {label}
       </p>
 
-      <p className="mt-2 font-serif text-[25px] leading-none text-[#31332C]">
+      <p
+        className={`mt-2 truncate font-serif leading-none text-[#31332C] ${
+          isLongValue ? "text-[21px] sm:text-[22px]" : "text-[26px]"
+        }`}
+        title={value}
+      >
         {value}
       </p>
 
-      <p className="mt-2 text-[11px] text-[#7B756E]">{description}</p>
+      <p className="mt-2 truncate text-[11px] leading-5 text-[#7B756E]">
+        {description}
+      </p>
     </div>
   );
 }
@@ -845,18 +1004,18 @@ function InfoTile({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-      <div className="flex items-start gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-white text-[#725F54]">
+    <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 transition hover:border-[#725F54] hover:bg-[#FCFBF9]">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
           <Icon size={16} />
         </div>
 
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
             {label}
           </p>
 
-          <p className="mt-1 truncate text-[13px] font-semibold text-[#31332C]">
+          <p className="mt-1 line-clamp-2 text-[13px] font-semibold leading-5 text-[#31332C]">
             {value}
           </p>
 
@@ -866,38 +1025,6 @@ function InfoTile({
         </div>
       </div>
     </div>
-  );
-}
-
-function ActionButton({
-  icon: Icon,
-  title,
-  description,
-  onClick,
-}: {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-start gap-3 rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 text-left transition hover:border-[#D9C8BA] hover:bg-white"
-    >
-      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
-        <Icon size={16} />
-      </div>
-
-      <div>
-        <p className="text-[13px] font-semibold text-[#31332C]">{title}</p>
-
-        <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-          {description}
-        </p>
-      </div>
-    </button>
   );
 }
 
@@ -924,10 +1051,12 @@ function PaymentTimelineBadge({
         ? "bg-[#FFF3EF] text-[#9A4A32]"
         : type === "refund"
           ? "bg-[#F8F6F2] text-[#7B756E]"
-          : "bg-[#FCFBF9] text-[#725F54]";
+          : "bg-white text-[#725F54] ring-1 ring-[#E8E2D9]";
 
   return (
-    <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${style}`}>
+    <span
+      className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${style}`}
+    >
       {label}
     </span>
   );
@@ -945,7 +1074,7 @@ function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
 
   return (
     <span
-      className={`inline-flex h-7 shrink-0 items-center rounded-full border px-3 text-[11px] font-semibold ${style}`}
+      className={`inline-flex h-7 max-w-full shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-[10px] font-semibold sm:text-[11px] ${style}`}
     >
       {status}
     </span>

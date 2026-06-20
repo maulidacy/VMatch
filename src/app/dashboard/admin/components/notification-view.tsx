@@ -2,595 +2,860 @@
 
 import {
   AlertTriangle,
-  ArrowRight,
+  Archive,
+  ArrowLeft,
   Bell,
+  BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   Clock,
   CreditCard,
+  FileText,
   Inbox,
+  Link2,
+  Megaphone,
   MessageCircle,
+  Search,
+  Settings,
   ShieldCheck,
-  Trash2,
-  UserRound,
+  StickyNote,
+  Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
-import { AdminSectionCard } from "./shared";
 import type { AdminPageId } from "../types";
 
-type NotificationStatus = "Belum Dibaca" | "Dibaca" | "Diarsipkan";
+type NotificationCategory =
+  | "Proyek"
+  | "Konsultasi"
+  | "RAB"
+  | "Pembayaran"
+  | "Vendor"
+  | "Customer"
+  | "Promo"
+  | "Sistem";
+
+type NotificationPriority = "Normal" | "Penting" | "Urgent";
+
+type NotificationStatus =
+  | "Belum Dibaca"
+  | "Sudah Dibaca"
+  | "Ditindaklanjuti"
+  | "Diarsipkan";
 
 type NotificationTab =
   | "Semua"
   | "Belum Dibaca"
   | "Proyek"
-  | "Pembayaran"
-  | "Sistem";
-
-type NotificationCategory =
-  | "Proyek"
-  | "Pembayaran"
   | "Konsultasi"
-  | "Vendor"
-  | "Customer"
-  | "Sistem";
+  | "RAB"
+  | "Pembayaran"
+  | "Promo"
+  | "Sistem"
+  | "Arsip";
 
 type AdminNotification = {
   id: string;
   title: string;
-  message: string;
+  shortDescription: string;
+  systemMessage: string;
   category: NotificationCategory;
+  priority: NotificationPriority;
   status: NotificationStatus;
-  priority: "Normal" | "Penting" | "Urgent";
-  time: string;
   date: string;
-  relatedPage: AdminPageId;
+  time: string;
+  relatedPageLabel: string;
+  relatedPageId: AdminPageId;
+  primaryActionLabel: string;
+  sourceInfo: string;
+  reason: string;
+  requiredAction: string;
+  adminNote: string;
 };
 
 const notificationTabs: NotificationTab[] = [
   "Semua",
   "Belum Dibaca",
   "Proyek",
+  "Konsultasi",
+  "RAB",
   "Pembayaran",
+  "Promo",
   "Sistem",
+  "Arsip",
 ];
 
-const initialNotifications: AdminNotification[] = [
+const statusOptions: NotificationStatus[] = [
+  "Belum Dibaca",
+  "Sudah Dibaca",
+  "Ditindaklanjuti",
+  "Diarsipkan",
+];
+
+
+function isNotificationMatchTab(
+  item: AdminNotification,
+  activeTab: NotificationTab,
+) {
+  if (activeTab === "Semua") return true;
+  if (activeTab === "Belum Dibaca") return item.status === "Belum Dibaca";
+  if (activeTab === "Arsip") return item.status === "Diarsipkan";
+
+  return item.category === activeTab;
+}
+
+const mockNotifications: AdminNotification[] = [
   {
     id: "notif-1",
     title: "Request proyek baru masuk",
-    message:
-      "Alya Putri mengajukan request proyek Kitchen Set Minimalis dan menunggu review admin.",
+    shortDescription:
+      "Alya Putri mengajukan request Kitchen Set Minimalis dan menunggu review admin.",
+    systemMessage:
+      "Customer Alya Putri baru saja mengirim request proyek Kitchen Set Minimalis melalui dashboard user. Request ini perlu dicek agar admin dapat melanjutkan proses review kebutuhan dan menyiapkan tindak lanjut awal.",
     category: "Proyek",
-    status: "Belum Dibaca",
     priority: "Penting",
-    time: "10.30 WIB",
+    status: "Belum Dibaca",
     date: "Hari ini",
-    relatedPage: "requests",
+    time: "10.30 WIB",
+    relatedPageLabel: "Request Proyek",
+    relatedPageId: "requests",
+    primaryActionLabel: "Buka Request",
+    sourceInfo: "Notifikasi dibuat dari aktivitas pengajuan request proyek baru.",
+    reason:
+      "Request baru membutuhkan review admin sebelum bisa masuk ke tahap konsultasi, brief, atau pencocokan vendor.",
+    requiredAction:
+      "Cek detail request, validasi kebutuhan customer, lalu tentukan apakah request perlu konsultasi lanjutan atau langsung dibuatkan brief awal.",
+    adminNote: "",
   },
   {
     id: "notif-2",
     title: "Konsultasi menunggu konfirmasi",
-    message:
+    shortDescription:
       "Jadwal konsultasi Bima Santoso untuk proyek Wardrobe Kamar Utama perlu dikonfirmasi.",
+    systemMessage:
+      "Customer Bima Santoso memiliki jadwal konsultasi yang belum dikonfirmasi. Admin perlu memastikan jadwal, metode konsultasi, dan link meeting agar customer mendapatkan kepastian waktu.",
     category: "Konsultasi",
-    status: "Belum Dibaca",
     priority: "Normal",
-    time: "09.15 WIB",
+    status: "Belum Dibaca",
     date: "Hari ini",
-    relatedPage: "consultations",
+    time: "09.15 WIB",
+    relatedPageLabel: "Konsultasi",
+    relatedPageId: "consultations",
+    primaryActionLabel: "Buka Konsultasi",
+    sourceInfo: "Notifikasi dibuat dari jadwal konsultasi dengan status menunggu konfirmasi.",
+    reason:
+      "Jadwal konsultasi yang belum dikonfirmasi dapat memperlambat proses validasi kebutuhan customer.",
+    requiredAction:
+      "Buka halaman konsultasi, cek jadwal, pastikan metode meeting, lalu ubah status konsultasi sesuai hasil konfirmasi.",
+    adminNote: "",
   },
   {
     id: "notif-3",
-    title: "Pembayaran melewati jatuh tempo",
-    message:
-      "Invoice proyek Ruang Kerja Rumah melewati tanggal jatuh tempo dan perlu follow up customer.",
-    category: "Pembayaran",
+    title: "Vendor mengirim estimasi RAB",
+    shortDescription:
+      "Vendor partner mengirim estimasi RAB untuk proyek Wardrobe dan perlu direview admin.",
+    systemMessage:
+      "Vendor Mitra Interior Jogja telah mengirim estimasi RAB untuk proyek Wardrobe Kamar Utama. Estimasi perlu direview agar nominal, material, dan ruang lingkup pekerjaan sesuai dengan brief.",
+    category: "RAB",
+    priority: "Penting",
     status: "Belum Dibaca",
-    priority: "Urgent",
-    time: "Kemarin",
-    date: "12 Juli 2026",
-    relatedPage: "payments",
+    date: "Hari ini",
+    time: "08.40 WIB",
+    relatedPageLabel: "RAB Builder",
+    relatedPageId: "rab-builder",
+    primaryActionLabel: "Review RAB",
+    sourceInfo: "Notifikasi dibuat ketika vendor mengirim estimasi biaya proyek.",
+    reason:
+      "RAB perlu diverifikasi sebelum dikirim atau disetujui oleh customer.",
+    requiredAction:
+      "Review item pekerjaan, cek kesesuaian nominal, dan pastikan catatan material sudah sesuai brief proyek.",
+    adminNote: "",
   },
   {
     id: "notif-4",
-    title: "Vendor perlu evaluasi",
-    message:
-      "Mitra Interior Jogja memiliki proyek dengan revisi layout yang belum selesai dan perlu evaluasi admin.",
-    category: "Vendor",
-    status: "Dibaca",
-    priority: "Penting",
-    time: "Kemarin",
-    date: "12 Juli 2026",
-    relatedPage: "vendors",
+    title: "Pembayaran melewati jatuh tempo",
+    shortDescription:
+      "Invoice proyek Ruang Kerja Rumah melewati tanggal jatuh tempo dan perlu follow up.",
+    systemMessage:
+      "Invoice pelunasan proyek Ruang Kerja Rumah sudah melewati tanggal jatuh tempo. Admin perlu melakukan follow up agar proses serah terima proyek tidak tertunda.",
+    category: "Pembayaran",
+    priority: "Urgent",
+    status: "Belum Dibaca",
+    date: "Kemarin",
+    time: "16.20 WIB",
+    relatedPageLabel: "Invoice & Pembayaran",
+    relatedPageId: "payments",
+    primaryActionLabel: "Buka Invoice",
+    sourceInfo: "Notifikasi dibuat dari invoice dengan status terlambat.",
+    reason:
+      "Pembayaran yang melewati jatuh tempo dapat menghambat penyelesaian administrasi dan serah terima proyek.",
+    requiredAction:
+      "Buka invoice, cek sisa tagihan, lalu lakukan follow up customer melalui kanal komunikasi yang tersedia.",
+    adminNote: "",
   },
   {
     id: "notif-5",
-    title: "QC proyek perlu dicek",
-    message:
-      "Proyek Ruang Kerja Rumah masuk tahap QC finishing dan menunggu pengecekan admin.",
-    category: "Proyek",
-    status: "Dibaca",
-    priority: "Penting",
-    time: "2 hari lalu",
-    date: "11 Juli 2026",
-    relatedPage: "progress-qc",
+    title: "Promo akan berakhir",
+    shortDescription:
+      "Campaign Interior Awal Bulan akan segera berakhir dan perlu dicek kembali.",
+    systemMessage:
+      "Promo Interior Awal Bulan mendekati tanggal akhir campaign. Admin dapat mengevaluasi performa promo dan menentukan apakah promo perlu diperpanjang, diganti, atau dinonaktifkan.",
+    category: "Promo",
+    priority: "Normal",
+    status: "Sudah Dibaca",
+    date: "Kemarin",
+    time: "13.10 WIB",
+    relatedPageLabel: "Promo & Campaign",
+    relatedPageId: "promo",
+    primaryActionLabel: "Kelola Promo",
+    sourceInfo: "Notifikasi dibuat dari campaign promo yang mendekati tanggal selesai.",
+    reason:
+      "Promo yang hampir berakhir perlu dicek agar landing page tetap menampilkan campaign yang relevan.",
+    requiredAction:
+      "Buka halaman promo, cek tanggal campaign, lalu aktifkan, jadwalkan, atau nonaktifkan promo sesuai kebutuhan.",
+    adminNote: "",
   },
   {
     id: "notif-6",
-    title: "Customer baru terdaftar",
-    message:
-      "Customer baru melihat katalog desain dan belum mengajukan proyek. Bisa dilakukan follow up ringan.",
-    category: "Customer",
-    status: "Dibaca",
-    priority: "Normal",
-    time: "3 hari lalu",
-    date: "10 Juli 2026",
-    relatedPage: "customers",
+    title: "Vendor perlu evaluasi",
+    shortDescription:
+      "Mitra Interior Jogja memiliki revisi layout yang belum selesai dan perlu evaluasi admin.",
+    systemMessage:
+      "Salah satu vendor partner memiliki progres revisi yang lambat pada proyek aktif. Admin perlu mengevaluasi komunikasi vendor dan menentukan tindak lanjut agar proyek tetap berjalan.",
+    category: "Vendor",
+    priority: "Penting",
+    status: "Sudah Dibaca",
+    date: "2 hari lalu",
+    time: "11.00 WIB",
+    relatedPageLabel: "Vendor Partner",
+    relatedPageId: "vendors",
+    primaryActionLabel: "Buka Vendor",
+    sourceInfo: "Notifikasi dibuat dari aktivitas vendor pada proyek aktif.",
+    reason:
+      "Respons vendor yang lambat dapat memengaruhi timeline proyek dan kepuasan customer.",
+    requiredAction:
+      "Buka data vendor, cek proyek aktif, lalu tentukan apakah vendor perlu follow up atau evaluasi status kerja sama.",
+    adminNote: "",
   },
   {
     id: "notif-7",
-    title: "Backup data berhasil",
-    message:
-      "Sistem berhasil melakukan backup data dashboard admin VMatch secara otomatis.",
-    category: "Sistem",
-    status: "Diarsipkan",
+    title: "Customer baru terdaftar",
+    shortDescription:
+      "Customer baru melihat katalog desain dan belum mengajukan proyek.",
+    systemMessage:
+      "Customer baru telah terdaftar dan mulai melihat katalog desain. Customer ini belum mengajukan request proyek sehingga dapat menjadi peluang follow up ringan.",
+    category: "Customer",
     priority: "Normal",
-    time: "4 hari lalu",
-    date: "9 Juli 2026",
-    relatedPage: "analytics",
+    status: "Ditindaklanjuti",
+    date: "3 hari lalu",
+    time: "14.45 WIB",
+    relatedPageLabel: "Customer",
+    relatedPageId: "customers",
+    primaryActionLabel: "Buka Customer",
+    sourceInfo: "Notifikasi dibuat dari aktivitas customer baru pada katalog desain.",
+    reason:
+      "Customer baru yang sudah melihat katalog dapat menjadi calon pengguna yang perlu diarahkan ke request proyek.",
+    requiredAction:
+      "Cek data customer dan pertimbangkan follow up untuk membantu customer memilih layanan interior.",
+    adminNote: "Sudah dicek, follow up ringan bisa dilakukan setelah customer aktif kembali.",
+  },
+  {
+    id: "notif-8",
+    title: "Backup sistem berhasil",
+    shortDescription:
+      "Sistem berhasil melakukan backup data dashboard admin VMatch secara otomatis.",
+    systemMessage:
+      "Backup data sistem berhasil dilakukan secara otomatis. Informasi ini bersifat sistem dan tidak memerlukan tindakan mendesak.",
+    category: "Sistem",
+    priority: "Normal",
+    status: "Diarsipkan",
+    date: "4 hari lalu",
+    time: "06.00 WIB",
+    relatedPageLabel: "Pengaturan",
+    relatedPageId: "settings",
+    primaryActionLabel: "Buka Pengaturan",
+    sourceInfo: "Notifikasi dibuat dari proses sistem otomatis.",
+    reason:
+      "Sistem mencatat aktivitas backup sebagai informasi operasional.",
+    requiredAction:
+      "Tidak ada tindakan mendesak. Admin dapat membuka pengaturan jika ingin mengecek konfigurasi sistem.",
+    adminNote: "",
   },
 ];
 
-export function NotificationView({
+export function AdminNotificationView({
   onChangePage,
 }: {
   onChangePage?: (page: AdminPageId) => void;
 }) {
   const [notifications, setNotifications] =
-    useState<AdminNotification[]>(initialNotifications);
+    useState<AdminNotification[]>(mockNotifications);
   const [activeTab, setActiveTab] = useState<NotificationTab>("Semua");
-  const [selectedNotificationId, setSelectedNotificationId] = useState(
-    initialNotifications[0]?.id ?? "",
-  );
+  const [keyword, setKeyword] = useState("");
+  const [selectedNotificationId, setSelectedNotificationId] = useState<
+    string | null
+  >(null);
+  const [adminNoteDraft, setAdminNoteDraft] = useState("");
+  const [isNoteSaved, setIsNoteSaved] = useState(false);
+
+  const filteredNotifications = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+
+    return notifications.filter((item) => {
+      const matchTab = isNotificationMatchTab(item, activeTab);
+
+      const matchKeyword =
+        normalizedKeyword.length === 0 ||
+        item.title.toLowerCase().includes(normalizedKeyword) ||
+        item.shortDescription.toLowerCase().includes(normalizedKeyword) ||
+        item.systemMessage.toLowerCase().includes(normalizedKeyword) ||
+        item.category.toLowerCase().includes(normalizedKeyword) ||
+        item.priority.toLowerCase().includes(normalizedKeyword) ||
+        item.status.toLowerCase().includes(normalizedKeyword) ||
+        item.relatedPageLabel.toLowerCase().includes(normalizedKeyword) ||
+        item.relatedPageId.toLowerCase().includes(normalizedKeyword);
+
+      return matchTab && matchKeyword;
+    });
+  }, [activeTab, keyword, notifications]);
 
   const selectedNotification = useMemo(() => {
+    if (!selectedNotificationId) return null;
+
     return (
-      notifications.find((item) => item.id === selectedNotificationId) ??
-      notifications[0]
+      notifications.find((item) => item.id === selectedNotificationId) ?? null
     );
   }, [notifications, selectedNotificationId]);
 
-  const filteredNotifications = useMemo(() => {
-    return notifications.filter((item) => {
-      if (activeTab === "Semua") return true;
-      if (activeTab === "Belum Dibaca") return item.status === "Belum Dibaca";
-      if (activeTab === "Proyek") return item.category === "Proyek";
-      if (activeTab === "Pembayaran") return item.category === "Pembayaran";
-      return item.category === "Sistem";
-    });
-  }, [activeTab, notifications]);
+  const summaryCounts = useMemo(() => {
+    return {
+      unread: notifications.filter((item) => item.status === "Belum Dibaca")
+        .length,
+      urgent: notifications.filter((item) => item.priority === "Urgent").length,
+      followedUp: notifications.filter(
+        (item) => item.status === "Ditindaklanjuti",
+      ).length,
+      archived: notifications.filter((item) => item.status === "Diarsipkan")
+        .length,
+    };
+  }, [notifications]);
 
-  const unreadCount = notifications.filter(
-    (item) => item.status === "Belum Dibaca",
-  ).length;
+  const tabCounts = useMemo<Record<NotificationTab, number>>(() => {
+    return {
+      Semua: notifications.length,
+      "Belum Dibaca": notifications.filter(
+        (item) => item.status === "Belum Dibaca",
+      ).length,
+      Proyek: notifications.filter((item) => item.category === "Proyek").length,
+      Konsultasi: notifications.filter((item) => item.category === "Konsultasi")
+        .length,
+      RAB: notifications.filter((item) => item.category === "RAB").length,
+      Pembayaran: notifications.filter((item) => item.category === "Pembayaran")
+        .length,
+      Promo: notifications.filter((item) => item.category === "Promo").length,
+      Sistem: notifications.filter((item) => item.category === "Sistem").length,
+      Arsip: notifications.filter((item) => item.status === "Diarsipkan")
+        .length,
+    };
+  }, [notifications]);
 
-  const readCount = notifications.filter(
-    (item) => item.status === "Dibaca",
-  ).length;
-
-  const archivedCount = notifications.filter(
-    (item) => item.status === "Diarsipkan",
-  ).length;
-
-  const urgentCount = notifications.filter(
-    (item) => item.priority === "Urgent",
-  ).length;
-
-  const updateSelectedNotification = (
-    field: keyof AdminNotification,
-    value: string | NotificationStatus,
+  const updateNotification = (
+    id: string,
+    updater: (item: AdminNotification) => AdminNotification,
   ) => {
-    if (!selectedNotification) return;
-
     setNotifications((current) =>
-      current.map((item) =>
-        item.id === selectedNotification.id
-          ? {
-              ...item,
-              [field]: value,
-            }
-          : item,
-      ),
+      current.map((item) => (item.id === id ? updater(item) : item)),
     );
   };
 
-  const updateStatus = (status: NotificationStatus) => {
-    updateSelectedNotification("status", status);
+  const openDetail = (item: AdminNotification) => {
+    setSelectedNotificationId(item.id);
+    setAdminNoteDraft(item.adminNote);
+    setIsNoteSaved(false);
 
-    if (status === "Belum Dibaca") setActiveTab("Belum Dibaca");
-    if (status === "Diarsipkan") setActiveTab("Semua");
+    if (item.status === "Belum Dibaca") {
+      updateNotification(item.id, (notification) => ({
+        ...notification,
+        status: "Sudah Dibaca",
+      }));
+    }
+  };
+
+  const closeDetail = () => {
+    setSelectedNotificationId(null);
+    setAdminNoteDraft("");
+    setIsNoteSaved(false);
   };
 
   const markAllAsRead = () => {
     setNotifications((current) =>
       current.map((item) => ({
         ...item,
-        status: item.status === "Diarsipkan" ? item.status : "Dibaca",
+        status: item.status === "Belum Dibaca" ? "Sudah Dibaca" : item.status,
       })),
     );
+
+    if (activeTab === "Belum Dibaca") {
+      setActiveTab("Semua");
+    }
   };
 
-  const deleteSelectedNotification = () => {
+  const updateStatus = (id: string, status: NotificationStatus) => {
+    updateNotification(id, (item) => ({
+      ...item,
+      status,
+    }));
+
+    if (status === "Diarsipkan") {
+      setActiveTab("Arsip");
+    }
+  };
+
+  const saveAdminNote = () => {
     if (!selectedNotification) return;
 
-    const remaining = notifications.filter(
-      (item) => item.id !== selectedNotification.id,
-    );
+    updateNotification(selectedNotification.id, (item) => ({
+      ...item,
+      adminNote: adminNoteDraft,
+    }));
 
-    setNotifications(remaining);
-    setSelectedNotificationId(remaining[0]?.id ?? "");
+    setIsNoteSaved(true);
   };
 
-  if (!selectedNotification) {
+  const handlePrimaryAction = (notification: AdminNotification) => {
+    if (notification.status === "Belum Dibaca") {
+      updateStatus(notification.id, "Sudah Dibaca");
+    }
+
+    onChangePage?.(notification.relatedPageId);
+  };
+
+  if (selectedNotification) {
     return (
-      <div className="space-y-6">
-        <section>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
-            Pusat Aktivitas
-          </p>
-
-          <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
-            Notifikasi
-          </h1>
-        </section>
-
-        <AdminSectionCard title="Daftar Notifikasi">
-          <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-8 text-center">
-            <p className="text-[14px] font-semibold text-[#31332C]">
-              Belum ada notifikasi.
-            </p>
-
-            <p className="mt-2 text-[13px] text-[#7B756E]">
-              Semua notifikasi admin akan muncul di halaman ini.
-            </p>
-          </div>
-        </AdminSectionCard>
-      </div>
+      <NotificationDetailView
+        notification={selectedNotification}
+        adminNoteDraft={adminNoteDraft}
+        isNoteSaved={isNoteSaved}
+        onBack={closeDetail}
+        onStatusChange={(status) =>
+          updateStatus(selectedNotification.id, status)
+        }
+        onAdminNoteChange={(value) => {
+          setAdminNoteDraft(value);
+          setIsNoteSaved(false);
+        }}
+        onSaveAdminNote={saveAdminNote}
+        onPrimaryAction={() => handlePrimaryAction(selectedNotification)}
+        onMarkFollowedUp={() =>
+          updateStatus(selectedNotification.id, "Ditindaklanjuti")
+        }
+        onArchive={() => updateStatus(selectedNotification.id, "Diarsipkan")}
+      />
     );
   }
 
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-4 pb-1 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
-            Pusat Aktivitas
-          </p>
+    <div className="space-y-5">
+      <section className="pb-1">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-[900px]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#725F54]">
+              NOTIFIKASI
+            </p>
 
-          <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
-            Notifikasi
-          </h1>
+            <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
+              Daftar Notifikasi
+            </h1>
 
-          <p className="mt-2 max-w-[760px] text-[14px] leading-7 text-[#7B756E]">
-            Pantau notifikasi penting dari request proyek, konsultasi,
-            pembayaran, vendor, customer, dan sistem VMatch.
-          </p>
+            <p className="mt-2 text-[13px] leading-6 text-[#7B756E] sm:text-[14px]">
+              Pantau aktivitas penting dari request proyek, konsultasi,
+              pembayaran, vendor, customer, RAB, promo, dan sistem operasional
+              VMatch.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={markAllAsRead}
+            disabled={summaryCounts.unread === 0}
+            className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${summaryCounts.unread > 0
+                ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+              }`}
+          >
+            <CheckCircle2 size={15} />
+            Tandai Semua Dibaca
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={markAllAsRead}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42]"
-        >
-          <CheckCircle2 size={16} />
-          Tandai Semua Dibaca
-        </button>
       </section>
 
-      <section className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
-        <NotificationMiniStat
-          icon={Bell}
-          label="Total"
-          value={`${notifications.length}`}
-          description="Semua notifikasi"
-        />
-
-        <NotificationMiniStat
-          icon={Clock}
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <NotificationSummaryChip
           label="Belum Dibaca"
-          value={`${unreadCount}`}
-          description="Perlu dicek admin"
+          value={summaryCounts.unread}
+          icon={Clock}
         />
 
-        <NotificationMiniStat
-          icon={CheckCircle2}
-          label="Dibaca"
-          value={`${readCount}`}
-          description="Sudah ditinjau"
-        />
-
-        <NotificationMiniStat
-          icon={AlertTriangle}
+        <NotificationSummaryChip
           label="Urgent"
-          value={`${urgentCount}`}
-          description="Prioritas tinggi"
+          value={summaryCounts.urgent}
+          icon={AlertTriangle}
+        />
+
+        <NotificationSummaryChip
+          label="Ditindaklanjuti"
+          value={summaryCounts.followedUp}
+          icon={CheckCircle2}
+        />
+
+        <NotificationSummaryChip
+          label="Arsip"
+          value={summaryCounts.archived}
+          icon={Archive}
         />
       </section>
 
-      <AdminSectionCard title="Daftar Notifikasi">
-        <div className="rounded-2xl border border-[#E8E2D9] bg-white p-2">
-          <div className="grid grid-cols-5 gap-2">
-            {notificationTabs.map((tab) => {
-              const active = activeTab === tab;
+      <section className="rounded-3xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)]">
+        <div className="grid gap-3">
+          <div className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-3">
+            <Search size={16} className="shrink-0 text-[#9A8F86]" />
 
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex h-11 items-center justify-center rounded-xl px-2 text-[10px] font-semibold transition sm:text-[13px] ${
-                    active
-                      ? "bg-[#725F54] text-white shadow-sm"
-                      : "text-[#6F6860] hover:bg-[#F8F6F2]"
-                  }`}
-                >
-                  {tab}
-                </button>
-              );
-            })}
+            <input
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="Cari notifikasi, kategori, status, prioritas, atau halaman..."
+              className="h-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#31332C] outline-none placeholder:text-[#B8AEA5]"
+            />
           </div>
+
+          <NotificationFilterTabs
+            activeTab={activeTab}
+            tabs={notificationTabs}
+            counts={tabCounts}
+            onChange={setActiveTab}
+          />
         </div>
+      </section>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {filteredNotifications.length > 0 ? (
-            filteredNotifications.map((item) => (
-              <NotificationCard
-                key={item.id}
-                item={item}
-                selected={selectedNotification.id === item.id}
-                onClick={() => setSelectedNotificationId(item.id)}
+      <section>
+        {filteredNotifications.length > 0 ? (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {filteredNotifications.map((notification) => (
+              <NotificationListCard
+                key={notification.id}
+                notification={notification}
+                onClick={() => openDetail(notification)}
               />
-            ))
-          ) : (
-            <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-6 text-center md:col-span-2 xl:col-span-3">
-              <p className="text-[13px] font-semibold text-[#31332C]">
-                Tidak ada notifikasi pada kategori ini.
-              </p>
-
-              <p className="mt-1 text-[12px] text-[#7B756E]">
-                Notifikasi akan muncul sesuai kategori dan statusnya.
-              </p>
-            </div>
-          )}
-        </div>
-      </AdminSectionCard>
-
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <AdminSectionCard
-          title="Detail Notifikasi"
-          action={<NotificationStatusBadge status={selectedNotification.status} />}
-        >
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-5">
-              <div className="flex items-start gap-4">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
-                  <CategoryIcon category={selectedNotification.category} />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <NotificationPriorityBadge
-                      priority={selectedNotification.priority}
-                    />
-
-                    <span className="rounded-full border border-[#E8E2D9] bg-white px-3 py-1 text-[11px] font-semibold text-[#725F54]">
-                      {selectedNotification.category}
-                    </span>
-                  </div>
-
-                  <h2 className="mt-3 font-serif text-[30px] leading-tight text-[#31332C]">
-                    {selectedNotification.title}
-                  </h2>
-
-                  <p className="mt-3 text-[14px] leading-7 text-[#6F6860]">
-                    {selectedNotification.message}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <InfoTile
-                icon={CalendarDays}
-                label="Tanggal"
-                value={selectedNotification.date}
-                description={selectedNotification.time}
-              />
-
-              <InfoTile
-                icon={Inbox}
-                label="Status"
-                value={selectedNotification.status}
-                description="Status notifikasi"
-              />
-
-              <InfoTile
-                icon={ArrowRight}
-                label="Halaman"
-                value={selectedNotification.relatedPage}
-                description="Tujuan navigasi"
-              />
-            </div>
-
-            <label className="block rounded-2xl border border-[#E8E2D9] bg-white p-4">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                Pesan Notifikasi
-              </span>
-
-              <textarea
-                value={selectedNotification.message}
-                onChange={(event) =>
-                  updateSelectedNotification("message", event.target.value)
-                }
-                rows={5}
-                className="mt-3 w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-              />
-            </label>
+            ))}
           </div>
-        </AdminSectionCard>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-white p-8 text-center">
+            <p className="text-[14px] font-semibold text-[#31332C]">
+              Notifikasi tidak ditemukan.
+            </p>
 
-        <div className="space-y-5">
-          <AdminSectionCard title="Aksi Notifikasi">
-            <div className="space-y-3">
-              <ActionButton
-                icon={CheckCircle2}
-                title="Tandai Dibaca"
-                description="Ubah status notifikasi menjadi dibaca."
-                onClick={() => updateStatus("Dibaca")}
-              />
-
-              <ActionButton
-                icon={Inbox}
-                title="Arsipkan"
-                description="Simpan notifikasi ke arsip."
-                onClick={() => updateStatus("Diarsipkan")}
-              />
-
-              <ActionButton
-                icon={Trash2}
-                title="Hapus"
-                description="Hapus notifikasi dari daftar admin."
-                onClick={deleteSelectedNotification}
-              />
-            </div>
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Navigasi Cepat">
-            <div className="grid gap-2">
-              <button
-                type="button"
-                onClick={() => onChangePage?.(selectedNotification.relatedPage)}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
-              >
-                Buka Halaman Terkait
-                <ArrowRight size={14} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChangePage?.("analytics")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
-              >
-                Ke Analytics
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Ringkasan">
-            <div className="space-y-3 text-[12px] leading-6 text-[#7B756E]">
-              <p>
-                <span className="font-semibold text-[#31332C]">
-                  {unreadCount}
-                </span>{" "}
-                notifikasi belum dibaca.
-              </p>
-
-              <p>
-                <span className="font-semibold text-[#31332C]">
-                  {archivedCount}
-                </span>{" "}
-                notifikasi sudah diarsipkan.
-              </p>
-
-              <p>
-                <span className="font-semibold text-[#31332C]">
-                  {urgentCount}
-                </span>{" "}
-                notifikasi memiliki prioritas urgent.
-              </p>
-            </div>
-          </AdminSectionCard>
-        </div>
+            <p className="mt-2 text-[13px] text-[#7B756E]">
+              Coba ubah filter atau kata pencarian.
+            </p>
+          </div>
+        )}
       </section>
     </div>
   );
 }
 
-function NotificationCard({
-  item,
-  selected,
+export function NotificationView({
+  onChangePage,
+}: {
+  onChangePage?: (page: AdminPageId) => void;
+}) {
+  return <AdminNotificationView onChangePage={onChangePage} />;
+}
+
+function NotificationDetailView({
+  notification,
+  adminNoteDraft,
+  isNoteSaved,
+  onBack,
+  onStatusChange,
+  onAdminNoteChange,
+  onSaveAdminNote,
+  onPrimaryAction,
+  onMarkFollowedUp,
+  onArchive,
+}: {
+  notification: AdminNotification;
+  adminNoteDraft: string;
+  isNoteSaved: boolean;
+  onBack: () => void;
+  onStatusChange: (status: NotificationStatus) => void;
+  onAdminNoteChange: (value: string) => void;
+  onSaveAdminNote: () => void;
+  onPrimaryAction: () => void;
+  onMarkFollowedUp: () => void;
+  onArchive: () => void;
+}) {
+  const isAdminNoteChanged = adminNoteDraft !== notification.adminNote;
+
+  return (
+    <div className="space-y-5">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+      >
+        <ArrowLeft size={15} />
+        Kembali ke daftar notifikasi
+      </button>
+
+      <section className="overflow-hidden rounded-3xl border border-[#E8E2D9] bg-white shadow-[0_12px_34px_rgba(49,51,44,0.035)]">
+        <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1fr)_310px]">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex h-8 items-center gap-2 rounded-full border border-[#E8E2D9] bg-[#FCFBF9] px-3 text-[11px] font-semibold text-[#725F54]">
+                <NotificationCategoryIcon category={notification.category} />
+                {notification.category}
+              </span>
+
+              <NotificationPriorityBadge priority={notification.priority} />
+              <NotificationStatusBadge status={notification.status} />
+            </div>
+
+            <h1 className="mt-3 max-w-[820px] font-serif text-[32px] leading-tight text-[#31332C] sm:text-[42px]">
+              {notification.title}
+            </h1>
+
+            <p className="mt-3 max-w-[860px] text-[13px] leading-7 text-[#7B756E] sm:text-[14px]">
+              {notification.shortDescription}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+              Status Notifikasi
+            </label>
+
+            <div className="relative mt-3">
+              <select
+                value={notification.status}
+                onChange={(event) =>
+                  onStatusChange(event.target.value as NotificationStatus)
+                }
+                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+              >
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-[#E8E2D9] bg-[#FCFBF9]/70 p-5 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <NotificationInfoTile
+              icon={CalendarDays}
+              label="Tanggal & Waktu"
+              value={notification.date}
+              description={notification.time}
+            />
+
+            <NotificationInfoTile
+              icon={Inbox}
+              label="Kategori"
+              value={notification.category}
+              description="Jenis aktivitas"
+            />
+
+            <NotificationInfoTile
+              icon={Link2}
+              label="Halaman Terkait"
+              value={notification.relatedPageLabel}
+              description="Tujuan tindak lanjut"
+            />
+
+            <NotificationInfoTile
+              icon={Bell}
+              label="Prioritas"
+              value={notification.priority}
+              description="Tingkat perhatian"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-0 border-t border-[#E8E2D9] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <DetailSection
+            title="Pesan Sistem"
+            description="Pesan asli dari sistem. Bagian ini hanya untuk dibaca."
+          >
+            <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+              <p className="text-[13px] leading-7 text-[#31332C]">
+                {notification.systemMessage}
+              </p>
+            </div>
+          </DetailSection>
+
+          <DetailSection
+            title="Detail Aktivitas"
+            description="Sumber, alasan muncul, dan tindakan yang disarankan."
+            withRightBorder={false}
+          >
+            <div className="space-y-3">
+              <ActivityInfo
+                title="Sumber informasi"
+                description={notification.sourceInfo}
+              />
+
+              <ActivityInfo
+                title="Alasan notifikasi muncul"
+                description={notification.reason}
+              />
+
+              <ActivityInfo
+                title="Tindakan yang perlu dilakukan"
+                description={notification.requiredAction}
+              />
+            </div>
+          </DetailSection>
+        </div>
+
+        <div className="border-t border-[#E8E2D9] p-5 sm:p-6">
+          <AdminNoteBox
+            value={adminNoteDraft}
+            isSaved={isNoteSaved}
+            isChanged={isAdminNoteChanged}
+            onChange={onAdminNoteChange}
+            onSave={onSaveAdminNote}
+          />
+        </div>
+      </section>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <button
+          type="button"
+          onClick={onPrimaryAction}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+        >
+          <Link2 size={15} />
+          {notification.primaryActionLabel}
+        </button>
+
+        <button
+          type="button"
+          onClick={onMarkFollowedUp}
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${notification.status === "Ditindaklanjuti"
+              ? "border-[#725F54] bg-[#725F54] text-white"
+              : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+            }`}
+        >
+          <CheckCircle2 size={15} />
+          Ditindaklanjuti
+        </button>
+
+        <button
+          type="button"
+          onClick={onArchive}
+          className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${notification.status === "Diarsipkan"
+              ? "border-[#725F54] bg-[#725F54] text-white"
+              : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+            }`}
+        >
+          <Archive size={15} />
+          Arsipkan
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NotificationListCard({
+  notification,
   onClick,
 }: {
-  item: AdminNotification;
-  selected: boolean;
+  notification: AdminNotification;
   onClick: () => void;
 }) {
+  const isUnread = notification.status === "Belum Dibaca";
+  const isUrgent = notification.priority === "Urgent";
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-w-0 rounded-2xl border p-4 text-left transition ${
-        selected
-          ? "border-[#D9C8BA] bg-[#FFFDF9]"
-          : item.status === "Belum Dibaca"
-            ? "border-[#E8D6BE] bg-[#FFF8ED] hover:bg-white"
-            : "border-[#E8E2D9] bg-[#FCFBF9] hover:bg-white"
-      }`}
+      className={`group w-full rounded-2xl border p-4 text-left shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:border-[#725F54] hover:bg-white ${isUrgent
+          ? "border-[#E6C7BD] bg-[#FFF8ED]"
+          : isUnread
+            ? "border-[#E8D6BE] bg-[#FFF8ED]"
+            : "border-[#E8E2D9] bg-white"
+        }`}
     >
-      <div className="flex items-start gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
-          <CategoryIcon category={item.category} />
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54] ring-1 ring-[#E8E2D9]">
+          <NotificationCategoryIcon category={notification.category} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <p className="line-clamp-1 text-[14px] font-semibold text-[#31332C]">
-              {item.title}
-            </p>
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[14px] font-semibold text-[#31332C]">
+                {notification.title}
+              </p>
 
-            <NotificationPriorityBadge priority={item.priority} />
+              <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
+                {notification.shortDescription}
+              </p>
+            </div>
+
+            <NotificationPriorityBadge priority={notification.priority} />
           </div>
 
-          <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
-            {item.message}
-          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <NotificationStatusBadge status={notification.status} />
 
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="text-[11px] text-[#9A8F86]">
-              {item.date} • {item.time}
+            <span className="rounded-full border border-[#E8E2D9] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#725F54]">
+              {notification.category}
             </span>
 
-            <NotificationStatusBadge status={item.status} />
+            <span className="rounded-full border border-[#E8E2D9] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#7B756E]">
+              {notification.relatedPageLabel}
+            </span>
           </div>
+
+          <p className="mt-3 text-[11px] text-[#9A8F86]">
+            {notification.date} • {notification.time}
+          </p>
         </div>
       </div>
     </button>
   );
 }
 
-function NotificationMiniStat({
+function NotificationSummaryChip({
   icon: Icon,
   label,
   value,
-  description,
 }: {
   icon: LucideIcon;
   label: string;
-  value: string;
-  description: string;
+  value: number;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.035)]">
+    <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:border-[#725F54] hover:bg-[#FCFBF9]">
       <div className="flex items-start justify-between gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
-          <Icon size={17} strokeWidth={2} />
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
+          <Icon size={17} strokeWidth={2.2} />
         </div>
 
-        <p className="min-w-0 truncate text-right font-serif text-[25px] leading-none text-[#31332C]">
+        <p className="shrink-0 font-serif text-[28px] leading-none text-[#31332C]">
           {value}
         </p>
       </div>
@@ -599,14 +864,57 @@ function NotificationMiniStat({
         {label}
       </p>
 
-      <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
-        {description}
+      <p className="mt-1 text-[11px] leading-5 text-[#7B756E]">
+        Ringkasan notifikasi
       </p>
     </div>
   );
 }
 
-function InfoTile({
+function NotificationFilterTabs({
+  activeTab,
+  tabs,
+  counts,
+  onChange,
+}: {
+  activeTab: NotificationTab;
+  tabs: NotificationTab[];
+  counts: Record<NotificationTab, number>;
+  onChange: (tab: NotificationTab) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-1.5">
+      <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {tabs.map((tab) => {
+          const active = activeTab === tab;
+
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => onChange(tab)}
+              className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3.5 text-[12px] font-semibold transition ${active
+                  ? "bg-[#725F54] text-white shadow-sm"
+                  : "text-[#6F6860] hover:bg-white"
+                }`}
+            >
+              <span>{tab}</span>
+
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/18 text-white" : "bg-white text-[#9A8F86]"
+                  }`}
+              >
+                {counts[tab]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function NotificationInfoTile({
   icon: Icon,
   label,
   value,
@@ -618,18 +926,18 @@ function InfoTile({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-      <div className="flex items-start gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-white text-[#725F54]">
+    <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 transition hover:border-[#725F54] hover:bg-[#FCFBF9]">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
           <Icon size={16} />
         </div>
 
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
             {label}
           </p>
 
-          <p className="mt-1 truncate text-[13px] font-semibold text-[#31332C]">
+          <p className="mt-1 line-clamp-2 text-[13px] font-semibold leading-5 text-[#31332C]">
             {value}
           </p>
 
@@ -642,59 +950,142 @@ function InfoTile({
   );
 }
 
-function ActionButton({
-  icon: Icon,
-  title,
-  description,
-  onClick,
+function AdminNoteBox({
+  value,
+  isSaved,
+  isChanged,
+  onChange,
+  onSave,
 }: {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  onClick: () => void;
+  value: string;
+  isSaved: boolean;
+  isChanged: boolean;
+  onChange: (value: string) => void;
+  onSave: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-start gap-3 rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 text-left transition hover:border-[#D9C8BA] hover:bg-white"
-    >
-      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
-        <Icon size={16} />
+    <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+            Catatan Admin
+          </p>
+
+          <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+            Catatan internal admin. Bagian ini berbeda dari pesan sistem.
+          </p>
+        </div>
+
+        {isSaved && (
+          <span className="shrink-0 rounded-full border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-1 text-[10px] font-semibold text-[#4F7A5F]">
+            Tersimpan
+          </span>
+        )}
       </div>
 
-      <div>
-        <p className="text-[13px] font-semibold text-[#31332C]">{title}</p>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        rows={4}
+        placeholder="Tambahkan catatan tindak lanjut admin..."
+        className="mt-3 w-full resize-none rounded-xl border border-[#E4D8CD] bg-white px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+      />
 
-        <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-          {description}
-        </p>
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!isChanged}
+          className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${isChanged
+              ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+              : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+            }`}
+        >
+          <StickyNote size={14} />
+          Simpan Catatan
+        </button>
       </div>
-    </button>
+    </div>
   );
 }
 
-function CategoryIcon({ category }: { category: NotificationCategory }) {
-  if (category === "Pembayaran") return <CreditCard size={17} />;
-  if (category === "Konsultasi") return <MessageCircle size={17} />;
-  if (category === "Vendor") return <ShieldCheck size={17} />;
-  if (category === "Customer") return <UserRound size={17} />;
-  if (category === "Sistem") return <Bell size={17} />;
+function DetailSection({
+  title,
+  description,
+  children,
+  withRightBorder = true,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+  withRightBorder?: boolean;
+}) {
+  return (
+    <div
+      className={`min-w-0 border-b border-[#E8E2D9] p-5 sm:p-6 xl:border-b-0 ${withRightBorder ? "xl:border-r" : ""
+        }`}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+        {title}
+      </p>
 
-  return <Inbox size={17} />;
+      <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+        {description}
+      </p>
+
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
+
+function ActivityInfo({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+      <p className="text-[12px] font-semibold text-[#31332C]">{title}</p>
+
+      <p className="mt-1 text-[12px] leading-6 text-[#7B756E]">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function NotificationCategoryIcon({
+  category,
+}: {
+  category: NotificationCategory;
+}) {
+  if (category === "Proyek") return <BriefcaseBusiness size={16} />;
+  if (category === "Konsultasi") return <MessageCircle size={16} />;
+  if (category === "RAB") return <FileText size={16} />;
+  if (category === "Pembayaran") return <CreditCard size={16} />;
+  if (category === "Vendor") return <ShieldCheck size={16} />;
+  if (category === "Customer") return <Users size={16} />;
+  if (category === "Promo") return <Megaphone size={16} />;
+  if (category === "Sistem") return <Settings size={16} />;
+
+  return <Bell size={16} />;
 }
 
 function NotificationStatusBadge({ status }: { status: NotificationStatus }) {
   const style =
     status === "Belum Dibaca"
       ? "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]"
-      : status === "Dibaca"
+      : status === "Sudah Dibaca"
         ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
-        : "border-[#E8E2D9] bg-white text-[#9A8F86]";
+        : status === "Ditindaklanjuti"
+          ? "border-[#D8C7B6] bg-[#FCFBF9] text-[#725F54]"
+          : "border-[#E8E2D9] bg-white text-[#9A8F86]";
 
   return (
     <span
-      className={`inline-flex h-7 shrink-0 items-center rounded-full border px-3 text-[11px] font-semibold ${style}`}
+      className={`inline-flex h-7 max-w-full shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-[10px] font-semibold sm:text-[11px] ${style}`}
     >
       {status}
     </span>
@@ -704,18 +1095,18 @@ function NotificationStatusBadge({ status }: { status: NotificationStatus }) {
 function NotificationPriorityBadge({
   priority,
 }: {
-  priority: "Normal" | "Penting" | "Urgent";
+  priority: NotificationPriority;
 }) {
   const style =
     priority === "Urgent"
-      ? "bg-[#FFF3EF] text-[#9A4A32]"
+      ? "border-[#E6C7BD] bg-[#FFF3EF] text-[#9A4A32]"
       : priority === "Penting"
-        ? "bg-[#FFF8ED] text-[#8A5A24]"
-        : "bg-white text-[#7B756E]";
+        ? "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]"
+        : "border-[#E8E2D9] bg-white text-[#7B756E]";
 
   return (
     <span
-      className={`shrink-0 rounded-full border border-[#E8E2D9] px-2.5 py-1 text-[10px] font-semibold ${style}`}
+      className={`inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-[10px] font-semibold sm:text-[11px] ${style}`}
     >
       {priority}
     </span>

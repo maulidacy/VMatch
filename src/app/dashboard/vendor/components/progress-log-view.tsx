@@ -15,7 +15,6 @@ import {
 } from "../mock-data";
 import type { ProgressLog, ProgressLogStatus } from "../types";
 import {
-    VendorActionButton,
     VendorEmptyState,
     VendorField,
     VendorListRow,
@@ -107,7 +106,7 @@ export function ProgressLogView() {
                                         <select
                                             value={selectedProjectId}
                                             onChange={(event) => setSelectedProjectId(event.target.value)}
-                                            className="h-12 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-12 text-[14px] font-medium text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                                            className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-12 text-[13px] font-medium text-[#31332C] outline-none focus:border-[#725F54]"
                                         >
                                             {vendorProjects.map((project) => (
                                                 <option key={project.id} value={project.id}>
@@ -136,7 +135,7 @@ export function ProgressLogView() {
                         </div>
 
                         <VendorField label="Status Pekerjaan">
-                            <div className="grid gap-2 sm:grid-cols-3">
+                            <div className="grid gap-3 sm:grid-cols-3">
                                 {statusOptions.map((item) => {
                                     const active = status === item;
 
@@ -146,8 +145,8 @@ export function ProgressLogView() {
                                             type="button"
                                             onClick={() => setStatus(item)}
                                             className={`min-h-10 rounded-xl border px-3 text-[12px] font-semibold transition ${active
-                                                    ? "border-[#725F54] bg-[#725F54] text-white"
-                                                    : "border-[#E4D8CD] bg-white text-[#725F54] hover:bg-[#FCFBF9]"
+                                                ? "border-[#725F54] bg-[#725F54] text-white"
+                                                : "border-[#E4D8CD] bg-white text-[#725F54] hover:bg-[#FCFBF9]"
                                                 }`}
                                         >
                                             {item}
@@ -239,13 +238,18 @@ export function ProgressLogView() {
                         </div>
 
                         <div className="flex justify-end">
-                            <VendorActionButton
-                                icon={Send}
-                                label="Kirim Log"
-                                primary
+                            <button
+                                type="button"
                                 onClick={handleSubmit}
-                                disabled={!selectedProject || !workSummary.trim()}
-                            />
+                                disabled={!workSummary.trim()}
+                                className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl px-5 text-[13px] font-semibold transition sm:w-fit ${workSummary.trim()
+                                        ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                                        : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+                                    }`}
+                            >
+                                <Send size={15} />
+                                Kirim Log
+                            </button>
                         </div>
                     </div>
                 </VendorSectionCard>
