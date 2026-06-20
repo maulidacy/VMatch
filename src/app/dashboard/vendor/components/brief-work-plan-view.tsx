@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
+  Calculator,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
   ClipboardCheck,
   ClipboardList,
+  Clock3,
   Download,
   Eye,
   FileText,
@@ -15,6 +17,8 @@ import {
   Paperclip,
   Save,
   Search,
+  Send,
+  Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -39,9 +43,24 @@ type AdminBriefFile = {
   url: string;
 };
 
-type BriefTab = "Semua" | "Belum Dibaca" | "Sudah Dibaca";
+type VendorEstimateDraft = {
+  estimatedCost: string;
+  estimatedDuration: string;
+  suggestedMaterial: string;
+  vendorNote: string;
+};
 
-const briefTabs: BriefTab[] = ["Semua", "Belum Dibaca", "Sudah Dibaca"];
+const emptyEstimateDraft: VendorEstimateDraft = {
+  estimatedCost: "",
+  estimatedDuration: "",
+  suggestedMaterial: "",
+  vendorNote: "",
+};
+
+
+type BriefTab = "Semua" | "Belum Dibaca" | "Sudah Dibaca" | "Estimasi Dikirim";
+
+const briefTabs: BriefTab[] = ["Semua", "Belum Dibaca", "Sudah Dibaca", "Estimasi Dikirim"];
 
 const adminBriefFiles: Record<string, AdminBriefFile[]> = {
   "brief-1": [
@@ -104,6 +123,14 @@ export function BriefWorkPlanView({
   const [vendorNoteDraft, setVendorNoteDraft] = useState("");
   const [isVendorNoteSaved, setIsVendorNoteSaved] = useState(false);
 
+  const [estimateDrafts, setEstimateDrafts] = useState<
+    Record<string, VendorEstimateDraft>
+  >({});
+  const [estimateSentBriefIds, setEstimateSentBriefIds] = useState<
+    Record<string, boolean>
+  >({});
+  const [estimateFeedback, setEstimateFeedback] = useState("");
+
   const [briefStatuses, setBriefStatuses] = useState<
     Record<string, WorkPlanStatus>
   >(
@@ -160,16 +187,31 @@ export function BriefWorkPlanView({
     ? vendorNoteDraft !== (vendorNotes[selectedBrief.id] ?? "")
     : false;
 
+  const currentEstimateDraft = selectedBrief
+    ? estimateDrafts[selectedBrief.id] ?? emptyEstimateDraft
+    : emptyEstimateDraft;
+
+  const isEstimateSent = selectedBrief
+    ? Boolean(estimateSentBriefIds[selectedBrief.id])
+    : false;
+
+  const isEstimateReady =
+    currentEstimateDraft.estimatedCost.trim().length > 0 &&
+    currentEstimateDraft.estimatedDuration.trim().length > 0 &&
+    currentEstimateDraft.suggestedMaterial.trim().length > 0;
+
   const openDetail = (brief: WorkBrief) => {
     setSelectedBriefId(brief.id);
     setVendorNoteDraft(vendorNotes[brief.id] ?? "");
     setIsVendorNoteSaved(false);
+    setEstimateFeedback("");
   };
 
   const closeDetail = () => {
     setSelectedBriefId(null);
     setVendorNoteDraft("");
     setIsVendorNoteSaved(false);
+    setEstimateFeedback("");
     setConfirmOpen(false);
   };
 
@@ -193,6 +235,40 @@ export function BriefWorkPlanView({
     }));
 
     setIsVendorNoteSaved(true);
+  };
+
+  const updateEstimateDraft = (draft: VendorEstimateDraft) => {
+    if (!selectedBrief) return;
+
+    setEstimateDrafts((current) => ({
+      ...current,
+      [selectedBrief.id]: draft,
+    }));
+
+    setEstimateFeedback("");
+  };
+
+  const sendEstimateToAdmin = () => {
+    if (!selectedBrief || !isEstimateReady) return;
+
+    setEstimateDrafts((current) => ({
+      ...current,
+      [selectedBrief.id]: currentEstimateDraft,
+    }));
+
+    setEstimateSentBriefIds((current) => ({
+      ...current,
+      [selectedBrief.id]: true,
+    }));
+
+    setBriefStatuses((current) => ({
+      ...current,
+      [selectedBrief.id]: "Estimasi Dikirim",
+    }));
+
+    setEstimateFeedback(
+      "Estimasi RAB berhasil dikirim ke admin untuk direview di RAB Builder.",
+    );
   };
 
   if (workBriefs.length === 0) {
@@ -458,6 +534,15 @@ export function BriefWorkPlanView({
             </DetailSection>
           </div>
 
+          <VendorEstimateSection
+            estimateDraft={currentEstimateDraft}
+            isEstimateReady={isEstimateReady}
+            isEstimateSent={isEstimateSent}
+            feedbackMessage={estimateFeedback}
+            onChangeEstimate={updateEstimateDraft}
+            onSendEstimate={sendEstimateToAdmin}
+          />
+
           <div className="border-t border-[#E8E2D9] p-5 sm:p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
               Standar QC
@@ -479,12 +564,12 @@ export function BriefWorkPlanView({
           </div>
         </section>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}
-            disabled={selectedStatus === "Sudah Dibaca"}
-            className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${selectedStatus === "Sudah Dibaca"
+            disabled={selectedStatus === "Sudah Dibaca" || selectedStatus === "Estimasi Dikirim"}
+            className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${selectedStatus === "Sudah Dibaca" || selectedStatus === "Estimasi Dikirim"
               ? "cursor-not-allowed border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
               : "border-[#725F54] bg-[#725F54] text-white hover:bg-[#5A4A42]"
               }`}
@@ -495,8 +580,22 @@ export function BriefWorkPlanView({
 
           <button
             type="button"
+            onClick={sendEstimateToAdmin}
+            disabled={!isEstimateReady || isEstimateSent}
+            className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+              isEstimateReady && !isEstimateSent
+                ? "border-[#725F54] bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                : "cursor-not-allowed border-[#E8E2D9] bg-[#E8E2D9] text-[#9A8F86]"
+            }`}
+          >
+            <Send size={15} />
+            {isEstimateSent ? "Estimasi Terkirim" : "Kirim Estimasi"}
+          </button>
+
+          <button
+            type="button"
             onClick={() => onChangePage("progress-log")}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+            className="col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white sm:col-span-1"
           >
             <FileText size={15} />
             Isi Log
@@ -636,6 +735,163 @@ export function BriefWorkPlanView({
   );
 }
 
+
+function VendorEstimateSection({
+  estimateDraft,
+  isEstimateReady,
+  isEstimateSent,
+  feedbackMessage,
+  onChangeEstimate,
+  onSendEstimate,
+}: {
+  estimateDraft: VendorEstimateDraft;
+  isEstimateReady: boolean;
+  isEstimateSent: boolean;
+  feedbackMessage: string;
+  onChangeEstimate: (draft: VendorEstimateDraft) => void;
+  onSendEstimate: () => void;
+}) {
+  return (
+    <div className="border-t border-[#E8E2D9] bg-[#FCFBF9] p-5 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="max-w-[760px]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+            Estimasi RAB Vendor
+          </p>
+
+          <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+            Kirim estimasi awal ke admin. Nominal ini belum dikirim ke customer
+            sebelum direview dan difinalisasi oleh admin VMatch.
+          </p>
+        </div>
+
+        {isEstimateSent && (
+          <span className="w-fit rounded-full border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-1 text-[11px] font-semibold text-[#4F7A5F]">
+            Estimasi Dikirim
+          </span>
+        )}
+      </div>
+
+      {feedbackMessage && (
+        <div className="mt-4 rounded-2xl border border-[#DCEBDD] bg-[#F5FAF6] px-4 py-3 text-[12px] font-semibold leading-5 text-[#4F7A5F]">
+          {feedbackMessage}
+        </div>
+      )}
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <EstimateInput
+          icon={Wallet}
+          label="Estimasi Biaya"
+          value={estimateDraft.estimatedCost}
+          placeholder="Contoh: Rp23.500.000"
+          onChange={(value) =>
+            onChangeEstimate({
+              ...estimateDraft,
+              estimatedCost: value,
+            })
+          }
+        />
+
+        <EstimateInput
+          icon={Clock3}
+          label="Estimasi Durasi"
+          value={estimateDraft.estimatedDuration}
+          placeholder="Contoh: 14-21 hari"
+          onChange={(value) =>
+            onChangeEstimate({
+              ...estimateDraft,
+              estimatedDuration: value,
+            })
+          }
+        />
+
+        <EstimateInput
+          icon={Calculator}
+          label="Material Disarankan"
+          value={estimateDraft.suggestedMaterial}
+          placeholder="Contoh: Multiplek 18mm + HPL"
+          onChange={(value) =>
+            onChangeEstimate({
+              ...estimateDraft,
+              suggestedMaterial: value,
+            })
+          }
+        />
+      </div>
+
+      <div className="mt-3">
+        <label className="block">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+            Catatan Estimasi
+          </span>
+
+          <textarea
+            value={estimateDraft.vendorNote}
+            onChange={(event) =>
+              onChangeEstimate({
+                ...estimateDraft,
+                vendorNote: event.target.value,
+              })
+            }
+            rows={4}
+            placeholder="Tambahkan catatan material, kondisi pekerjaan, kebutuhan survey, atau hal yang perlu direview admin."
+            className="mt-2 w-full resize-none rounded-xl border border-[#E4D8CD] bg-white px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+          />
+        </label>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={onSendEstimate}
+          disabled={!isEstimateReady || isEstimateSent}
+          className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
+            isEstimateReady && !isEstimateSent
+              ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+              : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+          }`}
+        >
+          <Send size={14} />
+          {isEstimateSent ? "Estimasi Terkirim" : "Kirim Estimasi RAB"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EstimateInput({
+  icon: Icon,
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+        {label}
+      </span>
+
+      <div className="mt-2 flex h-11 items-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3">
+        <Icon size={15} className="shrink-0 text-[#725F54]" />
+
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className="h-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#31332C] outline-none placeholder:text-[#B8AEA5]"
+        />
+      </div>
+    </label>
+  );
+}
+
 function DetailSection({
   title,
   description,
@@ -645,7 +901,7 @@ function DetailSection({
 }: {
   title: string;
   description: string;
-  children: React.ReactNode;
+  children: ReactNode;
   badge?: string;
   withRightBorder?: boolean;
 }) {

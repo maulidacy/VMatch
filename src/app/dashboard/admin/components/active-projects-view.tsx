@@ -21,7 +21,6 @@ import type { AdminPageId } from "../types";
 
 type ProjectStatus =
   | "Berjalan"
-  | "Menunggu Vendor"
   | "Butuh Review"
   | "QC"
   | "Selesai";
@@ -50,7 +49,6 @@ const projectTabs: ProjectTab[] = ["Semua", "Berjalan", "Review", "Selesai"];
 
 const statusOptions: ProjectStatus[] = [
   "Berjalan",
-  "Menunggu Vendor",
   "Butuh Review",
   "QC",
   "Selesai",
@@ -151,8 +149,7 @@ export function ActiveProjectsView({
     return projects.filter((project) => {
       const matchTab =
         activeTab === "Semua" ||
-        (activeTab === "Berjalan" &&
-          ["Berjalan", "Menunggu Vendor"].includes(project.status)) ||
+        (activeTab === "Berjalan" && project.status === "Berjalan") ||
         (activeTab === "Review" &&
           ["Butuh Review", "QC"].includes(project.status)) ||
         (activeTab === "Selesai" && project.status === "Selesai");
@@ -254,9 +251,7 @@ export function ActiveProjectsView({
           </h1>
 
           <p className="mt-2 text-[13px] leading-6 text-[#7B756E] sm:text-[14px]">
-            Pantau proyek interior yang sedang berjalan, cek progres pengerjaan,
-            vendor partner, jadwal target, status proyek, dan tindak lanjut
-            administrasi.
+            Pantau proyek interior yang sudah benar-benar aktif setelah RAB final disetujui customer, termasuk progres pengerjaan, vendor partner, jadwal target, status proyek, dan tindak lanjut administrasi.
           </p>
         </div>
       </section>
@@ -736,11 +731,9 @@ function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
   const style =
     status === "Berjalan"
       ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
-      : status === "Menunggu Vendor" ||
-          status === "Butuh Review" ||
-          status === "QC"
-        ? "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]"
-        : "border-[#E8E2D9] bg-white text-[#7B756E]";
+      : status === "Butuh Review" || status === "QC"
+      ? "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]"
+      : "border-[#E8E2D9] bg-white text-[#7B756E]";
 
   return (
     <span

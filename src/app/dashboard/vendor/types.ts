@@ -43,7 +43,9 @@ export type ProgressLogStatus =
 export type WorkPlanStatus =
   | "Belum Dibaca"
   | "Sudah Dibaca"
-  | "Butuh Diskusi";
+  | "Butuh Diskusi"
+  | "Estimasi Disiapkan"
+  | "Estimasi Dikirim";
 
 export type VendorProfile = {
   name: string;
@@ -127,4 +129,21 @@ export type BonusInfo = {
     label: string;
     completed: boolean;
   }[];
+};
+
+export type VendorEstimateStatus =
+  | "Belum Dibuat"
+  | "Draft Estimasi"
+  | "Estimasi Dikirim";
+
+export type VendorEstimate = {
+  id: string;
+  briefId: string;
+  projectName: string;
+  estimatedCost: string;
+  estimatedDuration: string;
+  suggestedMaterial: string;
+  vendorNote: string;
+  status: VendorEstimateStatus;
+  sentAt?: string;
 };

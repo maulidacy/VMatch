@@ -108,6 +108,72 @@ function isNotificationMatchTab(
 
 const mockNotifications: AdminNotification[] = [
   {
+    id: "notif-flow-brief-sent",
+    title: "Brief berhasil dikirim ke vendor",
+    shortDescription:
+      "Brief Kitchen Set Modern Minimalis sudah dikirim ke vendor dan menunggu estimasi.",
+    systemMessage:
+      "Admin telah mengirim brief proyek Kitchen Set Modern Minimalis ke vendor terpilih. Vendor dapat membaca brief di Vendor Panel dan menyiapkan estimasi RAB untuk admin.",
+    category: "Vendor",
+    priority: "Penting",
+    status: "Belum Dibaca",
+    date: "Hari ini",
+    time: "Baru saja",
+    relatedPageLabel: "Request Proyek",
+    relatedPageId: "requests",
+    primaryActionLabel: "Buka Request",
+    sourceInfo: "Notifikasi dibuat setelah admin mengirim brief ke vendor.",
+    reason:
+      "Admin perlu memantau apakah vendor sudah membaca brief dan mengirim estimasi RAB.",
+    requiredAction:
+      "Pantau status vendor. Jika vendor belum merespons, lakukan follow up melalui halaman Request Proyek atau Vendor Partner.",
+    adminNote: "",
+  },
+  {
+    id: "notif-flow-brief-read",
+    title: "Vendor membaca brief proyek",
+    shortDescription:
+      "Vendor terpilih sudah membaca brief dan dapat mulai menyiapkan estimasi RAB.",
+    systemMessage:
+      "Vendor telah membuka dan menandai brief sebagai sudah dibaca. Tahap berikutnya adalah vendor menyiapkan estimasi RAB untuk direview admin.",
+    category: "Vendor",
+    priority: "Normal",
+    status: "Sudah Dibaca",
+    date: "Hari ini",
+    time: "Baru saja",
+    relatedPageLabel: "Vendor Partner",
+    relatedPageId: "vendors",
+    primaryActionLabel: "Buka Vendor",
+    sourceInfo: "Notifikasi dibuat dari aktivitas vendor di Vendor Panel.",
+    reason:
+      "Aktivitas membaca brief menunjukkan vendor sudah menerima informasi proyek.",
+    requiredAction:
+      "Tunggu estimasi dari vendor atau lakukan follow up jika estimasi tidak dikirim sesuai waktu respon.",
+    adminNote: "",
+  },
+  {
+    id: "notif-flow-rab-review",
+    title: "RAB perlu direview admin",
+    shortDescription:
+      "Estimasi vendor sudah masuk dan perlu direview sebelum dikirim ke customer.",
+    systemMessage:
+      "Vendor telah mengirim estimasi RAB. Admin perlu mengecek item pekerjaan, material, nominal, dan catatan vendor sebelum membuat RAB final untuk customer.",
+    category: "RAB",
+    priority: "Penting",
+    status: "Belum Dibaca",
+    date: "Hari ini",
+    time: "Baru saja",
+    relatedPageLabel: "RAB Builder",
+    relatedPageId: "rab-builder",
+    primaryActionLabel: "Review RAB",
+    sourceInfo: "Notifikasi dibuat setelah vendor mengirim estimasi RAB.",
+    reason:
+      "Estimasi vendor belum boleh langsung diteruskan ke customer sebelum admin melakukan review.",
+    requiredAction:
+      "Buka RAB Builder, review estimasi vendor, sesuaikan catatan admin, lalu kirim RAB final ke customer.",
+    adminNote: "",
+  },
+  {
     id: "notif-1",
     title: "Request proyek baru masuk",
     shortDescription:
