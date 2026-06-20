@@ -21,6 +21,12 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import type { AdminPageId } from "../types";
 
+type BriefDocumentStatus =
+    | "Belum Dibuat"
+    | "Draft Brief"
+    | "Brief Siap"
+    | "Brief Dikirim";
+
 type RequestStatus =
     | "Baru Masuk"
     | "Menunggu Review"
@@ -75,8 +81,8 @@ type ProjectRequest = {
     submittedAt: string;
     description: string;
     adminNote: string;
-    initialBrief: string;
-    vendorNote: string;
+    briefDocumentStatus: BriefDocumentStatus;
+    briefDocumentUpdatedAt?: string;
     selectedVendorId?: string;
     sentToVendorAt?: string;
     lastMessage?: string;
@@ -163,10 +169,8 @@ const initialRequests: ProjectRequest[] = [
             "Customer membutuhkan kitchen set yang bersih, fungsional, mudah dirawat, dan memiliki penyimpanan yang cukup untuk dapur kecil.",
         adminNote:
             "Request sudah cukup jelas. Cocok diteruskan ke vendor kitchen set area Semarang untuk estimasi awal.",
-        initialBrief:
-            "Buat estimasi kitchen set modern minimalis untuk area dapur compact. Fokus pada kabinet bawah, kabinet atas, area penyimpanan tertutup, top table solid surface, dan finishing warna netral dengan aksen kayu hangat.",
-        vendorNote:
-            "Vendor diminta mengecek kemungkinan layout L-shape, kebutuhan pengukuran ulang, dan estimasi material Standard / Premium.",
+        briefDocumentStatus: "Brief Siap",
+        briefDocumentUpdatedAt: "Hari ini, 11.00 WIB",
     },
     {
         id: "request-2",
@@ -187,10 +191,8 @@ const initialRequests: ProjectRequest[] = [
             "Customer ingin wardrobe built-in full plafon dengan area gantung, rak lipat, dan pintu sliding.",
         adminNote:
             "Perlu konsultasi untuk memastikan layout bagian dalam wardrobe dan preferensi pintu sliding.",
-        initialBrief:
-            "Estimasi wardrobe built-in full plafon dengan pembagian area gantung, rak lipat, laci, dan storage tambahan.",
-        vendorNote:
-            "Vendor perlu menanyakan detail ukuran dan kondisi area instalasi sebelum estimasi final.",
+        briefDocumentStatus: "Belum Dibuat",
+        briefDocumentUpdatedAt: "Belum ada dokumen brief",
     },
     {
         id: "request-3",
@@ -211,10 +213,8 @@ const initialRequests: ProjectRequest[] = [
             "Customer membutuhkan meja kerja custom, rak buku, dan storage kecil agar ruang tetap rapi dan terang.",
         adminNote:
             "Estimasi vendor sudah masuk. Admin dapat lanjut review di RAB Builder.",
-        initialBrief:
-            "Ruang kerja compact dengan meja custom, rak terbuka, storage tertutup, dan warna terang.",
-        vendorNote:
-            "Vendor sudah mengirim estimasi awal untuk review admin.",
+        briefDocumentStatus: "Brief Dikirim",
+        briefDocumentUpdatedAt: "Kemarin, 09.20 WIB",
         selectedVendorId: "vendor-3",
         sentToVendorAt: "Kemarin, 09.20 WIB",
         lastMessage: "Vendor mengirim estimasi RAB. Silakan review di RAB Builder.",
@@ -244,6 +244,13 @@ function matchRequestTab(request: ProjectRequest, activeTab: RequestTab) {
     if (activeTab === "Ditolak") return request.status === "Ditolak";
 
     return true;
+}
+
+function isBriefReadyForVendor(request: ProjectRequest) {
+    return (
+        request.briefDocumentStatus === "Brief Siap" ||
+        request.briefDocumentStatus === "Brief Dikirim"
+    );
 }
 
 function getVendorScore(request: ProjectRequest, vendor: VendorRecommendation) {
@@ -392,6 +399,35 @@ export function RequestProjectView({
         if (status === "Ditolak") setActiveTab("Ditolak");
     };
 
+    const openBriefDocument = (requestId: string) => {
+        updateRequest(requestId, (request) => ({
+            ...request,
+            briefDocumentStatus:
+                request.briefDocumentStatus === "Belum Dibuat"
+                    ? "Draft Brief"
+                    : request.briefDocumentStatus,
+            briefDocumentUpdatedAt: "Baru saja",
+        }));
+
+        setFeedbackMessage(
+            "Halaman Brief & Dokumen dibuka. Lengkapi brief sebelum dikirim ke vendor.",
+        );
+
+        onChangePage?.("brief-documents");
+    };
+
+    const markBriefReady = (requestId: string) => {
+        updateRequest(requestId, (request) => ({
+            ...request,
+            briefDocumentStatus: "Brief Siap",
+            briefDocumentUpdatedAt: "Baru saja",
+        }));
+
+        setFeedbackMessage(
+            "Dokumen brief sudah ditandai siap. Admin dapat memilih vendor dan mengirim brief.",
+        );
+    };
+
     const selectVendor = (requestId: string, vendorId: string) => {
         updateRequest(requestId, (request) => ({
             ...request,
@@ -406,11 +442,18 @@ export function RequestProjectView({
     };
 
     const sendBriefToVendor = () => {
-        if (!selectedRequest?.selectedVendorId) return;
+        if (!selectedRequest?.selectedVendorId || !isBriefReadyForVendor(selectedRequest)) {
+            setFeedbackMessage(
+                "Lengkapi dan tandai dokumen brief siap sebelum dikirim ke vendor.",
+            );
+            return;
+        }
 
         updateRequest(selectedRequest.id, (request) => ({
             ...request,
             status: "Menunggu Estimasi Vendor",
+            briefDocumentStatus: "Brief Dikirim",
+            briefDocumentUpdatedAt: "Baru saja",
             sentToVendorAt: "Baru saja",
             lastMessage:
                 "Brief berhasil dikirim ke vendor. Vendor dapat melihat brief di Vendor Panel dan mengirim estimasi RAB kepada admin.",
@@ -441,6 +484,8 @@ export function RequestProjectView({
                 onSelectVendor={(vendorId) => selectVendor(selectedRequest.id, vendorId)}
                 onSendBrief={sendBriefToVendor}
                 onStatusChange={(status) => updateStatus(selectedRequest.id, status)}
+                onOpenBriefDocument={() => openBriefDocument(selectedRequest.id)}
+                onMarkBriefReady={() => markBriefReady(selectedRequest.id)}
                 onOpenConsultation={() => onChangePage?.("consultations")}
                 onOpenRabBuilder={() => onChangePage?.("rab-builder")}
             />
@@ -460,7 +505,7 @@ export function RequestProjectView({
                     </h1>
 
                     <p className="mt-2 text-[13px] leading-6 text-[#7B756E] sm:text-[14px]">
-                        Tinjau request proyek interior dari customer, siapkan brief awal,
+                        Tinjau request proyek interior dari customer, buat dokumen brief,
                         lakukan vendor matching, lalu kirim brief ke vendor yang sesuai.
                     </p>
                 </div>
@@ -566,6 +611,8 @@ function RequestDetailPage({
     onSelectVendor,
     onSendBrief,
     onStatusChange,
+    onOpenBriefDocument,
+    onMarkBriefReady,
     onOpenConsultation,
     onOpenRabBuilder,
 }: {
@@ -585,6 +632,8 @@ function RequestDetailPage({
     onSelectVendor: (vendorId: string) => void;
     onSendBrief: () => void;
     onStatusChange: (status: RequestStatus) => void;
+    onOpenBriefDocument: () => void;
+    onMarkBriefReady: () => void;
     onOpenConsultation: () => void;
     onOpenRabBuilder: () => void;
 }) {
@@ -619,9 +668,9 @@ function RequestDetailPage({
                         </h1>
 
                         <p className="mt-3 max-w-[860px] text-[13px] leading-7 text-[#7B756E] sm:text-[14px]">
-                            Request dari {request.customerName}. Admin meninjau kebutuhan,
-                            membuat brief awal, memilih vendor, lalu menunggu estimasi RAB dari
-                            vendor sebelum proyek dilanjutkan.
+                            Request dari {request.customerName}. Admin meninjau kebutuhan customer,
+                            membuat dokumen brief, memilih vendor, lalu menunggu estimasi RAB
+                            dari vendor sebelum masuk ke RAB Builder.
                         </p>
                     </div>
 
@@ -688,33 +737,42 @@ function RequestDetailPage({
                 <div className="grid gap-0 border-t border-[#E8E2D9] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                     <DetailSection
                         title="Detail Kebutuhan Customer"
-                        description="Informasi utama dari request customer."
+                        description="Data asli dari request customer, bukan dokumen brief vendor."
                     >
                         <div className="grid gap-3">
                             <DetailRow label="Deskripsi Kebutuhan" value={request.description} />
+                            <DetailRow label="Jenis Proyek" value={request.projectType} />
                             <DetailRow label="Gaya Desain" value={request.designStyle} />
                             <DetailRow label="Ukuran Ruangan" value={request.roomSize} />
-                            <DetailRow label="Referensi Desain" value={request.referenceSource} />
-                            <DetailRow label="Catatan Admin" value={request.adminNote} />
+                            <DetailRow label="Lokasi" value={request.location} />
+                            <DetailRow label="Budget Customer" value={request.budget} />
                         </div>
                     </DetailSection>
 
                     <DetailSection
-                        title="Brief Awal"
-                        description="Ringkasan brief yang akan menjadi acuan vendor."
+                        title="Referensi & Preferensi Customer"
+                        description="Informasi pendukung dari customer untuk membantu admin menyusun brief."
                         withRightBorder={false}
                     >
                         <div className="grid gap-3">
-                            <DetailRow label="Ringkasan Brief" value={request.initialBrief} />
+                            <DetailRow label="Referensi Desain" value={request.referenceSource} />
                             <DetailRow
-                                label="Paket Material Preferensi"
+                                label="Preferensi Paket Material"
                                 value={request.preferredMaterialPackage}
                             />
                             <DetailRow label="Target Waktu" value={request.targetTime} />
-                            <DetailRow label="Catatan untuk Vendor" value={request.vendorNote} />
+                            <DetailRow label="Tanggal Request" value={request.submittedAt} />
+                            <DetailRow label="Catatan Review Admin" value={request.adminNote} />
                         </div>
                     </DetailSection>
                 </div>
+
+                <BriefDocumentActionCard
+                    status={request.briefDocumentStatus}
+                    updatedAt={request.briefDocumentUpdatedAt}
+                    onOpenBriefDocument={onOpenBriefDocument}
+                    onMarkBriefReady={onMarkBriefReady}
+                />
 
                 <VendorMatchingSection
                     request={request}
@@ -734,7 +792,7 @@ function RequestDetailPage({
                 />
             </section>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                     type="button"
                     onClick={onOpenConsultation}
@@ -746,29 +804,98 @@ function RequestDetailPage({
 
                 <button
                     type="button"
-                    onClick={onSendBrief}
-                    disabled={!request.selectedVendorId}
-                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${request.selectedVendorId
-                            ? "border-[#725F54] bg-[#725F54] text-white hover:bg-[#5A4A42]"
-                            : "cursor-not-allowed border-[#E8E2D9] bg-[#E8E2D9] text-[#9A8F86]"
-                        }`}
-                >
-                    <Send size={15} />
-                    Kirim Brief
-                </button>
-
-                <button
-                    type="button"
                     onClick={onOpenRabBuilder}
                     disabled={!canOpenRab}
-                    className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${canOpenRab
+                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+                        canOpenRab
                             ? "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
                             : "cursor-not-allowed border-[#E8E2D9] bg-white text-[#B8AEA5]"
-                        }`}
+                    }`}
                 >
                     <FileText size={15} />
-                    Buat RAB Draft
+                    Buka RAB Builder
                 </button>
+            </div>
+        </div>
+    );
+}
+
+
+function BriefDocumentActionCard({
+    status,
+    updatedAt,
+    onOpenBriefDocument,
+    onMarkBriefReady,
+}: {
+    status: BriefDocumentStatus;
+    updatedAt?: string;
+    onOpenBriefDocument: () => void;
+    onMarkBriefReady: () => void;
+}) {
+    const isReady = status === "Brief Siap" || status === "Brief Dikirim";
+    const isSent = status === "Brief Dikirim";
+
+    const actionLabel =
+        status === "Belum Dibuat"
+            ? "Buat Dokumen Brief"
+            : status === "Draft Brief"
+                ? "Lanjut Edit Brief"
+                : "Lihat/Edit Brief";
+
+    return (
+        <div className="border-t border-[#E8E2D9] bg-white p-5 sm:p-6">
+            <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-white text-[#725F54]">
+                            <FileText size={18} />
+                        </div>
+
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-[14px] font-semibold text-[#31332C]">
+                                    Dokumen Brief Proyek
+                                </p>
+
+                                <BriefDocumentStatusBadge status={status} />
+                            </div>
+
+                            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                                Brief disiapkan admin sebagai acuan vendor. Lengkapi brief
+                                terlebih dahulu sebelum memilih dan mengirim ke vendor.
+                            </p>
+
+                            <p className="mt-1 text-[11px] text-[#9A8F86]">
+                                Update: {updatedAt ?? "Belum ada update"}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2 lg:w-[320px]">
+                        <button
+                            type="button"
+                            onClick={onOpenBriefDocument}
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                        >
+                            <FileText size={14} />
+                            {actionLabel}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={onMarkBriefReady}
+                            disabled={isSent}
+                            className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
+                                isReady
+                                    ? "bg-[#F5FAF6] text-[#4F7A5F] ring-1 ring-[#DCEBDD]"
+                                    : "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                            } ${isSent ? "cursor-not-allowed opacity-80" : ""}`}
+                        >
+                            <CheckCircle2 size={14} />
+                            {isReady ? "Brief Siap" : "Tandai Siap"}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -818,16 +945,17 @@ function VendorMatchingSection({
                     </h2>
 
                     <p className="mt-2 text-[13px] leading-6 text-[#7B756E]">
-                        Rekomendasi vendor berdasarkan lokasi, keahlian, ketersediaan,
-                        performa internal, dan jumlah proyek aktif.
+                        Pilih vendor setelah dokumen brief siap. Brief baru dapat dikirim ke vendor
+                        jika vendor sudah dipilih dan brief sudah ditandai siap.
                     </p>
                 </div>
 
                 <button
                     type="button"
                     onClick={onSendBrief}
-                    disabled={!request.selectedVendorId}
-                    className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${request.selectedVendorId
+                    disabled={!request.selectedVendorId || !isBriefReadyForVendor(request)}
+                    className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
+                        request.selectedVendorId && isBriefReadyForVendor(request)
                             ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
                             : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
                         }`}
@@ -1237,6 +1365,26 @@ function MiniInfo({ label, value }: { label: string; value: string }) {
                 {value}
             </span>
         </div>
+    );
+}
+
+
+function BriefDocumentStatusBadge({ status }: { status: BriefDocumentStatus }) {
+    const style =
+        status === "Brief Dikirim"
+            ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
+            : status === "Brief Siap"
+                ? "border-[#D9C8BA] bg-[#FFFDF9] text-[#725F54]"
+                : status === "Draft Brief"
+                    ? "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]"
+                    : "border-[#E8E2D9] bg-white text-[#7B756E]";
+
+    return (
+        <span
+            className={`inline-flex h-6 shrink-0 items-center rounded-full border px-2.5 text-[10px] font-semibold ${style}`}
+        >
+            {status}
+        </span>
     );
 }
 

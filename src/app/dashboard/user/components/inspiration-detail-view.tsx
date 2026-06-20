@@ -5,14 +5,13 @@ import {
     ArrowLeft,
     ArrowRight,
     Bookmark,
+    CalendarDays,
     CheckCircle2,
     ChevronLeft,
     ChevronRight,
-    ClipboardList,
-    Home,
     ImageIcon,
+    MapPin,
     Package,
-    Paintbrush,
     Ruler,
     Wallet,
 } from "lucide-react";
@@ -34,6 +33,16 @@ type RelatedInspiration = {
     image: string;
 };
 
+type VendorPortfolioProfile = {
+    vendorName: string;
+    studioName: string;
+    location: string;
+    specialty: string;
+    experience: string;
+    completedProjects: string;
+    description: string;
+};
+
 type InspirationDetail = {
     id: string;
     title: string;
@@ -42,6 +51,9 @@ type InspirationDetail = {
     style: string;
     budgetRange: string;
     idealSize: string;
+    projectLocation: string;
+    projectTimeline: string;
+    vendorProfile: VendorPortfolioProfile;
     spaceType: string;
     suitableFor: string[];
     materials: string[];
@@ -81,15 +93,26 @@ const inspirationDetail: InspirationDetail = {
     category: "Kitchen Set",
     packageLevel: "Standard / Premium",
     style: "Modern minimalis",
-    budgetRange: "Rp25–70 juta",
-    idealSize: "2m–4m area dapur",
+    budgetRange: "Rp43.500.000",
+    idealSize: "2.5m x 2m",
+    projectLocation: "Semarang",
+    projectTimeline: "05 Mei 2024 - 08 Agustus 2024 (3 bulan)",
+    vendorProfile: {
+        vendorName: "Kayu Rapi Interior",
+        studioName: "Vendor Partner VMatch",
+        location: "Semarang",
+        specialty: "Kitchen set, storage, dan custom cabinet",
+        experience: "5 tahun pengalaman",
+        completedProjects: "38 proyek selesai",
+        description: "Vendor Partner VMatch",
+    },
     spaceType: "Rumah / Apartemen",
     suitableFor: ["Dapur rumah", "Apartemen", "Ruang dapur compact"],
     materials: ["HPL", "Multiplek", "Solid surface"],
     shortDescription:
-        "Konsep dapur fungsional, bersih, dan elegan sebagai referensi awal sebelum divalidasi oleh tim VMatch.",
+        "Referensi desain dari portofolio vendor partner VMatch dengan konsep dapur modern, fungsional, bersih, dan elegan.",
     fullDescription:
-        "Kitchen set ini mengutamakan tampilan modern minimalis dengan kombinasi warna netral dan aksen kayu hangat. Konsep ini cocok untuk customer yang membutuhkan dapur bersih, fungsional, mudah dirawat, dan tetap terlihat elegan. Inspirasi ini akan divalidasi kembali oleh tim VMatch berdasarkan ukuran ruang, budget, material, serta kebutuhan penyimpanan customer.",
+        "Kitchen set ini merupakan referensi portofolio dari vendor partner VMatch. Konsepnya mengutamakan tampilan modern minimalis dengan warna netral dan aksen kayu hangat. Referensi ini cocok untuk kebutuhan dapur yang bersih, fungsional, mudah dirawat, dan tetap terlihat elegan.",
     designElements: [
         "Kabinet atas dan bawah",
         "Area penyimpanan tertutup",
@@ -290,7 +313,7 @@ export function InspirationDetailView({
                     <div className="mt-4 flex flex-wrap gap-2">
                         <Badge label={inspiration.category} />
                         <Badge label={inspiration.packageLevel} />
-                        <Badge label="Referensi Awal" />
+                        <Badge label="Portofolio Vendor" />
                     </div>
                 </div>
             </section>
@@ -317,22 +340,13 @@ export function InspirationDetailView({
 
             <InspirationInfoGrid inspiration={inspiration} />
 
+            <VendorPortfolioSection profile={inspiration.vendorProfile} />
+
             <section className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
                 <SectionCard title="Mengenai Inspirasi Ini">
                     <p className="text-[13px] leading-7 text-[#6F6860] sm:text-[14px]">
                         {inspiration.fullDescription}
                     </p>
-
-                    <div className="mt-5 rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-                        <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                            Validasi VMatch
-                        </p>
-
-                        <p className="mt-2 text-[13px] leading-6 text-[#7B756E]">
-                            Desain akhir akan disesuaikan kembali berdasarkan hasil konsultasi,
-                            ukuran ruang, kondisi area, budget, material, dan estimasi vendor.
-                        </p>
-                    </div>
                 </SectionCard>
 
                 <SectionCard title="Elemen Desain">
@@ -370,31 +384,6 @@ export function InspirationDetailView({
                     after={inspiration.beforeAfter.after}
                 />
             )}
-
-            <TimelineSection timeline={inspiration.timeline} />
-
-            <section className="rounded-3xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div className="max-w-[760px]">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                            Catatan VMatch
-                        </p>
-
-                        <p className="mt-2 text-[13px] leading-7 text-[#6F6860] sm:text-[14px]">
-                            {inspiration.notes}
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={goToRequest}
-                        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
-                    >
-                        Gunakan sebagai Preferensi
-                        <ArrowRight size={15} />
-                    </button>
-                </div>
-            </section>
 
             <section className="space-y-4">
                 <div>
@@ -439,7 +428,7 @@ function InspirationImageGallery({
     const activeImage = images[activeIndex] ?? "";
 
     return (
-        <section className="overflow-hidden rounded-3xl border border-[#E8E2D9] bg-white shadow-[0_12px_34px_rgba(49,51,44,0.035)]">
+        <section className="overflow-hidden rounded-1xl bg-white shadow-[0_12px_34px_rgba(49,51,44,0.035)]">
             <div className="relative h-[280px] bg-[#EFE8DF] sm:h-[360px] lg:h-[500px]">
                 <ImageWithFallback
                     src={activeImage}
@@ -448,10 +437,6 @@ function InspirationImageGallery({
                     sizes="(max-width: 1280px) 100vw, 70vw"
                     priority
                 />
-
-                <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-[#725F54] shadow-sm">
-                    {activeIndex + 1} / {images.length}
-                </div>
 
                 {images.length > 1 && (
                     <>
@@ -476,7 +461,7 @@ function InspirationImageGallery({
                 )}
             </div>
 
-            <div className="border-t border-[#E8E2D9] bg-[#FCFBF9] p-3 sm:p-4">
+            <div className="bg-[#FCFBF9] p-3 sm:p-4">
                 <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {images.map((image, index) => {
                         const active = index === activeIndex;
@@ -486,8 +471,7 @@ function InspirationImageGallery({
                                 key={`${image}-${index}`}
                                 type="button"
                                 onClick={() => onSelect(index)}
-                                className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border transition sm:h-20 sm:w-28 ${active ? "border-[#725F54] ring-2 ring-[#725F54]/15" : "border-[#E8E2D9]"
-                                    }`}
+                                className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-1xl transition sm:h-20 sm:w-28 ${active ? "ring-2 ring-[#725F54]/25" : "opacity-80 hover:opacity-100"}`}
                                 aria-label={`Pilih gambar ${index + 1}`}
                             >
                                 <ImageWithFallback
@@ -521,25 +505,15 @@ function InspirationSummaryCard({
     onSave: () => void;
 }) {
     return (
-        <aside className="h-fit rounded-3xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
+        <aside className="h-fit rounded-1xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
                 Ringkasan Inspirasi
             </p>
 
             <div className="mt-4 space-y-3">
-                <SummaryRow label="Estimasi awal" value={inspiration.budgetRange} />
                 <SummaryRow label="Style" value={inspiration.style} />
                 <SummaryRow label="Kategori" value={inspiration.category} />
-                <SummaryRow label="Cocok untuk" value={inspiration.suitableFor.join(", ")} />
-                <SummaryRow label="Paket material" value={inspiration.packageLevel} />
-                <SummaryRow label="Material umum" value={inspiration.materials.join(", ")} />
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
-                <p className="text-[12px] leading-6 text-[#7B756E]">
-                    Estimasi dapat berubah sesuai ukuran, material, kondisi ruangan, dan
-                    hasil validasi VMatch.
-                </p>
+                <SummaryRow label="Material" value={inspiration.materials.join(", ")} />
             </div>
 
             <div className="mt-5 grid gap-2">
@@ -574,8 +548,8 @@ function InspirationSummaryCard({
                     type="button"
                     onClick={onSave}
                     className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-semibold transition ${isSaved
-                            ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
-                            : "border-[#E4D8CD] bg-white text-[#725F54] hover:bg-[#FCFBF9]"
+                        ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
+                        : "border-[#E4D8CD] bg-white text-[#725F54] hover:bg-[#FCFBF9]"
                         }`}
                 >
                     <Bookmark size={14} />
@@ -592,48 +566,96 @@ function InspirationInfoGrid({
     inspiration: InspirationDetail;
 }) {
     return (
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <InfoTile
-                icon={Paintbrush}
-                label="Style Desain"
-                value={inspiration.style}
-                description="Arah visual utama"
-            />
+        <section className="border-y border-[#E8E2D9] py-5">
+            <div className="grid gap-y-5 sm:grid-cols-2 lg:grid-cols-5">
+                <InlineInfoItem
+                    icon={MapPin}
+                    label="Lokasi Proyek"
+                    value={inspiration.projectLocation}
+                />
 
-            <InfoTile
-                icon={Ruler}
-                label="Ukuran Ideal"
-                value={inspiration.idealSize}
-                description="Estimasi luas ruang"
-            />
+                <InlineInfoItem
+                    icon={Ruler}
+                    label="Ukuran Ruang"
+                    value={inspiration.idealSize}
+                />
 
-            <InfoTile
-                icon={Home}
-                label="Jenis Ruang"
-                value={inspiration.spaceType}
-                description="Tipe hunian"
-            />
+                <InlineInfoItem
+                    icon={CalendarDays}
+                    label="Timeline Proyek"
+                    value={inspiration.projectTimeline}
+                    className="lg:col-span-1"
+                />
 
-            <InfoTile
-                icon={ClipboardList}
-                label="Kategori Proyek"
-                value={inspiration.category}
-                description="Jenis pengerjaan"
-            />
+                <InlineInfoItem
+                    icon={Wallet}
+                    label="Nilai Proyek"
+                    value={inspiration.budgetRange}
+                />
 
-            <InfoTile
-                icon={Wallet}
-                label="Estimasi Budget"
-                value={inspiration.budgetRange}
-                description="Estimasi awal"
-            />
+                <InlineInfoItem
+                    icon={Package}
+                    label="Paket Material"
+                    value={inspiration.packageLevel}
+                />
+            </div>
+        </section>
+    );
+}
 
-            <InfoTile
-                icon={Package}
-                label="Paket Material"
-                value={inspiration.packageLevel}
-                description="Referensi kualitas"
-            />
+function InlineInfoItem({
+    icon: Icon,
+    label,
+    value,
+    className = "",
+}: {
+    icon: LucideIcon;
+    label: string;
+    value: string;
+    className?: string;
+}) {
+    return (
+        <div
+            className={`flex items-start gap-3 px-0 sm:px-4 sm:first:pl-0 lg:border-l lg:border-[#E8E2D9] lg:first:border-l-0 ${className}`}
+        >
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F7F3EE] text-[#725F54]">
+                <Icon size={16} />
+            </div>
+
+            <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8C8178]">
+                    {label}
+                </p>
+                <p className="mt-1 text-[14px] font-semibold leading-snug text-[#31332C]">
+                    {value}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function VendorPortfolioSection({
+    profile,
+}: {
+    profile: VendorPortfolioProfile;
+}) {
+    return (
+        <section className="rounded-1xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
+            <div className="flex items-center gap-4">
+                <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border border-[#E4D8CD] bg-[#FCFBF9] text-[18px] font-semibold text-[#725F54]">
+                    KR
+                </div>
+
+                <div className="min-w-0">
+                    <p className="truncate text-[20px] font-semibold text-[#31332C]">
+                        {profile.vendorName}
+                    </p>
+
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                        Vendor Partner VMatch
+                    </p>
+                </div>
+            </div>
         </section>
     );
 }
@@ -644,29 +666,37 @@ function MaterialPackageSection({
     packages: MaterialPackage[];
 }) {
     return (
-        <SectionCard title="Rekomendasi Material">
-            <p className="mb-4 max-w-[820px] text-[13px] leading-7 text-[#7B756E]">
-                Material final tetap mengikuti review admin, estimasi vendor, budget
-                customer, kondisi ruangan, dan persetujuan customer.
+        <section className="space-y-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
+                Referensi Material
             </p>
 
             <div className="grid gap-3 md:grid-cols-3">
                 {packages.map((item) => (
                     <div
                         key={item.name}
-                        className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 transition hover:border-[#725F54] hover:bg-white"
+                        className={`rounded-1xl p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition ${item.name === "Standard"
+                            ? "bg-[#725F54] text-white"
+                            : "bg-white text-[#31332C] hover:bg-[#FCFBF9]"
+                            }`}
                     >
-                        <p className="font-serif text-[26px] leading-tight text-[#31332C]">
+                        <p
+                            className={`font-serif text-[26px] leading-tight ${item.name === "Standard" ? "text-white" : "text-[#31332C]"
+                                }`}
+                        >
                             {item.name}
                         </p>
 
-                        <p className="mt-2 text-[13px] leading-6 text-[#7B756E]">
+                        <p
+                            className={`mt-2 text-[12px] leading-6 ${item.name === "Standard" ? "text-white/78" : "text-[#7B756E]"
+                                }`}
+                        >
                             {item.description}
                         </p>
                     </div>
                 ))}
             </div>
-        </SectionCard>
+        </section>
     );
 }
 
@@ -682,16 +712,20 @@ function GalleryGridSection({
     onSelect: (index: number) => void;
 }) {
     return (
-        <SectionCard title="Gallery Desain">
+        <section className="space-y-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
+                Gallery Desain
+            </p>
+
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
                 {images.map((image, index) => (
                     <button
                         key={`${image}-grid-${index}`}
                         type="button"
                         onClick={() => onSelect(index)}
-                        className={`relative aspect-[4/3] overflow-hidden rounded-2xl border transition ${activeIndex === index
-                                ? "border-[#725F54] ring-2 ring-[#725F54]/15"
-                                : "border-[#E8E2D9]"
+                        className={`relative aspect-[4/3] overflow-hidden rounded-1xl transition ${activeIndex === index
+                            ? "ring-2 ring-[#725F54]/25"
+                            : "opacity-95 hover:opacity-100"
                             }`}
                     >
                         <ImageWithFallback
@@ -703,7 +737,7 @@ function GalleryGridSection({
                     </button>
                 ))}
             </div>
-        </SectionCard>
+        </section>
     );
 }
 
@@ -717,12 +751,16 @@ function BeforeAfterSection({
     after: string;
 }) {
     return (
-        <SectionCard title="Sebelum dan Sesudah">
+        <section className="space-y-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
+                Sebelum dan Sesudah
+            </p>
+
             <div className="grid gap-3 md:grid-cols-2">
                 <BeforeAfterImage label="Sebelum" title={title} src={before} />
                 <BeforeAfterImage label="Sesudah" title={title} src={after} />
             </div>
-        </SectionCard>
+        </section>
     );
 }
 
@@ -736,53 +774,18 @@ function BeforeAfterImage({
     src: string;
 }) {
     return (
-        <div className="overflow-hidden rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9]">
-            <div className="relative h-[240px] sm:h-[300px]">
-                <ImageWithFallback
-                    src={src}
-                    alt={`${label} ${title}`}
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                />
-            </div>
+        <div className="relative h-[240px] overflow-hidden rounded-1xl bg-[#EFE8DF] shadow-[0_8px_24px_rgba(49,51,44,0.025)] sm:h-[300px]">
+            <ImageWithFallback
+                src={src}
+                alt={`${label} ${title}`}
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
+            />
 
-            <div className="border-t border-[#E8E2D9] bg-white px-4 py-3">
-                <p className="text-[12px] font-semibold text-[#725F54]">{label}</p>
+            <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-[#725F54] shadow-sm">
+                {label}
             </div>
         </div>
-    );
-}
-
-function TimelineSection({ timeline }: { timeline: string[] }) {
-    return (
-        <SectionCard title="Estimasi Timeline">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {timeline.map((item, index) => (
-                    <div
-                        key={item}
-                        className="flex gap-3 rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4"
-                    >
-                        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[12px] font-semibold text-[#725F54] ring-1 ring-[#E8E2D9]">
-                            {index + 1}
-                        </div>
-
-                        <div>
-                            <p className="text-[13px] font-semibold text-[#31332C]">{item}</p>
-
-                            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-                                Tahap akan disesuaikan setelah kebutuhan, ukuran, dan RAB final
-                                disetujui.
-                            </p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <p className="mt-4 text-[12px] leading-6 text-[#7B756E]">
-                Timeline aktual akan disesuaikan setelah kebutuhan, ukuran, dan RAB final
-                disetujui.
-            </p>
-        </SectionCard>
     );
 }
 
@@ -812,7 +815,7 @@ function RelatedInspirationCard({
                 <p className="mt-1 text-[12px] text-[#7B756E]">{item.style}</p>
 
                 <p className="mt-2 text-[12px] font-semibold text-[#725F54]">
-                    Estimasi awal {item.budgetRange}
+                    Nilai referensi {item.budgetRange}
                 </p>
 
                 <button
@@ -836,49 +839,13 @@ function SectionCard({
     children: React.ReactNode;
 }) {
     return (
-        <section className="rounded-3xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
+        <section className="rounded-1xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
                 {title}
             </p>
 
             <div className="mt-4">{children}</div>
         </section>
-    );
-}
-
-function InfoTile({
-    icon: Icon,
-    label,
-    value,
-    description,
-}: {
-    icon: LucideIcon;
-    label: string;
-    value: string;
-    description: string;
-}) {
-    return (
-        <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:border-[#725F54] hover:bg-[#FCFBF9]">
-            <div className="flex min-w-0 items-start gap-3">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
-                    <Icon size={16} />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                    <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                        {label}
-                    </p>
-
-                    <p className="mt-1 line-clamp-2 text-[13px] font-semibold leading-5 text-[#31332C]">
-                        {value}
-                    </p>
-
-                    <p className="mt-0.5 truncate text-[11px] text-[#7B756E]">
-                        {description}
-                    </p>
-                </div>
-            </div>
-        </div>
     );
 }
 

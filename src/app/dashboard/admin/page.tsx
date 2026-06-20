@@ -26,6 +26,7 @@ import { CustomerView } from "./components/customer-view";
 import { AnalyticsView } from "./components/analytics-view";
 import { NotificationView } from "./components/notification-view";
 import { SettingsView } from "./components/settings-view";
+import { VendorBonusView } from "./components/vendor-bonus-view";
 import {
   AdminIconBadge,
   AdminSectionCard,
@@ -43,6 +44,7 @@ export default function AdminDashboardPage() {
     "progress-qc": "Progress & QC",
     payments: "Invoice & Pembayaran",
     "rab-builder": "RAB Builder",
+    "vendor-bonus": "Bonus Vendor",
     consultations: "Konsultasi",
     vendors: "Vendor Partner",
     customers: "Customer",
@@ -111,6 +113,9 @@ export default function AdminDashboardPage() {
           {activePage === "rab-builder" && (
             <RabBuilderView onChangePage={handleChangePage} />
           )}
+          {activePage === "vendor-bonus" && (
+            <VendorBonusView />
+          )}
           {activePage === "consultations" && (
             <ConsultationView />
           )}
@@ -139,6 +144,7 @@ export default function AdminDashboardPage() {
             activePage !== "progress-qc" &&
             activePage !== "payments" &&
             activePage !== "rab-builder" &&
+            activePage !== "vendor-bonus" &&
             activePage !== "analytics" &&
             activePage !== "notifications" &&
             activePage !== "settings" && (

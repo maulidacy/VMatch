@@ -30,9 +30,23 @@ import {
     type BriefTimelineInput,
 } from "./brief-timeline-form";
 
-type BriefStatus = "Draft" | "Siap Vendor" | "Revisi" | "Disetujui";
+type BriefStatus =
+    | "Draft"
+    | "Siap Dikirim"
+    | "Dikirim ke Vendor"
+    | "Dibaca Vendor"
+    | "Estimasi Dikirim"
+    | "Revisi Brief";
 
-type BriefTab = "Semua" | "Draft" | "Siap Vendor" | "Revisi" | "Disetujui";
+type BriefTab =
+    | "Semua"
+    | "Draft"
+    | "Siap Dikirim"
+    | "Dikirim ke Vendor"
+    | "Dibaca Vendor"
+    | "Estimasi Dikirim"
+    | "Revisi Brief";
+
 
 type BriefFile = {
     id: string;
@@ -59,6 +73,9 @@ type BriefDocument = {
     materialNote: string;
     adminNote: string;
     vendorNote: string;
+    vendorResponse?: string;
+    vendorRespondedAt?: string;
+    vendorReadAt?: string;
     timeline: {
         id: string;
         label: string;
@@ -77,26 +94,22 @@ type BriefDocument = {
 const briefTabs: BriefTab[] = [
     "Semua",
     "Draft",
-    "Siap Vendor",
-    "Revisi",
-    "Disetujui",
+    "Siap Dikirim",
+    "Dikirim ke Vendor",
+    "Dibaca Vendor",
+    "Estimasi Dikirim",
+    "Revisi Brief",
 ];
 
 const statusOptions: BriefStatus[] = [
     "Draft",
-    "Siap Vendor",
-    "Revisi",
-    "Disetujui",
+    "Siap Dikirim",
+    "Dikirim ke Vendor",
+    "Dibaca Vendor",
+    "Estimasi Dikirim",
+    "Revisi Brief",
 ];
 
-const vendorResponses: Record<string, string> = {
-    "brief-1":
-        "Vendor perlu konfirmasi ulang ukuran kabinet atas sebelum masuk tahap produksi. Selain itu, vendor menyarankan pengecekan ulang area ventilasi agar tidak tertutup kabinet.",
-    "brief-2":
-        "Vendor sudah memahami brief dan siap melanjutkan ke tahap persiapan produksi. Tidak ada revisi tambahan saat ini.",
-    "brief-3":
-        "Vendor meminta revisi layout storage sisi kanan meja kerja agar ukuran lebih sesuai dengan ruang yang tersedia.",
-};
 
 const initialBriefs: BriefDocument[] = [
     {
@@ -118,7 +131,7 @@ const initialBriefs: BriefDocument[] = [
         adminNote:
             "Pastikan ukuran kabinet atas mengikuti hasil survey terakhir dan tidak menutup area ventilasi.",
         vendorNote:
-            "Vendor perlu mengirimkan gambar kerja final sebelum masuk tahap produksi.",
+            "Vendor perlu memberi catatan awal dan estimasi RAB setelah membaca dokumen brief.",
         timeline: [
             {
                 id: "tl-1",
@@ -127,7 +140,7 @@ const initialBriefs: BriefDocument[] = [
             },
             {
                 id: "tl-2",
-                label: "Produksi kabinet",
+                label: "Estimasi pengerjaan kabinet",
                 date: "6 - 18 Juli 2026",
             },
             {
@@ -168,7 +181,7 @@ const initialBriefs: BriefDocument[] = [
             },
             {
                 id: "check-3",
-                label: "Material sudah disetujui",
+                label: "Material acuan sudah dicatat",
                 completed: false,
             },
             {
@@ -194,7 +207,7 @@ const initialBriefs: BriefDocument[] = [
         location: "Yogyakarta",
         roomSize: "3m x 3m",
         budget: "Rp16.000.000",
-        status: "Siap Vendor",
+        status: "Siap Dikirim",
         createdAt: "5 Juli 2026",
         updatedAt: "Kemarin",
         scope:
@@ -204,7 +217,7 @@ const initialBriefs: BriefDocument[] = [
         adminNote:
             "Customer meminta tambahan area gantung baju panjang di sisi kiri wardrobe.",
         vendorNote:
-            "Vendor diminta mengecek kembali layout bagian dalam sebelum produksi.",
+            "Vendor diminta mengecek kembali layout bagian dalam sebelum mengirim estimasi RAB.",
         timeline: [
             {
                 id: "tl-1",
@@ -213,7 +226,7 @@ const initialBriefs: BriefDocument[] = [
             },
             {
                 id: "tl-2",
-                label: "Produksi",
+                label: "Estimasi pengerjaan",
                 date: "8 - 20 Juli 2026",
             },
             {
@@ -246,7 +259,7 @@ const initialBriefs: BriefDocument[] = [
             },
             {
                 id: "check-3",
-                label: "Material sudah disetujui",
+                label: "Material acuan sudah dicatat",
                 completed: true,
             },
             {
@@ -272,7 +285,7 @@ const initialBriefs: BriefDocument[] = [
         location: "Solo",
         roomSize: "2m x 3m",
         budget: "Rp10.500.000",
-        status: "Revisi",
+        status: "Revisi Brief",
         createdAt: "1 Juli 2026",
         updatedAt: "2 hari lalu",
         scope:
@@ -282,7 +295,11 @@ const initialBriefs: BriefDocument[] = [
         adminNote:
             "Customer meminta storage tambahan di sisi kanan meja kerja.",
         vendorNote:
-            "Vendor perlu mengirim revisi layout sebelum brief disetujui.",
+            "Vendor meminta revisi layout sebelum estimasi RAB dapat dilanjutkan.",
+        vendorResponse:
+            "Vendor meminta revisi layout storage sisi kanan meja kerja agar ukuran lebih sesuai dengan ruang yang tersedia.",
+        vendorRespondedAt: "2 hari lalu",
+        vendorReadAt: "2 hari lalu",
         timeline: [
             {
                 id: "tl-1",
@@ -296,7 +313,7 @@ const initialBriefs: BriefDocument[] = [
             },
             {
                 id: "tl-3",
-                label: "Produksi",
+                label: "Estimasi pengerjaan",
                 date: "6 - 15 Juli 2026",
             },
         ],
@@ -315,7 +332,7 @@ const initialBriefs: BriefDocument[] = [
             },
             {
                 id: "check-3",
-                label: "Material sudah disetujui",
+                label: "Material acuan sudah dicatat",
                 completed: false,
             },
             {
@@ -520,7 +537,9 @@ export function BriefDocumentsView() {
                     adminNoteDraft={adminNoteDraft}
                     vendorNoteDraft={vendorNoteDraft}
                     isBriefSaved={isBriefSaved}
-                    vendorResponse={vendorResponses[selectedBrief.id] ?? ""}
+                    vendorResponse={selectedBrief.vendorResponse ?? ""}
+                    vendorReadAt={selectedBrief.vendorReadAt}
+                    vendorRespondedAt={selectedBrief.vendorRespondedAt}
                     onBack={closeDetail}
                     onStatusChange={(status) => updateStatus(selectedBrief.id, status)}
                     onScopeChange={(value) => {
@@ -624,8 +643,8 @@ export function BriefDocumentsView() {
                                             type="button"
                                             onClick={() => setActiveTab(tab)}
                                             className={`inline-flex h-10 shrink-0 items-center justify-center rounded-xl px-4 text-[12px] font-semibold transition ${active
-                                                    ? "bg-[#725F54] text-white shadow-sm"
-                                                    : "text-[#6F6860] hover:bg-white"
+                                                ? "bg-[#725F54] text-white shadow-sm"
+                                                : "text-[#6F6860] hover:bg-white"
                                                 }`}
                                         >
                                             {tab}
@@ -684,6 +703,8 @@ function BriefDetailPage({
     vendorNoteDraft,
     isBriefSaved,
     vendorResponse,
+    vendorReadAt,
+    vendorRespondedAt,
     onBack,
     onStatusChange,
     onScopeChange,
@@ -704,6 +725,8 @@ function BriefDetailPage({
     vendorNoteDraft: string;
     isBriefSaved: boolean;
     vendorResponse: string;
+    vendorReadAt?: string;
+    vendorRespondedAt?: string;
     onBack: () => void;
     onStatusChange: (status: BriefStatus) => void;
     onScopeChange: (value: string) => void;
@@ -722,6 +745,12 @@ function BriefDetailPage({
         scopeDraft !== brief.scope ||
         adminNoteDraft !== brief.adminNote ||
         vendorNoteDraft !== brief.vendorNote;
+
+    const showVendorResponse =
+        vendorResponse.trim().length > 0 &&
+        (brief.status === "Dibaca Vendor" ||
+            brief.status === "Estimasi Dikirim" ||
+            brief.status === "Revisi Brief");
 
     return (
         <div className="space-y-5">
@@ -751,8 +780,7 @@ function BriefDetailPage({
 
                         <p className="mt-3 max-w-[820px] text-[13px] leading-7 text-[#7B756E] sm:text-[14px]">
                             Brief kerja untuk mengatur scope, material, timeline, file acuan,
-                            standar QC, serta instruksi vendor sebelum proyek masuk tahap
-                            produksi.
+                            standar QC, serta instruksi vendor sebelum vendor mengirim estimasi RAB.
                         </p>
                     </div>
 
@@ -853,7 +881,7 @@ function BriefDetailPage({
                                 </p>
 
                                 <p className="mt-1 text-[12px] text-[#7B756E]">
-                                    Scope pekerjaan, catatan admin, dan instruksi vendor.
+                                    Scope pekerjaan dan instruksi yang akan menjadi acuan vendor.
                                 </p>
                             </div>
 
@@ -911,8 +939,8 @@ function BriefDetailPage({
                                 onClick={onSave}
                                 disabled={!isBriefChanged}
                                 className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${isBriefChanged
-                                        ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
-                                        : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+                                    ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                                    : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
                                     }`}
                             >
                                 <Save size={14} />
@@ -937,14 +965,14 @@ function BriefDetailPage({
                                     type="button"
                                     onClick={() => onChecklistToggle(item.id)}
                                     className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${item.completed
-                                            ? "border-[#DCEBDD] bg-[#F5FAF6]"
-                                            : "border-[#E8E2D9] bg-[#FCFBF9] hover:bg-white"
+                                        ? "border-[#DCEBDD] bg-[#F5FAF6]"
+                                        : "border-[#E8E2D9] bg-[#FCFBF9] hover:bg-white"
                                         }`}
                                 >
                                     <div
                                         className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border ${item.completed
-                                                ? "border-[#4F7A5F] bg-[#4F7A5F] text-white"
-                                                : "border-[#D9C8BA] bg-white text-transparent"
+                                            ? "border-[#4F7A5F] bg-[#4F7A5F] text-white"
+                                            : "border-[#D9C8BA] bg-white text-transparent"
                                             }`}
                                     >
                                         <CheckCircle2 size={14} />
@@ -1047,19 +1075,28 @@ function BriefDetailPage({
                         </div>
                     </DetailBlock>
 
-                    <DetailBlock
-                        title="Tanggapan Vendor"
-                        description="Catatan vendor setelah membaca scope, material, dan timeline."
-                        badge="Read-only"
-                        withRightBorder={false}
-                    >
-                        <div className="rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-4 py-3">
-                            <p className="text-[13px] leading-7 text-[#31332C]">
-                                {vendorResponse ||
-                                    "Belum ada tanggapan dari vendor untuk brief ini."}
-                            </p>
-                        </div>
-                    </DetailBlock>
+                    {showVendorResponse && (
+                        <DetailBlock
+                            title="Tanggapan Vendor"
+                            description="Catatan vendor setelah membaca dokumen brief. Informasi ini menjadi bahan admin sebelum lanjut ke RAB Builder."
+                            badge="Diisi Vendor"
+                            withRightBorder={false}
+                        >
+                            <div className="rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-4 py-3">
+                                <p className="text-[13px] leading-7 text-[#31332C]">
+                                    {vendorResponse}
+                                </p>
+
+                                {(vendorReadAt || vendorRespondedAt) && (
+                                    <p className="mt-3 text-[11px] leading-5 text-[#7B756E]">
+                                        {vendorReadAt ? `Dibaca vendor: ${vendorReadAt}` : ""}
+                                        {vendorReadAt && vendorRespondedAt ? " • " : ""}
+                                        {vendorRespondedAt ? `Ditanggapi: ${vendorRespondedAt}` : ""}
+                                    </p>
+                                )}
+                            </div>
+                        </DetailBlock>
+                    )}
                 </div>
 
                 <div className="border-t border-[#E8E2D9] bg-[#FCFBF9] p-5 sm:p-6">
@@ -1139,38 +1176,38 @@ function BriefDetailPage({
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <button
                     type="button"
-                    onClick={() => onStatusChange("Siap Vendor")}
-                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${brief.status === "Siap Vendor"
-                            ? "border-[#725F54] bg-[#725F54] text-white"
-                            : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                    onClick={() => onStatusChange("Siap Dikirim")}
+                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${brief.status === "Siap Dikirim"
+                        ? "border-[#725F54] bg-[#725F54] text-white"
+                        : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
                         }`}
                 >
                     <Send size={15} />
-                    Kirim Vendor
+                    Tandai Siap Dikirim
                 </button>
 
                 <button
                     type="button"
-                    onClick={() => onStatusChange("Revisi")}
-                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${brief.status === "Revisi"
-                            ? "border-[#725F54] bg-[#725F54] text-white"
-                            : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                    onClick={() => onStatusChange("Revisi Brief")}
+                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${brief.status === "Revisi Brief"
+                        ? "border-[#725F54] bg-[#725F54] text-white"
+                        : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
                         }`}
                 >
                     <PenLine size={15} />
-                    Revisi
+                    Revisi Brief
                 </button>
 
                 <button
                     type="button"
-                    onClick={() => onStatusChange("Disetujui")}
-                    className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${brief.status === "Disetujui"
-                            ? "border-[#725F54] bg-[#725F54] text-white"
-                            : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                    onClick={() => onStatusChange("Estimasi Dikirim")}
+                    className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${brief.status === "Estimasi Dikirim"
+                        ? "border-[#725F54] bg-[#725F54] text-white"
+                        : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
                         }`}
                 >
                     <CheckCircle2 size={15} />
-                    Setujui Brief
+                    Estimasi Dikirim
                 </button>
             </div>
         </div>
@@ -1359,13 +1396,15 @@ function InfoTile({
 
 function BriefStatusBadge({ status }: { status: BriefStatus }) {
     const style =
-        status === "Siap Vendor"
-            ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
-            : status === "Revisi"
-                ? "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]"
-                : status === "Disetujui"
-                    ? "border-[#D9C8BA] bg-[#FFFDF9] text-[#725F54]"
-                    : "border-[#E8E2D9] bg-white text-[#7B756E]";
+        status === "Draft"
+            ? "border-[#E8E2D9] bg-white text-[#7B756E]"
+            : status === "Siap Dikirim"
+                ? "border-[#D9C8BA] bg-[#FFFDF9] text-[#725F54]"
+                : status === "Dikirim ke Vendor" || status === "Dibaca Vendor"
+                    ? "border-[#D8E0ED] bg-[#F5F8FC] text-[#526B8A]"
+                    : status === "Estimasi Dikirim"
+                        ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
+                        : "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]";
 
     return (
         <span

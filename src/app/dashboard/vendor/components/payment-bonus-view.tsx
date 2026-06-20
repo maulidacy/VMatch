@@ -17,6 +17,76 @@ import {
     VendorStatusBadge,
 } from "./shared";
 
+function getBonusStatusLabel(status: string) {
+    if (status === "Berpotensi Aktif") return "Menunggu Review Admin";
+    if (status === "Bonus Aktif") return "Disetujui";
+    if (status === "Masuk Payout") return "Masuk Payout";
+    if (status === "Dibayarkan") return "Dibayarkan";
+    if (status === "Ditolak") return "Ditolak";
+    return status;
+}
+
+function getBonusAmountLabel(status: string) {
+    const normalizedStatus = getBonusStatusLabel(status);
+
+    if (
+        normalizedStatus === "Disetujui" ||
+        normalizedStatus === "Masuk Payout" ||
+        normalizedStatus === "Dibayarkan"
+    ) {
+        return "Bonus Final";
+    }
+
+    return "Estimasi Potensi";
+}
+
+function getBonusReviewMessage(status: string, reason: string) {
+    const normalizedStatus = getBonusStatusLabel(status);
+
+    if (normalizedStatus === "Menunggu Review Admin") {
+        return `${reason} Bonus belum final dan akan direview admin VMatch setelah QC, dokumentasi, dan milestone proyek diperiksa.`;
+    }
+
+    if (normalizedStatus === "Disetujui") {
+        return `${reason} Bonus sudah disetujui admin VMatch dan menunggu masuk ke payout vendor.`;
+    }
+
+    if (normalizedStatus === "Masuk Payout") {
+        return `${reason} Bonus sudah masuk ke proses payout vendor.`;
+    }
+
+    if (normalizedStatus === "Dibayarkan") {
+        return `${reason} Bonus sudah dibayarkan kepada vendor.`;
+    }
+
+    if (normalizedStatus === "Ditolak") {
+        return `${reason} Bonus tidak diberikan untuk proyek ini setelah review admin VMatch.`;
+    }
+
+    return reason;
+}
+
+function BonusReviewBadge({ status }: { status: string }) {
+    const label = getBonusStatusLabel(status);
+
+    const style =
+        label === "Disetujui" || label === "Dibayarkan"
+            ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
+            : label === "Masuk Payout"
+                ? "border-[#D8E0ED] bg-[#F5F8FC] text-[#526B8A]"
+                : label === "Ditolak"
+                    ? "border-[#E6C7BD] bg-[#FFF3EF] text-[#9A4A32]"
+                    : "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]";
+
+    return (
+        <span
+            className={`inline-flex h-8 items-center rounded-full border px-3 text-[11px] font-semibold ${style}`}
+        >
+            {label}
+        </span>
+    );
+}
+
 export function PaymentBonusView() {
     const [selectedProjectId, setSelectedProjectId] = useState(
         vendorProjects[0]?.id ?? "",
@@ -54,7 +124,7 @@ export function PaymentBonusView() {
                     </h1>
 
                     <p className="mt-2 max-w-[720px] text-[14px] leading-7 text-[#7B756E]">
-                        Pantau tahap pembayaran proyek dan potensi bonus vendor secara ringkas.
+                        Pantau tahap pembayaran vendor dan status bonus berdasarkan review internal VMatch.
                     </p>
                 </div>
 
@@ -113,7 +183,7 @@ export function PaymentBonusView() {
             <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <VendorSectionCard
                     title="Tahap Pembayaran"
-                    description="Pantau tahap pembayaran vendor berdasarkan progress proyek."
+                    description="Pantau pembayaran vendor setelah progress atau milestone disetujui VMatch."
                 >
                     {selectedPayments.length > 0 ? (
                         <div className="grid gap-3">
@@ -159,22 +229,50 @@ export function PaymentBonusView() {
 
                 <div className="space-y-5">
                     <VendorSectionCard
-                        title="Potensi Bonus"
-                        description="Bonus aktif jika syarat proyek terpenuhi."
+                        title="Status Bonus Vendor"
+                        description="Bonus ditentukan dari hasil review internal VMatch setelah progress, QC, dan dokumen proyek diperiksa."
                     >
                         {selectedBonus ? (
                             <div className="space-y-4">
                                 <div className="rounded-2xl border border-[#D9C8BA] bg-[#FFFDF9] p-4">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <VendorStatusBadge status={selectedBonus.status} />
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+                                                Status Review
+                                            </p>
 
-                                        <span className="shrink-0 text-[13px] font-semibold text-[#725F54]">
-                                            {selectedBonus.amount}
-                                        </span>
+                                            <div className="mt-2">
+                                                <BonusReviewBadge status={selectedBonus.status} />
+                                            </div>
+                                        </div>
+
+                                        <div className="sm:text-right">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+                                                {getBonusAmountLabel(selectedBonus.status)}
+                                            </p>
+
+                                            <p className="mt-2 text-[15px] font-semibold text-[#31332C]">
+                                                {selectedBonus.amount}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <p className="mt-3 text-[13px] leading-6 text-[#6F6860]">
-                                        {selectedBonus.reason}
+                                    <div className="mt-4 rounded-xl border border-[#E8E2D9] bg-white px-4 py-3">
+                                        <p className="text-[13px] leading-6 text-[#6F6860]">
+                                            {getBonusReviewMessage(selectedBonus.status, selectedBonus.reason)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-[#E8E2D9] bg-white p-4">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                                        Dasar Review VMatch
+                                    </p>
+
+                                    <p className="mt-2 text-[12px] leading-6 text-[#7B756E]">
+                                        Bonus direview dari hasil QC admin, ketepatan waktu,
+                                        kelengkapan dokumentasi progress, kesesuaian pekerjaan
+                                        dengan brief/RAB, serta catatan komplain jika ada.
                                     </p>
                                 </div>
 
@@ -193,12 +291,19 @@ export function PaymentBonusView() {
                                         ))}
                                     </div>
                                 </div>
+
+                                <div className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                                    <p className="text-[12px] leading-6 text-[#7B756E]">
+                                        Vendor hanya dapat melihat status bonus. Nominal final
+                                        dan proses payout tetap ditentukan oleh admin VMatch.
+                                    </p>
+                                </div>
                             </div>
                         ) : (
                             <VendorEmptyState
                                 icon={Gift}
-                                title="Bonus tidak tersedia"
-                                description="Proyek ini belum masuk skema bonus."
+                                title="Status bonus belum tersedia"
+                                description="Proyek ini belum masuk tahap review bonus oleh admin VMatch."
                             />
                         )}
                     </VendorSectionCard>

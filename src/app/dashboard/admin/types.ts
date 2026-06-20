@@ -9,6 +9,7 @@ export type AdminPageId =
   | "progress-qc"
   | "payments"
   | "rab-builder"
+  | "vendor-bonus"
   | "consultations"
   | "vendors"
   | "customers"

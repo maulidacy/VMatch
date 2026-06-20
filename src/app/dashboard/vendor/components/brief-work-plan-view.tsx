@@ -3,7 +3,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
-  Calculator,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
@@ -197,8 +196,7 @@ export function BriefWorkPlanView({
 
   const isEstimateReady =
     currentEstimateDraft.estimatedCost.trim().length > 0 &&
-    currentEstimateDraft.estimatedDuration.trim().length > 0 &&
-    currentEstimateDraft.suggestedMaterial.trim().length > 0;
+    currentEstimateDraft.estimatedDuration.trim().length > 0;
 
   const openDetail = (brief: WorkBrief) => {
     setSelectedBriefId(brief.id);
@@ -447,7 +445,7 @@ export function BriefWorkPlanView({
             </DetailSection>
           </div>
 
-          <div className="border-t border-[#E8E2D9] bg-[#FCFBF9] p-5 sm:p-6">
+          <div className="border-t border-[#E8E2D9] bg-white p-5 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
@@ -464,7 +462,7 @@ export function BriefWorkPlanView({
               </span>
             </div>
 
-            <div className="mt-4 grid gap-3">
+            <div className="mt-4 grid gap-2">
               {selectedBriefFiles.length > 0 ? (
                 selectedBriefFiles.map((file) => (
                   <AdminBriefFileCard key={file.id} file={file} />
@@ -582,11 +580,10 @@ export function BriefWorkPlanView({
             type="button"
             onClick={sendEstimateToAdmin}
             disabled={!isEstimateReady || isEstimateSent}
-            className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
-              isEstimateReady && !isEstimateSent
+            className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${isEstimateReady && !isEstimateSent
                 ? "border-[#725F54] bg-[#725F54] text-white hover:bg-[#5A4A42]"
                 : "cursor-not-allowed border-[#E8E2D9] bg-[#E8E2D9] text-[#9A8F86]"
-            }`}
+              }`}
           >
             <Send size={15} />
             {isEstimateSent ? "Estimasi Terkirim" : "Kirim Estimasi"}
@@ -738,11 +735,9 @@ export function BriefWorkPlanView({
 
 function VendorEstimateSection({
   estimateDraft,
-  isEstimateReady,
   isEstimateSent,
   feedbackMessage,
   onChangeEstimate,
-  onSendEstimate,
 }: {
   estimateDraft: VendorEstimateDraft;
   isEstimateReady: boolean;
@@ -752,16 +747,16 @@ function VendorEstimateSection({
   onSendEstimate: () => void;
 }) {
   return (
-    <div className="border-t border-[#E8E2D9] bg-[#FCFBF9] p-5 sm:p-6">
+    <div className="border-t border-[#E8E2D9] bg-white p-5 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="max-w-[760px]">
+        <div className="max-w-[720px]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
             Estimasi RAB Vendor
           </p>
 
           <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-            Kirim estimasi awal ke admin. Nominal ini belum dikirim ke customer
-            sebelum direview dan difinalisasi oleh admin VMatch.
+            Isi estimasi awal untuk admin VMatch. Nominal ini belum dikirim ke
+            customer sebelum direview oleh admin.
           </p>
         </div>
 
@@ -778,7 +773,7 @@ function VendorEstimateSection({
         </div>
       )}
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
         <EstimateInput
           icon={Wallet}
           label="Estimasi Biaya"
@@ -804,57 +799,26 @@ function VendorEstimateSection({
             })
           }
         />
+      </div>
 
-        <EstimateInput
-          icon={Calculator}
-          label="Material Disarankan"
-          value={estimateDraft.suggestedMaterial}
-          placeholder="Contoh: Multiplek 18mm + HPL"
-          onChange={(value) =>
+      <label className="mt-4 block">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+          Catatan Estimasi
+        </span>
+
+        <textarea
+          value={estimateDraft.vendorNote}
+          onChange={(event) =>
             onChangeEstimate({
               ...estimateDraft,
-              suggestedMaterial: value,
+              vendorNote: event.target.value,
             })
           }
+          rows={3}
+          placeholder="Contoh: estimasi sudah termasuk material, produksi, dan instalasi. Perlu survey ulang sebelum produksi."
+          className="mt-2 w-full resize-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
         />
-      </div>
-
-      <div className="mt-3">
-        <label className="block">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
-            Catatan Estimasi
-          </span>
-
-          <textarea
-            value={estimateDraft.vendorNote}
-            onChange={(event) =>
-              onChangeEstimate({
-                ...estimateDraft,
-                vendorNote: event.target.value,
-              })
-            }
-            rows={4}
-            placeholder="Tambahkan catatan material, kondisi pekerjaan, kebutuhan survey, atau hal yang perlu direview admin."
-            className="mt-2 w-full resize-none rounded-xl border border-[#E4D8CD] bg-white px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-          />
-        </label>
-      </div>
-
-      <div className="mt-4 flex justify-end">
-        <button
-          type="button"
-          onClick={onSendEstimate}
-          disabled={!isEstimateReady || isEstimateSent}
-          className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
-            isEstimateReady && !isEstimateSent
-              ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
-              : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
-          }`}
-        >
-          <Send size={14} />
-          {isEstimateSent ? "Estimasi Terkirim" : "Kirim Estimasi RAB"}
-        </button>
-      </div>
+      </label>
     </div>
   );
 }
@@ -990,48 +954,48 @@ function BriefListCard({
 
 function AdminBriefFileCard({ file }: { file: AdminBriefFile }) {
   return (
-    <div className="rounded-2xl border border-[#E8E2D9] bg-white p-4">
-      <div className="flex gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
-          <FileText size={17} />
+    <div className="flex flex-col gap-3 rounded-xl border border-[#E8E2D9] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
+          <FileText size={15} />
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[14px] font-semibold leading-6 text-[#31332C]">
+            <p className="truncate text-[13px] font-semibold text-[#31332C]">
               {file.name}
-            </h3>
+            </p>
 
-            <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-semibold text-[#725F54]">
+            <span className="rounded-full bg-[#FCFBF9] px-2 py-0.5 text-[10px] font-semibold text-[#725F54]">
               {file.type}
             </span>
           </div>
 
-          <p className="mt-2 text-[12px] leading-5 text-[#7B756E]">
+          <p className="mt-1 line-clamp-1 text-[11px] leading-5 text-[#7B756E]">
             {file.description}
           </p>
 
-          <p className="mt-2 text-[11px] leading-5 text-[#A19B95]">
-            Dikirim oleh {file.uploadedBy} • {file.uploadedAt} • {file.size}
+          <p className="mt-0.5 text-[10px] leading-5 text-[#A19B95]">
+            {file.uploadedAt} • {file.size}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[#E8E2D9] pt-4">
+      <div className="grid grid-cols-2 gap-2 sm:w-[180px]">
         <a
           href={file.url}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#E4D8CD] bg-white px-3 text-[11px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
         >
-          <Eye size={14} />
+          <Eye size={13} />
           Lihat
         </a>
 
         <a
           href={file.url}
           download
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-3 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#725F54] px-3 text-[11px] font-semibold text-white transition hover:bg-[#5A4A42]"
         >
-          <Download size={14} />
+          <Download size={13} />
           Unduh
         </a>
       </div>

@@ -1,5 +1,6 @@
 import {
   BadgePercent,
+  Banknote,
   BarChart3,
   Bell,
   BriefcaseBusiness,
@@ -102,6 +103,12 @@ export const adminMenuGroups: AdminMenuGroup[] = [
         label: "Invoice & Pembayaran",
         description: "Invoice, payout, dan bonus",
         icon: CreditCard,
+      },
+      {
+        id: "vendor-bonus",
+        label: "Bonus Vendor",
+        description: "Bonus dan insentif vendor",
+        icon: Banknote,
       },
     ],
   },
