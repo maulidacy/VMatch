@@ -79,13 +79,6 @@ export function SettingsView() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [publicRegistration, setPublicRegistration] = useState(true);
 
-  const activeNotificationCount = [
-    projectNotification,
-    paymentNotification,
-    vendorNotification,
-    systemNotification,
-  ].filter(Boolean).length;
-
   const activeTabData =
     settingTabs.find((item) => item.id === activeTab) ?? settingTabs[0];
 
@@ -110,36 +103,6 @@ export function SettingsView() {
           <Save size={16} />
           Simpan Perubahan
         </button>
-      </section>
-
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <SettingsMiniStat
-          icon={UserRound}
-          label="Admin"
-          value="1"
-          description="Akun aktif"
-        />
-
-        <SettingsMiniStat
-          icon={ShieldCheck}
-          label="Keamanan"
-          value="Aktif"
-          description="Proteksi akun"
-        />
-
-        <SettingsMiniStat
-          icon={Bell}
-          label="Notifikasi"
-          value={`${activeNotificationCount}`}
-          description="Preferensi aktif"
-        />
-
-        <SettingsMiniStat
-          icon={Database}
-          label="Backup"
-          value={autoBackup ? "On" : "Off"}
-          description="Backup otomatis"
-        />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[330px_minmax(0,1fr)]">
@@ -522,40 +485,6 @@ function SettingField({
 
       <div className="mt-3">{children}</div>
     </label>
-  );
-}
-
-function SettingsMiniStat({
-  icon: Icon,
-  label,
-  value,
-  description,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.035)] transition hover:border-[#725F54] hover:bg-[#FCFBF9]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#725F54]">
-          <Icon size={17} strokeWidth={2} />
-        </div>
-
-        <p className="min-w-0 truncate text-right font-serif text-[24px] leading-none text-[#31332C]">
-          {value}
-        </p>
-      </div>
-
-      <p className="mt-4 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-        {label}
-      </p>
-
-      <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
-        {description}
-      </p>
-    </div>
   );
 }
 

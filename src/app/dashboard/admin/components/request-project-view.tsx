@@ -2,20 +2,22 @@
 
 import {
     ArrowLeft,
-    CalendarDays,
+    BriefcaseBusiness,
     CheckCircle2,
     ChevronDown,
     FileText,
     MapPin,
     MessageCircle,
-    Phone,
-    Save,
     Search,
+    Send,
+    ShieldCheck,
+    Star,
     UserRound,
+    Users,
     Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import type { AdminPageId } from "../types";
 
@@ -24,29 +26,60 @@ type RequestStatus =
     | "Menunggu Review"
     | "Butuh Konsultasi"
     | "Disetujui"
-    | "Ditolak"
     | "Menunggu Vendor"
-    | "Menjadi Proyek Aktif";
+    | "Menunggu Estimasi Vendor"
+    | "Estimasi Dikirim Vendor"
+    | "RAB Direview Admin"
+    | "RAB Dikirim ke Customer"
+    | "Menjadi Proyek Aktif"
+    | "Ditolak";
 
-type RequestTab = "Semua" | "Baru" | "Review" | "Konsultasi" | "Disetujui";
+type RequestTab =
+    | "Semua"
+    | "Baru"
+    | "Review"
+    | "Konsultasi"
+    | "Vendor"
+    | "Estimasi"
+    | "Aktif"
+    | "Ditolak";
+
+type VendorAvailability = "Tersedia" | "Sibuk" | "Perlu Review";
+
+type VendorRecommendation = {
+    id: string;
+    name: string;
+    area: string;
+    skills: string[];
+    availability: VendorAvailability;
+    activeProjects: number;
+    performanceScore: number;
+    responseTime: string;
+    notes: string;
+};
 
 type ProjectRequest = {
     id: string;
+    title: string;
     customerName: string;
     customerEmail: string;
-    customerPhone: string;
-    projectTitle: string;
-    projectType: string;
     location: string;
     budget: string;
-    style: string;
+    projectType: string;
     roomSize: string;
+    designStyle: string;
+    referenceSource: string;
+    preferredMaterialPackage: string;
     targetTime: string;
-    submittedAt: string;
     status: RequestStatus;
+    submittedAt: string;
     description: string;
-    referenceNote: string;
     adminNote: string;
+    initialBrief: string;
+    vendorNote: string;
+    selectedVendorId?: string;
+    sentToVendorAt?: string;
+    lastMessage?: string;
 };
 
 const requestTabs: RequestTab[] = [
@@ -54,7 +87,10 @@ const requestTabs: RequestTab[] = [
     "Baru",
     "Review",
     "Konsultasi",
-    "Disetujui",
+    "Vendor",
+    "Estimasi",
+    "Aktif",
+    "Ditolak",
 ];
 
 const statusOptions: RequestStatus[] = [
@@ -63,92 +99,176 @@ const statusOptions: RequestStatus[] = [
     "Butuh Konsultasi",
     "Disetujui",
     "Menunggu Vendor",
+    "Menunggu Estimasi Vendor",
+    "Estimasi Dikirim Vendor",
+    "RAB Direview Admin",
+    "RAB Dikirim ke Customer",
     "Menjadi Proyek Aktif",
     "Ditolak",
 ];
 
-const initialRequests: ProjectRequest[] = [
+const recommendedVendors: VendorRecommendation[] = [
     {
-        id: "req-1",
-        customerName: "Alya Putri",
-        customerEmail: "alya@email.com",
-        customerPhone: "0812-3456-7890",
-        projectTitle: "Kitchen Set Minimalis",
-        projectType: "Kitchen Set",
-        location: "Semarang",
-        budget: "Rp18.000.000 - Rp25.000.000",
-        style: "Minimalis Modern",
-        roomSize: "2.5m x 2m",
-        targetTime: "Bulan depan",
-        submittedAt: "Hari ini, 09.20",
-        status: "Baru Masuk",
-        description:
-            "Customer ingin membuat kitchen set minimalis dengan kabinet bawah dan atas. Area dapur kecil, jadi membutuhkan desain yang efisien dan mudah dibersihkan.",
-        referenceNote:
-            "Referensi warna putih tulang, kombinasi kayu muda, dan handle minimalis.",
-        adminNote: "",
+        id: "vendor-1",
+        name: "Andi Interior Partner",
+        area: "Semarang",
+        skills: ["Kitchen Set", "Wardrobe", "Storage"],
+        availability: "Tersedia",
+        activeProjects: 2,
+        performanceScore: 92,
+        responseTime: "± 1 hari",
+        notes: "Cocok untuk kitchen set dan pekerjaan custom furniture rumah.",
     },
     {
-        id: "req-2",
-        customerName: "Bima Santoso",
-        customerEmail: "bima@email.com",
-        customerPhone: "0821-2222-8899",
-        projectTitle: "Wardrobe Kamar Utama",
-        projectType: "Wardrobe",
-        location: "Yogyakarta",
-        budget: "Rp12.000.000 - Rp18.000.000",
-        style: "Japandi",
-        roomSize: "3m x 3m",
-        targetTime: "Dalam 1 bulan",
-        submittedAt: "Kemarin",
-        status: "Menunggu Review",
-        description:
-            "Customer membutuhkan wardrobe built-in untuk kamar utama dengan ruang gantung, rak lipat, dan area penyimpanan tambahan.",
-        referenceNote:
-            "Model wardrobe full plafon dengan warna natural, pintu sliding, dan soft close.",
-        adminNote: "Perlu cek ukuran detail sebelum dibuatkan brief awal.",
+        id: "vendor-2",
+        name: "Nusa Custom Interior",
+        area: "Semarang",
+        skills: ["Kitchen Set", "Backdrop TV"],
+        availability: "Sibuk",
+        activeProjects: 5,
+        performanceScore: 86,
+        responseTime: "± 2 hari",
+        notes: "Performa baik, tetapi sedang menangani beberapa proyek aktif.",
     },
     {
-        id: "req-3",
-        customerName: "Nadia Rahma",
-        customerEmail: "nadia@email.com",
-        customerPhone: "0857-1000-4421",
-        projectTitle: "Ruang Kerja Rumah",
-        projectType: "Ruang Kerja",
-        location: "Solo",
-        budget: "Rp8.000.000 - Rp12.000.000",
-        style: "Scandinavian",
-        roomSize: "2m x 3m",
-        targetTime: "Secepatnya",
-        submittedAt: "2 hari lalu",
-        status: "Butuh Konsultasi",
-        description:
-            "Customer ingin membuat meja kerja custom, rak buku, dan storage kecil untuk ruang kerja di rumah.",
-        referenceNote:
-            "Ingin tampilan sederhana, terang, dan tidak terlalu banyak dekorasi.",
-        adminNote: "Disarankan konsultasi untuk memastikan kebutuhan storage.",
-    },
-    {
-        id: "req-4",
-        customerName: "Raka Pratama",
-        customerEmail: "raka@email.com",
-        customerPhone: "0813-7788-9922",
-        projectTitle: "Backdrop TV Ruang Keluarga",
-        projectType: "Backdrop TV",
-        location: "Semarang",
-        budget: "Rp10.000.000 - Rp15.000.000",
-        style: "Modern Warm",
-        roomSize: "3.5m x 3m",
-        targetTime: "Fleksibel",
-        submittedAt: "3 hari lalu",
-        status: "Disetujui",
-        description:
-            "Customer ingin membuat backdrop TV dengan kabinet bawah, panel dinding, dan tempat display sederhana.",
-        referenceNote:
-            "Warna coklat muda, aksen hitam tipis, dan desain tidak terlalu ramai.",
-        adminNote: "Request sudah layak dibuatkan brief awal.",
+        id: "vendor-3",
+        name: "Ruang Rapi Studio",
+        area: "Yogyakarta",
+        skills: ["Wardrobe", "Ruang Kerja", "Storage"],
+        availability: "Tersedia",
+        activeProjects: 1,
+        performanceScore: 89,
+        responseTime: "± 1 hari",
+        notes: "Cocok untuk wardrobe, ruang kerja, dan storage minimalis.",
     },
 ];
+
+const initialRequests: ProjectRequest[] = [
+    {
+        id: "request-1",
+        title: "Kitchen Set Modern Minimalis",
+        customerName: "Alya Putri",
+        customerEmail: "alya@email.com",
+        location: "Semarang",
+        budget: "Rp25.000.000 - Rp70.000.000",
+        projectType: "Kitchen Set",
+        roomSize: "Area dapur 3m x 2.5m",
+        designStyle: "Modern minimalis",
+        referenceSource: "Inspirasi Kitchen Set Modern Minimalis",
+        preferredMaterialPackage: "Standard / Premium",
+        targetTime: "Mulai pengerjaan bulan depan",
+        status: "Menunggu Vendor",
+        submittedAt: "Hari ini, 10.30 WIB",
+        description:
+            "Customer membutuhkan kitchen set yang bersih, fungsional, mudah dirawat, dan memiliki penyimpanan yang cukup untuk dapur kecil.",
+        adminNote:
+            "Request sudah cukup jelas. Cocok diteruskan ke vendor kitchen set area Semarang untuk estimasi awal.",
+        initialBrief:
+            "Buat estimasi kitchen set modern minimalis untuk area dapur compact. Fokus pada kabinet bawah, kabinet atas, area penyimpanan tertutup, top table solid surface, dan finishing warna netral dengan aksen kayu hangat.",
+        vendorNote:
+            "Vendor diminta mengecek kemungkinan layout L-shape, kebutuhan pengukuran ulang, dan estimasi material Standard / Premium.",
+    },
+    {
+        id: "request-2",
+        title: "Wardrobe Kamar Utama",
+        customerName: "Bima Santoso",
+        customerEmail: "bima@email.com",
+        location: "Yogyakarta",
+        budget: "Rp18.000.000 - Rp60.000.000",
+        projectType: "Wardrobe",
+        roomSize: "Lebar dinding ± 3 meter",
+        designStyle: "Warm modern",
+        referenceSource: "Referensi wardrobe built-in",
+        preferredMaterialPackage: "Standard",
+        targetTime: "2-3 minggu setelah RAB disetujui",
+        status: "Butuh Konsultasi",
+        submittedAt: "Kemarin, 14.00 WIB",
+        description:
+            "Customer ingin wardrobe built-in full plafon dengan area gantung, rak lipat, dan pintu sliding.",
+        adminNote:
+            "Perlu konsultasi untuk memastikan layout bagian dalam wardrobe dan preferensi pintu sliding.",
+        initialBrief:
+            "Estimasi wardrobe built-in full plafon dengan pembagian area gantung, rak lipat, laci, dan storage tambahan.",
+        vendorNote:
+            "Vendor perlu menanyakan detail ukuran dan kondisi area instalasi sebelum estimasi final.",
+    },
+    {
+        id: "request-3",
+        title: "Ruang Kerja Compact",
+        customerName: "Nadia Rahma",
+        customerEmail: "nadia@email.com",
+        location: "Solo",
+        budget: "Rp12.000.000 - Rp40.000.000",
+        projectType: "Ruang Kerja",
+        roomSize: "2m x 3m",
+        designStyle: "Scandinavian",
+        referenceSource: "Inspirasi ruang kerja compact",
+        preferredMaterialPackage: "Basic / Standard",
+        targetTime: "Fleksibel",
+        status: "Estimasi Dikirim Vendor",
+        submittedAt: "2 hari lalu",
+        description:
+            "Customer membutuhkan meja kerja custom, rak buku, dan storage kecil agar ruang tetap rapi dan terang.",
+        adminNote:
+            "Estimasi vendor sudah masuk. Admin dapat lanjut review di RAB Builder.",
+        initialBrief:
+            "Ruang kerja compact dengan meja custom, rak terbuka, storage tertutup, dan warna terang.",
+        vendorNote:
+            "Vendor sudah mengirim estimasi awal untuk review admin.",
+        selectedVendorId: "vendor-3",
+        sentToVendorAt: "Kemarin, 09.20 WIB",
+        lastMessage: "Vendor mengirim estimasi RAB. Silakan review di RAB Builder.",
+    },
+];
+
+function matchRequestTab(request: ProjectRequest, activeTab: RequestTab) {
+    if (activeTab === "Semua") return true;
+    if (activeTab === "Baru") return request.status === "Baru Masuk";
+    if (activeTab === "Review") return request.status === "Menunggu Review";
+    if (activeTab === "Konsultasi") return request.status === "Butuh Konsultasi";
+    if (activeTab === "Vendor") {
+        return (
+            request.status === "Disetujui" ||
+            request.status === "Menunggu Vendor" ||
+            request.status === "Menunggu Estimasi Vendor"
+        );
+    }
+    if (activeTab === "Estimasi") {
+        return (
+            request.status === "Estimasi Dikirim Vendor" ||
+            request.status === "RAB Direview Admin" ||
+            request.status === "RAB Dikirim ke Customer"
+        );
+    }
+    if (activeTab === "Aktif") return request.status === "Menjadi Proyek Aktif";
+    if (activeTab === "Ditolak") return request.status === "Ditolak";
+
+    return true;
+}
+
+function getVendorScore(request: ProjectRequest, vendor: VendorRecommendation) {
+    let score = vendor.performanceScore;
+
+    if (vendor.area.toLowerCase() === request.location.toLowerCase()) {
+        score += 6;
+    }
+
+    if (
+        vendor.skills.some(
+            (skill) => skill.toLowerCase() === request.projectType.toLowerCase(),
+        )
+    ) {
+        score += 8;
+    }
+
+    if (vendor.availability === "Tersedia") score += 5;
+    if (vendor.availability === "Sibuk") score -= 4;
+    if (vendor.availability === "Perlu Review") score -= 8;
+
+    score -= Math.min(vendor.activeProjects, 6);
+
+    return Math.max(0, Math.min(score, 100));
+}
 
 export function RequestProjectView({
     onChangePage,
@@ -161,29 +281,24 @@ export function RequestProjectView({
     const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
         null,
     );
-    const [adminNoteDraft, setAdminNoteDraft] = useState("");
-    const [isNoteSaved, setIsNoteSaved] = useState(false);
+    const [areaFilter, setAreaFilter] = useState("Semua");
+    const [skillFilter, setSkillFilter] = useState("Semua");
+    const [availabilityFilter, setAvailabilityFilter] = useState("Semua");
+    const [feedbackMessage, setFeedbackMessage] = useState("");
 
     const filteredRequests = useMemo(() => {
         const normalizedKeyword = keyword.trim().toLowerCase();
 
         return requests.filter((request) => {
-            const matchTab =
-                activeTab === "Semua" ||
-                (activeTab === "Baru" && request.status === "Baru Masuk") ||
-                (activeTab === "Review" && request.status === "Menunggu Review") ||
-                (activeTab === "Konsultasi" && request.status === "Butuh Konsultasi") ||
-                (activeTab === "Disetujui" &&
-                    ["Disetujui", "Menunggu Vendor", "Menjadi Proyek Aktif"].includes(
-                        request.status,
-                    ));
+            const matchTab = matchRequestTab(request, activeTab);
 
             const matchKeyword =
                 normalizedKeyword.length === 0 ||
-                request.projectTitle.toLowerCase().includes(normalizedKeyword) ||
+                request.title.toLowerCase().includes(normalizedKeyword) ||
                 request.customerName.toLowerCase().includes(normalizedKeyword) ||
                 request.location.toLowerCase().includes(normalizedKeyword) ||
                 request.projectType.toLowerCase().includes(normalizedKeyword) ||
+                request.designStyle.toLowerCase().includes(normalizedKeyword) ||
                 request.status.toLowerCase().includes(normalizedKeyword);
 
             return matchTab && matchKeyword;
@@ -196,61 +311,138 @@ export function RequestProjectView({
         return requests.find((request) => request.id === selectedRequestId) ?? null;
     }, [requests, selectedRequestId]);
 
-    const updateRequestStatus = (id: string, status: RequestStatus) => {
-        setRequests((current) =>
-            current.map((request) =>
-                request.id === id
-                    ? {
-                        ...request,
-                        status,
-                    }
-                    : request,
-            ),
-        );
-    };
+    const selectedVendor =
+        selectedRequest?.selectedVendorId
+            ? recommendedVendors.find(
+                (vendor) => vendor.id === selectedRequest.selectedVendorId,
+            ) ?? null
+            : null;
 
-    const updateAdminNote = (id: string, note: string) => {
-        setRequests((current) =>
-            current.map((request) =>
-                request.id === id
-                    ? {
-                        ...request,
-                        adminNote: note,
-                    }
-                    : request,
-            ),
-        );
-    };
+    const vendorAreaOptions = useMemo(
+        () => ["Semua", ...Array.from(new Set(recommendedVendors.map((v) => v.area)))],
+        [],
+    );
+
+    const vendorSkillOptions = useMemo(
+        () => [
+            "Semua",
+            ...Array.from(new Set(recommendedVendors.flatMap((v) => v.skills))),
+        ],
+        [],
+    );
+
+    const filteredVendorRecommendations = useMemo(() => {
+        if (!selectedRequest) return [];
+
+        return recommendedVendors
+            .filter((vendor) => {
+                const matchArea = areaFilter === "Semua" || vendor.area === areaFilter;
+                const matchSkill =
+                    skillFilter === "Semua" || vendor.skills.includes(skillFilter);
+                const matchAvailability =
+                    availabilityFilter === "Semua" ||
+                    vendor.availability === availabilityFilter;
+
+                return matchArea && matchSkill && matchAvailability;
+            })
+            .sort(
+                (a, b) =>
+                    getVendorScore(selectedRequest, b) - getVendorScore(selectedRequest, a),
+            );
+    }, [areaFilter, availabilityFilter, selectedRequest, skillFilter]);
 
     const openDetail = (request: ProjectRequest) => {
         setSelectedRequestId(request.id);
-        setAdminNoteDraft(request.adminNote);
-        setIsNoteSaved(false);
+        setFeedbackMessage("");
+        setAreaFilter("Semua");
+        setSkillFilter("Semua");
+        setAvailabilityFilter("Semua");
     };
 
     const closeDetail = () => {
         setSelectedRequestId(null);
-        setAdminNoteDraft("");
-        setIsNoteSaved(false);
+        setFeedbackMessage("");
+    };
+
+    const updateRequest = (
+        id: string,
+        updater: (request: ProjectRequest) => ProjectRequest,
+    ) => {
+        setRequests((current) =>
+            current.map((request) => (request.id === id ? updater(request) : request)),
+        );
+    };
+
+    const updateStatus = (id: string, status: RequestStatus) => {
+        updateRequest(id, (request) => ({
+            ...request,
+            status,
+        }));
+
+        if (status === "Butuh Konsultasi") setActiveTab("Konsultasi");
+        if (status === "Menunggu Estimasi Vendor") setActiveTab("Vendor");
+        if (
+            status === "Estimasi Dikirim Vendor" ||
+            status === "RAB Direview Admin" ||
+            status === "RAB Dikirim ke Customer"
+        ) {
+            setActiveTab("Estimasi");
+        }
+        if (status === "Menjadi Proyek Aktif") setActiveTab("Aktif");
+        if (status === "Ditolak") setActiveTab("Ditolak");
+    };
+
+    const selectVendor = (requestId: string, vendorId: string) => {
+        updateRequest(requestId, (request) => ({
+            ...request,
+            selectedVendorId: vendorId,
+            status:
+                request.status === "Baru Masuk" || request.status === "Menunggu Review"
+                    ? "Menunggu Vendor"
+                    : request.status,
+        }));
+
+        setFeedbackMessage("Vendor berhasil dipilih untuk request ini.");
+    };
+
+    const sendBriefToVendor = () => {
+        if (!selectedRequest?.selectedVendorId) return;
+
+        updateRequest(selectedRequest.id, (request) => ({
+            ...request,
+            status: "Menunggu Estimasi Vendor",
+            sentToVendorAt: "Baru saja",
+            lastMessage:
+                "Brief berhasil dikirim ke vendor. Vendor dapat melihat brief di Vendor Panel dan mengirim estimasi RAB kepada admin.",
+        }));
+
+        setActiveTab("Vendor");
+        setFeedbackMessage(
+            "Brief berhasil dikirim ke vendor. Vendor dapat melihat brief di Vendor Panel.",
+        );
     };
 
     if (selectedRequest) {
         return (
             <RequestDetailPage
                 request={selectedRequest}
-                adminNoteDraft={adminNoteDraft}
-                isNoteSaved={isNoteSaved}
+                selectedVendor={selectedVendor}
+                vendorRecommendations={filteredVendorRecommendations}
+                areaOptions={vendorAreaOptions}
+                skillOptions={vendorSkillOptions}
+                areaFilter={areaFilter}
+                skillFilter={skillFilter}
+                availabilityFilter={availabilityFilter}
+                feedbackMessage={feedbackMessage}
                 onBack={closeDetail}
-                onChangeNote={(value) => {
-                    setAdminNoteDraft(value);
-                    setIsNoteSaved(false);
-                }}
-                onSaveNote={() => {
-                    updateAdminNote(selectedRequest.id, adminNoteDraft);
-                    setIsNoteSaved(true);
-                }}
-                onUpdateStatus={(status) => updateRequestStatus(selectedRequest.id, status)}
-                onChangePage={onChangePage}
+                onAreaFilterChange={setAreaFilter}
+                onSkillFilterChange={setSkillFilter}
+                onAvailabilityFilterChange={setAvailabilityFilter}
+                onSelectVendor={(vendorId) => selectVendor(selectedRequest.id, vendorId)}
+                onSendBrief={sendBriefToVendor}
+                onStatusChange={(status) => updateStatus(selectedRequest.id, status)}
+                onOpenConsultation={() => onChangePage?.("consultations")}
+                onOpenRabBuilder={() => onChangePage?.("rab-builder")}
             />
         );
     }
@@ -258,7 +450,7 @@ export function RequestProjectView({
     return (
         <div className="space-y-5">
             <section className="pb-1">
-                <div className="max-w-[820px]">
+                <div className="max-w-[860px]">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#725F54]">
                         Request Customer
                     </p>
@@ -268,8 +460,8 @@ export function RequestProjectView({
                     </h1>
 
                     <p className="mt-2 text-[13px] leading-6 text-[#7B756E] sm:text-[14px]">
-                        Kelola pengajuan proyek interior dari customer, mulai dari review kebutuhan,
-                        informasi budget, referensi desain, hingga penentuan status dan tindak lanjut.
+                        Tinjau request proyek interior dari customer, siapkan brief awal,
+                        lakukan vendor matching, lalu kirim brief ke vendor yang sesuai.
                     </p>
                 </div>
             </section>
@@ -282,7 +474,7 @@ export function RequestProjectView({
                         <input
                             value={keyword}
                             onChange={(event) => setKeyword(event.target.value)}
-                            placeholder="Cari request, customer, lokasi, atau status..."
+                            placeholder="Cari request, customer, lokasi, jenis proyek, style, atau status..."
                             className="h-full min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#31332C] outline-none placeholder:text-[#B8AEA5]"
                         />
                     </div>
@@ -307,7 +499,7 @@ export function RequestProjectView({
                     </div>
 
                     <div className="hidden rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-1.5 sm:block lg:col-span-2">
-                        <div className="flex gap-1.5 overflow-x-auto">
+                        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             {requestTabs.map((tab) => {
                                 const active = activeTab === tab;
 
@@ -334,7 +526,7 @@ export function RequestProjectView({
                 {filteredRequests.length > 0 ? (
                     <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
                         {filteredRequests.map((request) => (
-                            <RequestCard
+                            <RequestListCard
                                 key={request.id}
                                 request={request}
                                 onClick={() => openDetail(request)}
@@ -359,24 +551,46 @@ export function RequestProjectView({
 
 function RequestDetailPage({
     request,
-    adminNoteDraft,
-    isNoteSaved,
+    selectedVendor,
+    vendorRecommendations,
+    areaOptions,
+    skillOptions,
+    areaFilter,
+    skillFilter,
+    availabilityFilter,
+    feedbackMessage,
     onBack,
-    onChangeNote,
-    onSaveNote,
-    onUpdateStatus,
-    onChangePage,
+    onAreaFilterChange,
+    onSkillFilterChange,
+    onAvailabilityFilterChange,
+    onSelectVendor,
+    onSendBrief,
+    onStatusChange,
+    onOpenConsultation,
+    onOpenRabBuilder,
 }: {
     request: ProjectRequest;
-    adminNoteDraft: string;
-    isNoteSaved: boolean;
+    selectedVendor: VendorRecommendation | null;
+    vendorRecommendations: VendorRecommendation[];
+    areaOptions: string[];
+    skillOptions: string[];
+    areaFilter: string;
+    skillFilter: string;
+    availabilityFilter: string;
+    feedbackMessage: string;
     onBack: () => void;
-    onChangeNote: (value: string) => void;
-    onSaveNote: () => void;
-    onUpdateStatus: (status: RequestStatus) => void;
-    onChangePage?: (page: AdminPageId) => void;
+    onAreaFilterChange: (value: string) => void;
+    onSkillFilterChange: (value: string) => void;
+    onAvailabilityFilterChange: (value: string) => void;
+    onSelectVendor: (vendorId: string) => void;
+    onSendBrief: () => void;
+    onStatusChange: (status: RequestStatus) => void;
+    onOpenConsultation: () => void;
+    onOpenRabBuilder: () => void;
 }) {
-    const isAdminNoteChanged = adminNoteDraft !== request.adminNote;
+    const canOpenRab =
+        request.status === "Estimasi Dikirim Vendor" ||
+        request.status === "RAB Direview Admin";
 
     return (
         <div className="space-y-5">
@@ -394,18 +608,20 @@ function RequestDetailPage({
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                                {request.projectType}
+                                Detail Request
                             </p>
 
                             <RequestStatusBadge status={request.status} />
                         </div>
 
-                        <h1 className="mt-3 max-w-[760px] font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
-                            {request.projectTitle}
+                        <h1 className="mt-3 max-w-[820px] font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
+                            {request.title}
                         </h1>
 
-                        <p className="mt-3 max-w-[820px] text-[13px] leading-7 text-[#7B756E] sm:text-[14px]">
-                            {request.description}
+                        <p className="mt-3 max-w-[860px] text-[13px] leading-7 text-[#7B756E] sm:text-[14px]">
+                            Request dari {request.customerName}. Admin meninjau kebutuhan,
+                            membuat brief awal, memilih vendor, lalu menunggu estimasi RAB dari
+                            vendor sebelum proyek dilanjutkan.
                         </p>
                     </div>
 
@@ -418,7 +634,7 @@ function RequestDetailPage({
                             <select
                                 value={request.status}
                                 onChange={(event) =>
-                                    onUpdateStatus(event.target.value as RequestStatus)
+                                    onStatusChange(event.target.value as RequestStatus)
                                 }
                                 className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
                             >
@@ -438,7 +654,7 @@ function RequestDetailPage({
                 </div>
 
                 <div className="border-t border-[#E8E2D9] bg-[#FCFBF9]/70 p-5 sm:p-6">
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                         <InfoTile
                             icon={UserRound}
                             label="Customer"
@@ -447,140 +663,404 @@ function RequestDetailPage({
                         />
 
                         <InfoTile
-                            icon={Phone}
-                            label="Kontak"
-                            value={request.customerPhone}
-                            description="Nomor aktif"
-                        />
-
-                        <InfoTile
                             icon={MapPin}
                             label="Lokasi"
                             value={request.location}
-                            description={request.roomSize}
+                            description="Area proyek"
                         />
 
                         <InfoTile
                             icon={Wallet}
                             label="Budget"
                             value={request.budget}
-                            description={request.projectType}
+                            description="Estimasi awal customer"
                         />
 
                         <InfoTile
-                            icon={FileText}
-                            label="Gaya"
-                            value={request.style}
-                            description="Preferensi desain"
-                        />
-
-                        <InfoTile
-                            icon={CalendarDays}
-                            label="Target"
-                            value={request.targetTime}
+                            icon={BriefcaseBusiness}
+                            label="Jenis Proyek"
+                            value={request.projectType}
                             description={request.submittedAt}
                         />
                     </div>
                 </div>
 
-                <div className="grid gap-0 border-t border-[#E8E2D9] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                    <div className="border-b border-[#E8E2D9] p-5 sm:p-6 lg:border-b-0 lg:border-r">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                            Referensi Customer
-                        </p>
-
-                        <p className="mt-3 text-[13px] leading-7 text-[#6F6860]">
-                            {request.referenceNote}
-                        </p>
-                    </div>
-
-                    <div className="p-5 sm:p-6">
-                        <div className="flex items-start justify-between gap-3">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                                Catatan Admin
-                            </p>
-
-                            {isNoteSaved && (
-                                <span className="rounded-full border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-1 text-[10px] font-semibold text-[#4F7A5F]">
-                                    Tersimpan
-                                </span>
-                            )}
+                <div className="grid gap-0 border-t border-[#E8E2D9] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                    <DetailSection
+                        title="Detail Kebutuhan Customer"
+                        description="Informasi utama dari request customer."
+                    >
+                        <div className="grid gap-3">
+                            <DetailRow label="Deskripsi Kebutuhan" value={request.description} />
+                            <DetailRow label="Gaya Desain" value={request.designStyle} />
+                            <DetailRow label="Ukuran Ruangan" value={request.roomSize} />
+                            <DetailRow label="Referensi Desain" value={request.referenceSource} />
+                            <DetailRow label="Catatan Admin" value={request.adminNote} />
                         </div>
+                    </DetailSection>
 
-                        <textarea
-                            value={adminNoteDraft}
-                            onChange={(event) => onChangeNote(event.target.value)}
-                            placeholder="Tambahkan catatan review admin..."
-                            rows={6}
-                            className="mt-3 w-full resize-none rounded-2xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 py-3 text-[13px] leading-6 text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
-                        />
-
-                        <div className="mt-3 flex justify-end">
-                            <button
-                                type="button"
-                                onClick={onSaveNote}
-                                disabled={!isAdminNoteChanged}
-                                className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${isAdminNoteChanged
-                                        ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
-                                        : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
-                                    }`}
-                            >
-                                <Save size={14} />
-                                Simpan Catatan
-                            </button>
+                    <DetailSection
+                        title="Brief Awal"
+                        description="Ringkasan brief yang akan menjadi acuan vendor."
+                        withRightBorder={false}
+                    >
+                        <div className="grid gap-3">
+                            <DetailRow label="Ringkasan Brief" value={request.initialBrief} />
+                            <DetailRow
+                                label="Paket Material Preferensi"
+                                value={request.preferredMaterialPackage}
+                            />
+                            <DetailRow label="Target Waktu" value={request.targetTime} />
+                            <DetailRow label="Catatan untuk Vendor" value={request.vendorNote} />
                         </div>
-                    </div>
+                    </DetailSection>
                 </div>
 
-                <div className="border-t border-[#E8E2D9] bg-[#FCFBF9] p-5 sm:p-6">
-                    <div className="mb-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                            Aksi Lanjutan
-                        </p>
-
-                        <p className="mt-1 text-[12px] text-[#7B756E]">
-                            Pilih aksi sesuai hasil review request customer.
-                        </p>
-                    </div>
-
-                    <div className="grid gap-3 lg:grid-cols-3">
-                        <ActionButton
-                            icon={MessageCircle}
-                            title="Jadwalkan Konsultasi"
-                            description="Ubah request menjadi butuh konsultasi."
-                            onClick={() => {
-                                onUpdateStatus("Butuh Konsultasi");
-                                onChangePage?.("consultations");
-                            }}
-                        />
-
-                        <ActionButton
-                            icon={FileText}
-                            title="Buat Brief Awal"
-                            description="Lanjutkan ke brief dan dokumen proyek."
-                            onClick={() => {
-                                onUpdateStatus("Disetujui");
-                                onChangePage?.("brief-documents");
-                            }}
-                        />
-
-                        <ActionButton
-                            icon={CheckCircle2}
-                            title="Jadikan Proyek Aktif"
-                            description="Pindahkan ke proyek aktif."
-                            onClick={() => {
-                                onUpdateStatus("Menjadi Proyek Aktif");
-                                onChangePage?.("active-projects");
-                            }}
-                        />
-                    </div>
-                </div>
+                <VendorMatchingSection
+                    request={request}
+                    vendors={vendorRecommendations}
+                    selectedVendor={selectedVendor}
+                    areaOptions={areaOptions}
+                    skillOptions={skillOptions}
+                    areaFilter={areaFilter}
+                    skillFilter={skillFilter}
+                    availabilityFilter={availabilityFilter}
+                    feedbackMessage={feedbackMessage}
+                    onAreaFilterChange={onAreaFilterChange}
+                    onSkillFilterChange={onSkillFilterChange}
+                    onAvailabilityFilterChange={onAvailabilityFilterChange}
+                    onSelectVendor={onSelectVendor}
+                    onSendBrief={onSendBrief}
+                />
             </section>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <button
+                    type="button"
+                    onClick={onOpenConsultation}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                >
+                    <MessageCircle size={15} />
+                    Jadwalkan Konsultasi
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onSendBrief}
+                    disabled={!request.selectedVendorId}
+                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${request.selectedVendorId
+                            ? "border-[#725F54] bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                            : "cursor-not-allowed border-[#E8E2D9] bg-[#E8E2D9] text-[#9A8F86]"
+                        }`}
+                >
+                    <Send size={15} />
+                    Kirim Brief
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onOpenRabBuilder}
+                    disabled={!canOpenRab}
+                    className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${canOpenRab
+                            ? "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                            : "cursor-not-allowed border-[#E8E2D9] bg-white text-[#B8AEA5]"
+                        }`}
+                >
+                    <FileText size={15} />
+                    Buat RAB Draft
+                </button>
+            </div>
         </div>
     );
 }
 
-function RequestCard({
+function VendorMatchingSection({
+    request,
+    vendors,
+    selectedVendor,
+    areaOptions,
+    skillOptions,
+    areaFilter,
+    skillFilter,
+    availabilityFilter,
+    feedbackMessage,
+    onAreaFilterChange,
+    onSkillFilterChange,
+    onAvailabilityFilterChange,
+    onSelectVendor,
+    onSendBrief,
+}: {
+    request: ProjectRequest;
+    vendors: VendorRecommendation[];
+    selectedVendor: VendorRecommendation | null;
+    areaOptions: string[];
+    skillOptions: string[];
+    areaFilter: string;
+    skillFilter: string;
+    availabilityFilter: string;
+    feedbackMessage: string;
+    onAreaFilterChange: (value: string) => void;
+    onSkillFilterChange: (value: string) => void;
+    onAvailabilityFilterChange: (value: string) => void;
+    onSelectVendor: (vendorId: string) => void;
+    onSendBrief: () => void;
+}) {
+    return (
+        <div className="border-t border-[#E8E2D9] bg-[#FCFBF9] p-5 sm:p-6">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-[760px]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                        Vendor Matching
+                    </p>
+
+                    <h2 className="mt-2 font-serif text-[28px] leading-tight text-[#31332C] sm:text-[34px]">
+                        Pilih vendor yang sesuai
+                    </h2>
+
+                    <p className="mt-2 text-[13px] leading-6 text-[#7B756E]">
+                        Rekomendasi vendor berdasarkan lokasi, keahlian, ketersediaan,
+                        performa internal, dan jumlah proyek aktif.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={onSendBrief}
+                    disabled={!request.selectedVendorId}
+                    className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${request.selectedVendorId
+                            ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                            : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+                        }`}
+                >
+                    <Send size={14} />
+                    Kirim Brief ke Vendor
+                </button>
+            </div>
+
+            {feedbackMessage && (
+                <div className="mt-4 rounded-2xl border border-[#DCEBDD] bg-[#F5FAF6] px-4 py-3 text-[12px] font-semibold leading-5 text-[#4F7A5F]">
+                    {feedbackMessage}
+                </div>
+            )}
+
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <FilterSelect
+                    label="Area"
+                    value={areaFilter}
+                    options={areaOptions}
+                    onChange={onAreaFilterChange}
+                />
+
+                <FilterSelect
+                    label="Keahlian"
+                    value={skillFilter}
+                    options={skillOptions}
+                    onChange={onSkillFilterChange}
+                />
+
+                <FilterSelect
+                    label="Ketersediaan"
+                    value={availabilityFilter}
+                    options={["Semua", "Tersedia", "Sibuk", "Perlu Review"]}
+                    onChange={onAvailabilityFilterChange}
+                />
+            </div>
+
+            <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <div
+                    className={`min-w-0 ${vendors.length > 2
+                            ? "xl:max-h-[640px] xl:overflow-y-auto xl:pr-2 [scrollbar-width:thin]"
+                            : ""
+                        }`}
+                >
+                    {vendors.length > 0 ? (
+                        <div className="grid gap-3 lg:grid-cols-2">
+                            {vendors.map((vendor) => (
+                                <VendorRecommendationCard
+                                    key={vendor.id}
+                                    request={request}
+                                    vendor={vendor}
+                                    selected={request.selectedVendorId === vendor.id}
+                                    onSelect={() => onSelectVendor(vendor.id)}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-white p-8 text-center">
+                            <p className="text-[14px] font-semibold text-[#31332C]">
+                                Vendor tidak ditemukan.
+                            </p>
+
+                            <p className="mt-2 text-[13px] text-[#7B756E]">
+                                Coba ubah filter vendor matching.
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                <SelectedVendorCard
+                    selectedVendor={selectedVendor}
+                    sentToVendorAt={request.sentToVendorAt}
+                />
+            </div>
+        </div>
+    );
+}
+
+function SelectedVendorCard({
+    selectedVendor,
+    sentToVendorAt,
+}: {
+    selectedVendor: VendorRecommendation | null;
+    sentToVendorAt?: string;
+}) {
+    if (!selectedVendor) {
+        return (
+            <aside className="h-fit rounded-2xl border border-dashed border-[#E8E2D9] bg-white p-5">
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54]">
+                    <Users size={18} />
+                </div>
+
+                <p className="mt-4 text-[14px] font-semibold text-[#31332C]">
+                    Belum ada vendor terpilih
+                </p>
+
+                <p className="mt-2 text-[12px] leading-6 text-[#7B756E]">
+                    Pilih salah satu vendor dari daftar rekomendasi agar brief dapat
+                    dikirim ke Vendor Panel.
+                </p>
+            </aside>
+        );
+    }
+
+    return (
+        <aside className="h-fit rounded-2xl border border-[#D9C8BA] bg-white p-5 shadow-[0_10px_28px_rgba(49,51,44,0.04)]">
+            <div className="flex items-start gap-3">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#725F54] text-white">
+                    <ShieldCheck size={18} />
+                </div>
+
+                <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                        Vendor Terpilih
+                    </p>
+
+                    <h3 className="mt-1 text-[15px] font-semibold text-[#31332C]">
+                        {selectedVendor.name}
+                    </h3>
+                </div>
+            </div>
+
+            <div className="mt-4 space-y-2.5">
+                <MiniInfo label="Area" value={selectedVendor.area} />
+                <MiniInfo label="Status" value={selectedVendor.availability} />
+                <MiniInfo label="Proyek aktif" value={`${selectedVendor.activeProjects}`} />
+                <MiniInfo label="Estimasi respon" value={selectedVendor.responseTime} />
+            </div>
+
+            {sentToVendorAt && (
+                <div className="mt-4 rounded-xl border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-2 text-[12px] leading-5 text-[#4F7A5F]">
+                    Brief sudah dikirim ke Vendor Panel: {sentToVendorAt}.
+                </div>
+            )}
+        </aside>
+    );
+}
+
+function VendorRecommendationCard({
+    request,
+    vendor,
+    selected,
+    onSelect,
+}: {
+    request: ProjectRequest;
+    vendor: VendorRecommendation;
+    selected: boolean;
+    onSelect: () => void;
+}) {
+    const matchScore = getVendorScore(request, vendor);
+
+    return (
+        <article
+            className={`rounded-2xl border p-4 transition ${selected
+                    ? "border-[#725F54] bg-white ring-2 ring-[#725F54]/12"
+                    : "border-[#E8E2D9] bg-white hover:border-[#725F54]"
+                }`}
+        >
+            <div className="flex items-start gap-3">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54] ring-1 ring-[#E8E2D9]">
+                    <ShieldCheck size={18} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h3 className="truncate text-[14px] font-semibold text-[#31332C]">
+                                {vendor.name}
+                            </h3>
+
+                            <p className="mt-1 text-[12px] text-[#7B756E]">{vendor.area}</p>
+                        </div>
+
+                        <VendorAvailabilityBadge availability={vendor.availability} />
+                    </div>
+
+                    <p className="mt-3 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
+                        {vendor.notes}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+                {vendor.skills.map((skill) => (
+                    <span
+                        key={skill}
+                        className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${skill === request.projectType
+                                ? "border-[#D9C8BA] bg-[#FFFDF9] text-[#725F54]"
+                                : "border-[#E8E2D9] bg-[#FCFBF9] text-[#7B756E]"
+                            }`}
+                    >
+                        {skill}
+                    </span>
+                ))}
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-2">
+                <SmallStat label="Proyek" value={`${vendor.activeProjects}`} />
+                <SmallStat label="Cocok" value={`${matchScore}`} />
+                <SmallStat label="Respon" value={vendor.responseTime.replace("± ", "")} />
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-3 py-2">
+                <div className="flex items-center gap-2">
+                    <Star size={14} className="text-[#725F54]" />
+
+                    <span className="text-[11px] font-medium text-[#7B756E]">
+                        Respon {vendor.responseTime}
+                    </span>
+                </div>
+
+                <span className="text-[11px] font-semibold text-[#725F54]">
+                    {matchScore}/100
+                </span>
+            </div>
+
+            <button
+                type="button"
+                onClick={onSelect}
+                className={`mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl text-[12px] font-semibold transition ${selected
+                        ? "bg-[#F5FAF6] text-[#4F7A5F] ring-1 ring-[#DCEBDD]"
+                        : "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                    }`}
+            >
+                <CheckCircle2 size={14} />
+                {selected ? "Vendor Dipilih" : "Pilih Vendor"}
+            </button>
+        </article>
+    );
+}
+
+function RequestListCard({
     request,
     onClick,
 }: {
@@ -596,7 +1076,7 @@ function RequestCard({
             <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                     <p className="truncate text-[14px] font-semibold text-[#31332C]">
-                        {request.projectTitle}
+                        {request.title}
                     </p>
 
                     <p className="mt-1 truncate text-[12px] text-[#7B756E]">
@@ -611,16 +1091,57 @@ function RequestCard({
                 {request.description}
             </p>
 
-            <div className="mt-4 flex items-center justify-between gap-3">
-                <p className="min-w-0 truncate text-[11px] text-[#9A8F86]">
-                    {request.submittedAt}
-                </p>
-
-                <span className="shrink-0 rounded-full bg-[#F5F0EA] px-3 py-1 text-[11px] font-semibold text-[#725F54]">
+            <div className="mt-4 flex flex-wrap gap-2">
+                <span className="rounded-full border border-[#E8E2D9] bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-semibold text-[#725F54]">
                     {request.projectType}
+                </span>
+
+                <span className="rounded-full border border-[#E8E2D9] bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-semibold text-[#7B756E]">
+                    {request.budget}
                 </span>
             </div>
         </button>
+    );
+}
+
+function DetailSection({
+    title,
+    description,
+    children,
+    withRightBorder = true,
+}: {
+    title: string;
+    description: string;
+    children: ReactNode;
+    withRightBorder?: boolean;
+}) {
+    return (
+        <div
+            className={`min-w-0 border-b border-[#E8E2D9] p-5 sm:p-6 xl:border-b-0 ${withRightBorder ? "xl:border-r" : ""
+                }`}
+        >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                {title}
+            </p>
+
+            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                {description}
+            </p>
+
+            <div className="mt-4">{children}</div>
+        </div>
+    );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+                {label}
+            </p>
+
+            <p className="mt-1 text-[13px] leading-6 text-[#31332C]">{value}</p>
+        </div>
     );
 }
 
@@ -660,54 +1181,110 @@ function InfoTile({
     );
 }
 
-function ActionButton({
-    icon: Icon,
-    title,
-    description,
-    onClick,
+function FilterSelect({
+    label,
+    value,
+    options,
+    onChange,
 }: {
-    icon: LucideIcon;
-    title: string;
-    description: string;
-    onClick: () => void;
+    label: string;
+    value: string;
+    options: string[];
+    onChange: (value: string) => void;
 }) {
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="flex w-full min-w-0 items-start gap-3 rounded-2xl border border-[#E8E2D9] bg-white p-4 text-left transition hover:border-[#725F54] hover:bg-[#F4EEE8]"
-        >
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54] ring-1 ring-[#E8E2D9]">
-                <Icon size={16} />
-            </div>
+        <label className="grid gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#725F54]">
+                {label}
+            </span>
 
-            <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold text-[#31332C]">{title}</p>
+            <div className="relative">
+                <select
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
+                    className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-medium text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                >
+                    {options.map((option) => (
+                        <option key={option} value={option}>
+                            {option}
+                        </option>
+                    ))}
+                </select>
 
-                <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-                    {description}
-                </p>
+                <ChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7B756E]"
+                />
             </div>
-        </button>
+        </label>
+    );
+}
+
+function SmallStat({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-2.5 text-center">
+            <p className="text-[13px] font-semibold text-[#31332C]">{value}</p>
+            <p className="mt-0.5 text-[10px] font-medium text-[#7B756E]">{label}</p>
+        </div>
+    );
+}
+
+function MiniInfo({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-start justify-between gap-3 border-b border-[#E8E2D9] pb-2.5 last:border-b-0 last:pb-0">
+            <span className="text-[12px] text-[#7B756E]">{label}</span>
+            <span className="text-right text-[12px] font-semibold text-[#31332C]">
+                {value}
+            </span>
+        </div>
     );
 }
 
 function RequestStatusBadge({ status }: { status: RequestStatus }) {
-    const styles: Record<RequestStatus, string> = {
-        "Baru Masuk": "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]",
-        "Menunggu Review": "border-[#D9C8BA] bg-[#FCFBF9] text-[#725F54]",
-        "Butuh Konsultasi": "border-[#D9C8BA] bg-[#FCFBF9] text-[#725F54]",
-        Disetujui: "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]",
-        "Menunggu Vendor": "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]",
-        "Menjadi Proyek Aktif": "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]",
-        Ditolak: "border-[#E6C7BD] bg-[#FFF3EF] text-[#9A4A32]",
-    };
+    const style =
+        status === "Baru Masuk"
+            ? "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]"
+            : status === "Menunggu Review" ||
+                status === "Butuh Konsultasi" ||
+                status === "Menunggu Vendor" ||
+                status === "Menunggu Estimasi Vendor"
+                ? "border-[#D9C8BA] bg-[#FFFDF9] text-[#725F54]"
+                : status === "Estimasi Dikirim Vendor" ||
+                    status === "RAB Direview Admin" ||
+                    status === "RAB Dikirim ke Customer"
+                    ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
+                    : status === "Menjadi Proyek Aktif" || status === "Disetujui"
+                        ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
+                        : status === "Ditolak"
+                            ? "border-[#E6C7BD] bg-[#FFF3EF] text-[#9A4A32]"
+                            : "border-[#E8E2D9] bg-white text-[#7B756E]";
 
     return (
         <span
-            className={`inline-flex h-7 max-w-full shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-[10px] font-semibold sm:text-[11px] ${styles[status]}`}
+            className={`inline-flex h-7 max-w-full shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-[10px] font-semibold sm:text-[11px] ${style}`}
         >
             {status}
+        </span>
+    );
+}
+
+function VendorAvailabilityBadge({
+    availability,
+}: {
+    availability: VendorAvailability;
+}) {
+    const style =
+        availability === "Tersedia"
+            ? "border-[#DCEBDD] bg-[#F5FAF6] text-[#4F7A5F]"
+            : availability === "Sibuk"
+                ? "border-[#E8D6BE] bg-[#FFF8ED] text-[#8A5A24]"
+                : "border-[#E6C7BD] bg-[#FFF3EF] text-[#9A4A32]";
+
+    return (
+        <span
+            className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${style}`}
+        >
+            {availability}
         </span>
     );
 }
