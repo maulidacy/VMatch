@@ -1,1089 +1,326 @@
 "use client";
 
-import Image from "next/image";
-import {
-    ArrowLeft,
-    ArrowRight,
-    CalendarDays,
-    CheckCircle2,
-    ChevronLeft,
-    ChevronRight,
-    ImageIcon,
-    MapPin,
-    Package,
-    Ruler,
-    Wallet,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
+import {
+  ProjectDetailTemplate,
+  type DetailImage,
+  type DetailRelatedItem,
+  type MaterialPackage,
+} from "@/components/shared/project-detail";
 
 type CustomerPageTarget = "ajukan" | "ai-ide" | "konsultasi" | "catalog";
 
-type MaterialPackage = {
-    name: "Basic" | "Standard" | "Premium";
-    description: string;
-};
-
 type RelatedInspiration = {
-    id: string;
-    title: string;
-    style: string;
-    budgetRange: string;
-    image: string;
+  id: string;
+  title: string;
+  style: string;
+  projectValue: string;
+  image: string;
 };
 
 type VendorPortfolioProfile = {
-    vendorName: string;
-    studioName: string;
-    location: string;
-    specialty: string;
-    experience: string;
-    completedProjects: string;
-    description: string;
+  vendorName: string;
+  studioName: string;
+  location: string;
+  specialty: string;
+  experience: string;
+  completedProjects: string;
+  description: string;
 };
 
 type InspirationDetail = {
-    id: string;
-    title: string;
-    category: string;
-    packageLevel: string;
-    style: string;
-    budgetRange: string;
-    idealSize: string;
-    projectLocation: string;
-    projectTimeline: string;
-    vendorProfile: VendorPortfolioProfile;
-    spaceType: string;
-    suitableFor: string[];
-    materials: string[];
-    shortDescription: string;
-    fullDescription: string;
-    designElements: string[];
-    materialPackages: MaterialPackage[];
-    timeline: string[];
-    notes: string;
-    images: string[];
-    beforeAfter?: {
-        before: string;
-        after: string;
-    };
-    related: RelatedInspiration[];
+  id: string;
+  title: string;
+  category: string;
+  packageLevel: string;
+  style: string;
+  budgetRange: string;
+  idealSize: string;
+  projectLocation: string;
+  projectTimeline: string;
+  vendorProfile: VendorPortfolioProfile;
+  spaceType: string;
+  suitableFor: string[];
+  materials: string[];
+  shortDescription: string;
+  fullDescription: string;
+  designElements: string[];
+  materialPackages: MaterialPackage[];
+  timeline: string[];
+  notes: string;
+  images: string[];
+  beforeAfter?: {
+    before: string;
+    after: string;
+  };
+  related: RelatedInspiration[];
 };
 
 type SelectedInspirationPayload = {
-    id: string;
-    title: string;
-    category: string;
-    style: string;
-    budgetRange: string;
-    packageLevel: string;
-    materials: string[];
-    suitableFor: string[];
-    mainImage: string;
-    notes: string;
-};
-
-type DetailImage = {
-    src: string;
-    alt: string;
-};
-
-type DetailRelatedItem = {
-    id: string;
-    title: string;
-    style: string;
-    projectValue: string;
-    image: string;
+  id: string;
+  title: string;
+  category: string;
+  style: string;
+  budgetRange: string;
+  packageLevel: string;
+  materials: string[];
+  suitableFor: string[];
+  mainImage: string;
+  notes: string;
 };
 
 const STORAGE_KEY = "vmatch_selected_inspiration";
 const REQUEST_PAGE_TARGET: CustomerPageTarget = "ajukan";
 
 const inspirationDetail: InspirationDetail = {
-    id: "kitchen-set-modern-1",
-    title: "Kitchen Set Modern Minimalis",
-    category: "Kitchen Set",
-    packageLevel: "Standard / Premium",
-    style: "Modern minimalis",
-    budgetRange: "Rp43.500.000",
-    idealSize: "2.5m x 2m",
-    projectLocation: "Semarang",
-    projectTimeline: "05 Mei 2024 - 08 Agustus 2024 (3 bulan)",
-    vendorProfile: {
-        vendorName: "Kayu Rapi Interior",
-        studioName: "Vendor Partner VMatch",
-        location: "Semarang",
-        specialty: "Kitchen set, storage, dan custom cabinet",
-        experience: "5 tahun pengalaman",
-        completedProjects: "38 proyek selesai",
-        description: "Vendor Partner VMatch",
+  id: "kitchen-set-modern-1",
+  title: "Kitchen Set Modern Minimalis",
+  category: "Kitchen Set",
+  packageLevel: "Standard / Premium",
+  style: "Modern minimalis",
+  budgetRange: "Rp43.500.000",
+  idealSize: "2.5m x 2m",
+  projectLocation: "Semarang",
+  projectTimeline: "05 Mei 2024 - 08 Agustus 2024 (3 bulan)",
+  vendorProfile: {
+    vendorName: "Kayu Rapi Interior",
+    studioName: "Vendor Partner VMatch",
+    location: "Semarang",
+    specialty: "Kitchen set, storage, dan custom cabinet",
+    experience: "5 tahun pengalaman",
+    completedProjects: "38 proyek selesai",
+    description: "Vendor Partner VMatch",
+  },
+  spaceType: "Rumah / Apartemen",
+  suitableFor: ["Dapur rumah", "Apartemen", "Ruang dapur compact"],
+  materials: ["HPL", "Multiplek", "Solid surface"],
+  shortDescription:
+    "Referensi desain dari portofolio vendor partner VMatch dengan konsep dapur modern, fungsional, bersih, dan elegan.",
+  fullDescription:
+    "Kitchen set ini merupakan referensi portofolio dari vendor partner VMatch. Konsepnya mengutamakan tampilan modern minimalis dengan warna netral dan aksen kayu hangat. Referensi ini cocok untuk kebutuhan dapur yang bersih, fungsional, mudah dirawat, dan tetap terlihat elegan.",
+  designElements: [
+    "Kabinet atas dan bawah",
+    "Area penyimpanan tertutup",
+    "Top table solid surface",
+    "Backsplash motif marble",
+    "Warna netral dan aksen kayu",
+    "Layout dapur efisien",
+  ],
+  materialPackages: [
+    {
+      name: "Basic",
+      description:
+        "Pilihan ekonomis menggunakan MDF Board dan finishing melamine untuk kebutuhan interior sederhana.",
     },
-    spaceType: "Rumah / Apartemen",
-    suitableFor: ["Dapur rumah", "Apartemen", "Ruang dapur compact"],
-    materials: ["HPL", "Multiplek", "Solid surface"],
-    shortDescription:
-        "Referensi desain dari portofolio vendor partner VMatch dengan konsep dapur modern, fungsional, bersih, dan elegan.",
-    fullDescription:
-        "Kitchen set ini merupakan referensi portofolio dari vendor partner VMatch. Konsepnya mengutamakan tampilan modern minimalis dengan warna netral dan aksen kayu hangat. Referensi ini cocok untuk kebutuhan dapur yang bersih, fungsional, mudah dirawat, dan tetap terlihat elegan.",
-    designElements: [
-        "Kabinet atas dan bawah",
-        "Area penyimpanan tertutup",
-        "Top table solid surface",
-        "Backsplash motif marble",
-        "Warna netral dan aksen kayu",
-        "Layout dapur efisien",
-    ],
-    materialPackages: [
-        {
-            name: "Basic",
-            description:
-                "Pilihan ekonomis menggunakan MDF Board dan finishing melamine untuk kebutuhan interior sederhana.",
-        },
-        {
-            name: "Standard",
-            description:
-                "Pilihan seimbang menggunakan multiplek 15mm dan finishing HPL dengan tampilan yang rapi dan tahan pakai.",
-        },
-        {
-            name: "Premium",
-            description:
-                "Pilihan terbaik menggunakan multiplek 18mm, finishing premium, dan hardware soft close untuk hasil yang lebih elegan dan tahan lama.",
-        },
-    ],
-    timeline: [
-        "Konsultasi & validasi kebutuhan",
-        "Survey ukuran",
-        "Finalisasi desain dan RAB",
-        "Produksi",
-        "Instalasi",
-        "QC dan handover",
-    ],
-    notes:
-        "Inspirasi ini digunakan sebagai referensi awal. Tim VMatch akan membantu menyesuaikan solusi berdasarkan ukuran ruang, kebutuhan penyimpanan, budget, material, dan kondisi ruangan customer.",
-    images: [
-        "/figma/benefits-kitchen.webp",
-        "/figma/project-library.webp",
-        "/figma/benefits-storage.webp",
-        "/figma/benefits-living.webp",
-        "/figma/benefits-wardrobe.webp",
-        "/figma/benefits-bedroom.webp",
-    ],
-    beforeAfter: {
-        before: "/figma/project-library.webp",
-        after: "/figma/benefits-kitchen.webp",
+    {
+      name: "Standard",
+      description:
+        "Pilihan seimbang menggunakan multiplek 15mm dan finishing HPL dengan tampilan yang rapi dan tahan pakai.",
     },
-    related: [
-        {
-            id: "storage-rak-modern",
-            title: "Storage Compact Modern",
-            style: "Modern minimalis",
-            budgetRange: "Rp15–35 juta",
-            image: "/figma/benefits-storage.webp",
-        },
-        {
-            id: "wardrobe-warm-modern",
-            title: "Wardrobe Warm Modern",
-            style: "Warm modern",
-            budgetRange: "Rp18–60 juta",
-            image: "/figma/benefits-wardrobe.webp",
-        },
-        {
-            id: "living-room-japandi",
-            title: "Ruang Tamu Japandi",
-            style: "Japandi",
-            budgetRange: "Rp20–80 juta",
-            image: "/figma/benefits-living.webp",
-        },
-    ],
+    {
+      name: "Premium",
+      description:
+        "Pilihan terbaik menggunakan multiplek 18mm, finishing premium, dan hardware soft close untuk hasil yang lebih elegan dan tahan lama.",
+    },
+  ],
+  timeline: [
+    "Konsultasi & validasi kebutuhan",
+    "Survey ukuran",
+    "Finalisasi desain dan RAB",
+    "Produksi",
+    "Instalasi",
+    "QC dan handover",
+  ],
+  notes:
+    "Inspirasi ini digunakan sebagai referensi awal. Tim VMatch akan membantu menyesuaikan solusi berdasarkan ukuran ruang, kebutuhan penyimpanan, budget, material, dan kondisi ruangan customer.",
+  images: [
+    "/figma/benefits-kitchen.webp",
+    "/figma/project-library.webp",
+    "/figma/benefits-storage.webp",
+    "/figma/benefits-living.webp",
+    "/figma/benefits-wardrobe.webp",
+    "/figma/benefits-bedroom.webp",
+  ],
+  beforeAfter: {
+    before: "/figma/project-library.webp",
+    after: "/figma/benefits-kitchen.webp",
+  },
+  related: [
+    {
+      id: "storage-rak-modern",
+      title: "Storage Compact Modern",
+      style: "Modern minimalis",
+      projectValue: "Rp28.500.000",
+      image: "/figma/benefits-storage.webp",
+    },
+    {
+      id: "wardrobe-warm-modern",
+      title: "Wardrobe Warm Modern",
+      style: "Warm modern",
+      projectValue: "Rp38.000.000",
+      image: "/figma/benefits-wardrobe.webp",
+    },
+    {
+      id: "living-room-japandi",
+      title: "Ruang Tamu Japandi",
+      style: "Japandi",
+      projectValue: "Rp55.000.000",
+      image: "/figma/benefits-living.webp",
+    },
+  ],
 };
 
 export default function InspirationDetailPage() {
-    return <InspirationDetailView />;
+  return <InspirationDetailView />;
 }
 
 export function InspirationDetailView({
-    inspiration = inspirationDetail,
-    onBack,
-    onChangePage,
-    onOpenRelated,
+  inspiration = inspirationDetail,
+  onBack,
+  onChangePage,
+  onOpenRelated,
 }: {
-    inspiration?: InspirationDetail;
-    onBack?: () => void;
-    onChangePage?: (page: CustomerPageTarget) => void;
-    onOpenRelated?: (id: string) => void;
+  inspiration?: InspirationDetail;
+  onBack?: () => void;
+  onChangePage?: (page: CustomerPageTarget) => void;
+  onOpenRelated?: (id: string) => void;
 }) {
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
-    const [isSaved, setIsSaved] = useState(false);
-
-    const images =
-        inspiration.images.length > 0
-            ? inspiration.images.map((image, index) => ({
-                src: image,
-                alt: `${inspiration.title} ${index + 1}`,
-            }))
-            : [
-                {
-                    src: "",
-                    alt: inspiration.title,
-                },
-            ];
-
-    const activeImage = images[activeImageIndex]?.src ?? images[0]?.src ?? "";
-
-    const selectedPayload = useMemo<SelectedInspirationPayload>(
-        () => ({
-            id: inspiration.id,
-            title: inspiration.title,
-            category: inspiration.category,
-            style: inspiration.style,
-            budgetRange: inspiration.budgetRange,
-            packageLevel: inspiration.packageLevel,
-            materials: inspiration.materials,
-            suitableFor: inspiration.suitableFor,
-            mainImage: activeImage,
-            notes: inspiration.notes,
-        }),
-        [activeImage, inspiration],
-    );
-
-    const saveSelectedInspiration = () => {
-        if (typeof window === "undefined") return;
-
-        window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(selectedPayload));
-        setIsSaved(true);
-    };
-
-    const goToRequest = () => {
-        saveSelectedInspiration();
-
-        if (onChangePage) {
-            onChangePage(REQUEST_PAGE_TARGET);
-            return;
-        }
-
-        if (typeof window !== "undefined") {
-            window.location.href = "/dashboard/user";
-        }
-    };
-
-    const goToConsultation = () => {
-        saveSelectedInspiration();
-
-        if (onChangePage) {
-            onChangePage("konsultasi");
-            return;
-        }
-
-        if (typeof window !== "undefined") {
-            window.location.href = "/dashboard/user";
-        }
-    };
-
-    const handleBack = () => {
-        if (onBack) {
-            onBack();
-            return;
-        }
-
-        if (onChangePage) {
-            onChangePage("catalog");
-            return;
-        }
-
-        if (typeof window !== "undefined") {
-            window.history.back();
-        }
-    };
-
-    return (
-        <ProjectDetailTemplate
-            title={inspiration.title}
-            category={inspiration.category}
-            packageLevel={inspiration.packageLevel}
-            style={inspiration.style}
-            projectValue={inspiration.budgetRange}
-            roomSize={inspiration.idealSize}
-            projectLocation={inspiration.projectLocation}
-            projectTimeline={inspiration.projectTimeline}
-            vendorName={inspiration.vendorProfile.vendorName}
-            vendorStudio={inspiration.vendorProfile.studioName}
-            propertyType={inspiration.spaceType}
-            materials={inspiration.materials}
-            shortDescription={inspiration.shortDescription}
-            fullDescription={inspiration.fullDescription}
-            designElements={inspiration.designElements}
-            materialPackages={inspiration.materialPackages}
-            images={images}
-            activeImageIndex={activeImageIndex}
-            onSelectImage={setActiveImageIndex}
-            beforeAfter={
-                inspiration.beforeAfter
-                    ? {
-                        before: {
-                            src: inspiration.beforeAfter.before,
-                            alt: `Sebelum ${inspiration.title}`,
-                        },
-                        after: {
-                            src: inspiration.beforeAfter.after,
-                            alt: `Sesudah ${inspiration.title}`,
-                        },
-                    }
-                    : undefined
-            }
-            related={inspiration.related.map((item) => ({
-                id: item.id,
-                title: item.title,
-                style: item.style,
-                projectValue: item.budgetRange,
-                image: item.image,
-            }))}
-            isSaved={isSaved}
-            backLabel="Kembali ke Inspirasi Desain"
-            breadcrumbLabel="Inspirasi Desain"
-            detailLabel="Detail Inspirasi"
-            primaryCtaLabel="Gunakan sebagai Preferensi"
-            secondaryCtaLabel="Konsultasi"
-            onBack={handleBack}
-            onPrimaryAction={goToRequest}
-            onSecondaryAction={goToConsultation}
-            onSave={saveSelectedInspiration}
-            onOpenRelated={onOpenRelated}
-        />
-    );
-}
-
-function ProjectDetailTemplate({
-    title,
-    category,
-    packageLevel,
-    style,
-    projectValue,
-    roomSize,
-    projectLocation,
-    projectTimeline,
-    vendorName,
-    vendorStudio,
-    propertyType,
-    materials,
-    shortDescription,
-    fullDescription,
-    designElements,
-    materialPackages,
-    images,
-    activeImageIndex,
-    onSelectImage,
-    beforeAfter,
-    related,
-    isSaved,
-    backLabel,
-    breadcrumbLabel,
-    detailLabel,
-    primaryCtaLabel,
-    secondaryCtaLabel,
-    onBack,
-    onPrimaryAction,
-    onSecondaryAction,
-    onSave,
-    onOpenRelated,
-}: {
-    title: string;
-    category: string;
-    packageLevel: string;
-    style: string;
-    projectValue: string;
-    roomSize: string;
-    projectLocation: string;
-    projectTimeline: string;
-    vendorName: string;
-    vendorStudio: string;
-    propertyType: string;
-    materials: string[];
-    shortDescription: string;
-    fullDescription: string;
-    designElements: string[];
-    materialPackages: MaterialPackage[];
-    images: DetailImage[];
-    activeImageIndex: number;
-    onSelectImage: (index: number) => void;
-    beforeAfter?: {
-        before: DetailImage;
-        after: DetailImage;
-    };
-    related: DetailRelatedItem[];
-    isSaved: boolean;
-    backLabel: string;
-    breadcrumbLabel: string;
-    detailLabel: string;
-    primaryCtaLabel: string;
-    secondaryCtaLabel: string;
-    onBack: () => void;
-    onPrimaryAction: () => void;
-    onSecondaryAction: () => void;
-    onSave: () => void;
-    onOpenRelated?: (id: string) => void;
-}) {
-    const activeImage = images[activeImageIndex] ?? images[0];
-
-    const goToPreviousImage = () => {
-        onSelectImage(activeImageIndex === 0 ? images.length - 1 : activeImageIndex - 1);
-    };
-
-    const goToNextImage = () => {
-        onSelectImage(activeImageIndex === images.length - 1 ? 0 : activeImageIndex + 1);
-    };
-
-    return (
-        <div className="w-full space-y-6 text-[#31332C]">
-            <button
-                type="button"
-                onClick={onBack}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#F8F6F2]"
-            >
-                <ArrowLeft size={15} />
-                {backLabel}
-            </button>
-
-            <section className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_380px]">
-                <ProjectImageGallery
-                    title={title}
-                    images={images}
-                    activeImage={activeImage}
-                    activeIndex={activeImageIndex}
-                    onPrevious={goToPreviousImage}
-                    onNext={goToNextImage}
-                    onSelect={onSelectImage}
-                />
-
-                <ProjectSummaryCard
-                    title={title}
-                    category={category}
-                    style={style}
-                    materials={materials}
-                    isSaved={isSaved}
-                    primaryCtaLabel={primaryCtaLabel}
-                    secondaryCtaLabel={secondaryCtaLabel}
-                    onPrimaryAction={onPrimaryAction}
-                    onSecondaryAction={onSecondaryAction}
-                    onSave={onSave}
-                />
-            </section>
-
-            <section className="space-y-4">
-                <div className="max-w-[920px]">
-                    <p className="text-[12px] leading-5 text-[#7B756E]">
-                        {breadcrumbLabel} / {category}
-                    </p>
-
-                    <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#725F54]">
-                        {detailLabel}
-                    </p>
-
-                    <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[46px]">
-                        {title}
-                    </h1>
-
-                    <p className="mt-3 max-w-[760px] text-[13px] leading-7 text-[#7B756E] sm:text-[14px]">
-                        {shortDescription}
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        <Badge label={category} />
-                        <Badge label={packageLevel} />
-                        <Badge label={style} />
-                    </div>
-                </div>
-            </section>
-
-            <ProjectInfoGrid
-                projectLocation={projectLocation}
-                roomSize={roomSize}
-                projectTimeline={projectTimeline}
-                projectValue={projectValue}
-                packageLevel={packageLevel}
-            />
-
-            <VendorPortfolioSection vendorName={vendorName} vendorStudio={vendorStudio} />
-
-            <section className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-                <SectionCard title="Deskripsi Inspirasi">
-                    <p className="text-[13px] leading-7 text-[#6F6860] sm:text-[14px]">
-                        {fullDescription}
-                    </p>
-                </SectionCard>
-
-                <SectionCard title="Elemen Desain">
-                    <div className="grid gap-2.5">
-                        {designElements.map((item) => (
-                            <div
-                                key={item}
-                                className="flex items-start gap-3 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-4 py-3"
-                            >
-                                <CheckCircle2
-                                    size={16}
-                                    className="mt-0.5 shrink-0 text-[#725F54]"
-                                />
-
-                                <p className="text-[13px] leading-5 text-[#31332C]">{item}</p>
-                            </div>
-                        ))}
-                    </div>
-                </SectionCard>
-            </section>
-
-            <MaterialPackageSection packages={materialPackages} propertyType={propertyType} />
-
-            <GalleryGridSection
-                title={title}
-                images={images}
-                activeIndex={activeImageIndex}
-                onSelect={onSelectImage}
-            />
-
-            {beforeAfter && (
-                <BeforeAfterSection
-                    title={title}
-                    before={beforeAfter.before}
-                    after={beforeAfter.after}
-                />
-            )}
-
-            {related.length > 0 && (
-                <section className="space-y-4">
-                    <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                            Inspirasi Serupa
-                        </p>
-
-                        <h2 className="mt-2 font-serif text-[28px] leading-tight text-[#31332C] sm:text-[34px]">
-                            Referensi lain yang mungkin cocok
-                        </h2>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-3">
-                        {related.map((item) => (
-                            <RelatedInspirationCard
-                                key={item.id}
-                                item={item}
-                                onClick={() => onOpenRelated?.(item.id)}
-                            />
-                        ))}
-                    </div>
-                </section>
-            )}
-        </div>
-    );
-}
-
-function ProjectImageGallery({
-    images,
-    activeImage,
-    activeIndex,
-    onPrevious,
-    onNext,
-    onSelect,
-}: {
-    title: string;
-    images: DetailImage[];
-    activeImage: DetailImage;
-    activeIndex: number;
-    onPrevious: () => void;
-    onNext: () => void;
-    onSelect: (index: number) => void;
-}) {
-    return (
-        <section className="overflow-hidden rounded-1xl bg-white shadow-[0_12px_34px_rgba(49,51,44,0.035)]">
-            <div className="relative h-[280px] bg-[#EFE8DF] sm:h-[360px] lg:h-[500px]">
-                <ImageWithFallback
-                    src={activeImage.src}
-                    alt={activeImage.alt}
-                    className="object-cover"
-                    sizes="(max-width: 1280px) 100vw, 70vw"
-                    priority
-                />
-
-                {images.length > 1 && (
-                    <>
-                        <button
-                            type="button"
-                            onClick={onPrevious}
-                            className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#725F54] shadow-sm transition hover:bg-white"
-                            aria-label="Gambar sebelumnya"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={onNext}
-                            className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#725F54] shadow-sm transition hover:bg-white"
-                            aria-label="Gambar berikutnya"
-                        >
-                            <ChevronRight size={18} />
-                        </button>
-                    </>
-                )}
-            </div>
-
-            <div className="bg-[#FCFBF9] p-3 sm:p-4">
-                <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {images.map((image, index) => {
-                        const active = index === activeIndex;
-
-                        return (
-                            <button
-                                key={`${image.src}-${index}`}
-                                type="button"
-                                onClick={() => onSelect(index)}
-                                className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-1xl transition sm:h-20 sm:w-28 ${active
-                                    ? "ring-2 ring-[#725F54]/25"
-                                    : "opacity-80 hover:opacity-100"
-                                    }`}
-                                aria-label={`Pilih gambar ${index + 1}`}
-                            >
-                                <ImageWithFallback
-                                    src={image.src}
-                                    alt={image.alt}
-                                    className="object-cover"
-                                    sizes="120px"
-                                />
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function ProjectSummaryCard({
-    title,
-    category,
-    style,
-    materials,
-    isSaved,
-    primaryCtaLabel,
-    secondaryCtaLabel,
-    onPrimaryAction,
-    onSecondaryAction,
-    onSave,
-}: {
-    title: string;
-    category: string;
-    style: string;
-    materials: string[];
-    isSaved: boolean;
-    primaryCtaLabel: string;
-    secondaryCtaLabel: string;
-    onPrimaryAction: () => void;
-    onSecondaryAction: () => void;
-    onSave: () => void;
-}) {
-    return (
-        <aside className="h-fit rounded-1xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6 xl:sticky xl:top-8">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                Ringkasan Inspirasi
-            </p>
-
-            <div className="mt-4 space-y-3">
-                <SummaryRow label="Nama" value={title} />
-                <SummaryRow label="Style" value={style} />
-                <SummaryRow label="Kategori" value={category} />
-                <SummaryRow label="Material" value={materials.join(", ")} />
-            </div>
-
-            <div className="mt-5 grid gap-2">
-                <button
-                    type="button"
-                    onClick={onPrimaryAction}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
-                >
-                    {primaryCtaLabel}
-                    <ArrowRight size={15} />
-                </button>
-
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        type="button"
-                        onClick={onSave}
-                        className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
-                    >
-                        {isSaved ? "Tersimpan" : "Simpan"}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={onSecondaryAction}
-                        className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
-                    >
-                        {secondaryCtaLabel}
-                    </button>
-                </div>
-            </div>
-        </aside>
-    );
-}
-
-function ProjectInfoGrid({
-    projectLocation,
-    roomSize,
-    projectTimeline,
-    projectValue,
-    packageLevel,
-}: {
-    projectLocation: string;
-    roomSize: string;
-    projectTimeline: string;
-    projectValue: string;
-    packageLevel: string;
-}) {
-    return (
-        <section className="border-y border-[#E8E2D9] py-5">
-            <div className="grid gap-y-5 sm:grid-cols-2 lg:grid-cols-5">
-                <InlineInfoItem
-                    icon={MapPin}
-                    label="Lokasi Proyek"
-                    value={projectLocation}
-                />
-
-                <InlineInfoItem
-                    icon={Ruler}
-                    label="Ukuran Ruang"
-                    value={roomSize}
-                />
-
-                <InlineInfoItem
-                    icon={CalendarDays}
-                    label="Timeline Proyek"
-                    value={projectTimeline}
-                />
-
-                <InlineInfoItem
-                    icon={Wallet}
-                    label="Nilai Proyek"
-                    value={projectValue}
-                />
-
-                <InlineInfoItem
-                    icon={Package}
-                    label="Paket Material"
-                    value={packageLevel}
-                />
-            </div>
-        </section>
-    );
-}
-
-function InlineInfoItem({
-    icon: Icon,
-    label,
-    value,
-}: {
-    icon: LucideIcon;
-    label: string;
-    value: string;
-}) {
-    return (
-        <div className="flex items-start gap-3 px-0 sm:px-4 sm:first:pl-0 lg:border-l lg:border-[#E8E2D9] lg:first:border-l-0">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F7F3EE] text-[#725F54]">
-                <Icon size={16} />
-            </div>
-
-            <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8C8178]">
-                    {label}
-                </p>
-                <p className="mt-1 text-[14px] font-semibold leading-snug text-[#31332C]">
-                    {value}
-                </p>
-            </div>
-        </div>
-    );
-}
-
-function VendorPortfolioSection({
-    vendorName,
-    vendorStudio,
-}: {
-    vendorName: string;
-    vendorStudio: string;
-}) {
-    const initials = vendorName
-        .split(" ")
-        .slice(0, 2)
-        .map((word) => word[0])
-        .join("");
-
-    return (
-        <section className="rounded-1xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
-            <div className="flex items-center gap-4">
-                <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border border-[#E4D8CD] bg-[#FCFBF9] text-[18px] font-semibold text-[#725F54]">
-                    {initials}
-                </div>
-
-                <div className="min-w-0">
-                    <p className="truncate text-[20px] font-semibold text-[#31332C]">
-                        {vendorName}
-                    </p>
-
-                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-                        {vendorStudio}
-                    </p>
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function MaterialPackageSection({
-    packages,
-}: {
-    packages: MaterialPackage[];
-    propertyType: string;
-}) {
-    return (
-        <section className="space-y-4">
-            <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                    Referensi Material
-                </p>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-3">
-                {packages.map((item) => (
-                    <div
-                        key={item.name}
-                        className={`rounded-1xl p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition ${item.name === "Standard"
-                            ? "bg-[#725F54] text-white"
-                            : "bg-white text-[#31332C] hover:bg-[#FCFBF9]"
-                            }`}
-                    >
-                        <p
-                            className={`font-serif text-[26px] leading-tight ${item.name === "Standard" ? "text-white" : "text-[#31332C]"
-                                }`}
-                        >
-                            {item.name}
-                        </p>
-
-                        <p
-                            className={`mt-2 text-[12px] leading-6 ${item.name === "Standard" ? "text-white/78" : "text-[#7B756E]"
-                                }`}
-                        >
-                            {item.description}
-                        </p>
-                    </div>
-                ))}
-            </div>
-        </section>
-    );
-}
-
-function GalleryGridSection({
-    title,
-    images,
-    activeIndex,
-    onSelect,
-}: {
-    title: string;
-    images: DetailImage[];
-    activeIndex: number;
-    onSelect: (index: number) => void;
-}) {
-    return (
-        <section className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                Gallery Desain
-            </p>
-
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                {images.map((image, index) => (
-                    <button
-                        key={`${image.src}-grid-${index}`}
-                        type="button"
-                        onClick={() => onSelect(index)}
-                        className={`relative aspect-[4/3] overflow-hidden rounded-1xl transition ${activeIndex === index
-                            ? "ring-2 ring-[#725F54]/25"
-                            : "opacity-95 hover:opacity-100"
-                            }`}
-                    >
-                        <ImageWithFallback
-                            src={image.src}
-                            alt={`${title} gallery ${index + 1}`}
-                            className="object-cover"
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                        />
-                    </button>
-                ))}
-            </div>
-        </section>
-    );
-}
-
-function BeforeAfterSection({
-    title,
-    before,
-    after,
-}: {
-    title: string;
-    before: DetailImage;
-    after: DetailImage;
-}) {
-    return (
-        <section className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                Sebelum dan Sesudah
-            </p>
-
-            <div className="grid gap-3 md:grid-cols-2">
-                <BeforeAfterImage label="Sebelum" title={title} image={before} />
-                <BeforeAfterImage label="Sesudah" title={title} image={after} />
-            </div>
-        </section>
-    );
-}
-
-function BeforeAfterImage({
-    label,
-    title,
-    image,
-}: {
-    label: string;
-    title: string;
-    image: DetailImage;
-}) {
-    return (
-        <div className="relative h-[240px] overflow-hidden rounded-1xl bg-[#EFE8DF] shadow-[0_8px_24px_rgba(49,51,44,0.025)] sm:h-[300px]">
-            <ImageWithFallback
-                src={image.src}
-                alt={`${label} ${title}`}
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
-            />
-
-            <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-[#725F54] shadow-sm">
-                {label}
-            </div>
-        </div>
-    );
-}
-
-function RelatedInspirationCard({
-    item,
-    onClick,
-}: {
-    item: DetailRelatedItem;
-    onClick: () => void;
-}) {
-    return (
-        <article className="overflow-hidden rounded-xl border border-[#E8E2D9] bg-white shadow-[0_8px_24px_rgba(49,51,44,0.025)]">
-            <div className="relative aspect-[4/3] bg-[#EFE8DF]">
-                <ImageWithFallback
-                    src={item.image}
-                    alt={item.title}
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                />
-            </div>
-
-            <div className="p-4">
-                <h3 className="truncate text-[14px] font-semibold text-[#31332C]">
-                    {item.title}
-                </h3>
-
-                <p className="mt-1 text-[12px] text-[#7B756E]">{item.style}</p>
-
-                <p className="mt-2 text-[12px] font-semibold text-[#725F54]">
-                    Nilai referensi {item.projectValue}
-                </p>
-
-                <button
-                    type="button"
-                    onClick={onClick}
-                    className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
-                >
-                    Lihat Detail
-                    <ChevronRight size={14} />
-                </button>
-            </div>
-        </article>
-    );
-}
-
-function SectionCard({
-    title,
-    children,
-}: {
-    title: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <section className="rounded-1xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                {title}
-            </p>
-
-            <div className="mt-4">{children}</div>
-        </section>
-    );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="flex items-start justify-between gap-4 border-b border-[#E8E2D9] pb-3 last:border-b-0 last:pb-0">
-            <span className="text-[12px] text-[#7B756E]">{label}</span>
-
-            <span className="max-w-[210px] text-right text-[12px] font-semibold leading-5 text-[#31332C]">
-                {value}
-            </span>
-        </div>
-    );
-}
-
-function Badge({ label }: { label: string }) {
-    return (
-        <span className="inline-flex h-8 items-center rounded-full border border-[#E4D8CD] bg-white px-3 text-[11px] font-semibold text-[#725F54] shadow-sm">
-            {label}
-        </span>
-    );
-}
-
-function ImageWithFallback({
-    src,
-    alt,
-    className,
-    sizes,
-    priority,
-}: {
-    src: string;
-    alt: string;
-    className?: string;
-    sizes: string;
-    priority?: boolean;
-}) {
-    const [hasError, setHasError] = useState(!src);
-
-    return (
-        <>
-            {hasError ? (
-                <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#EFE8DF] px-4 text-center text-[#725F54]">
-                    <ImageIcon size={28} />
-
-                    <p className="text-[12px] font-semibold">Referensi visual</p>
-
-                    <p className="text-[11px] text-[#7B756E]">
-                        Gambar belum tersedia
-                    </p>
-                </div>
-            ) : (
-                <Image
-                    src={src}
-                    alt={alt}
-                    fill
-                    priority={priority}
-                    sizes={sizes}
-                    onError={() => setHasError(true)}
-                    className={className}
-                />
-            )}
-        </>
-    );
+  const [activeImageIndex] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
+
+  const images: DetailImage[] =
+    inspiration.images.length > 0
+      ? inspiration.images.map((image, index) => ({
+          src: image,
+          alt: `${inspiration.title} ${index + 1}`,
+        }))
+      : [
+          {
+            src: "",
+            alt: inspiration.title,
+          },
+        ];
+
+  const activeImage = images[activeImageIndex]?.src ?? images[0]?.src ?? "";
+
+  const selectedPayload = useMemo<SelectedInspirationPayload>(
+    () => ({
+      id: inspiration.id,
+      title: inspiration.title,
+      category: inspiration.category,
+      style: inspiration.style,
+      budgetRange: inspiration.budgetRange,
+      packageLevel: inspiration.packageLevel,
+      materials: inspiration.materials,
+      suitableFor: inspiration.suitableFor,
+      mainImage: String(activeImage),
+      notes: inspiration.notes,
+    }),
+    [activeImage, inspiration],
+  );
+
+  const saveSelectedInspiration = () => {
+    if (typeof window === "undefined") return;
+
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(selectedPayload));
+    setIsSaved(true);
+  };
+
+  const goToRequest = () => {
+    saveSelectedInspiration();
+
+    if (onChangePage) {
+      onChangePage(REQUEST_PAGE_TARGET);
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      window.location.href = "/dashboard/user";
+    }
+  };
+
+  const goToConsultation = () => {
+    saveSelectedInspiration();
+
+    if (onChangePage) {
+      onChangePage("konsultasi");
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      window.location.href = "/dashboard/user";
+    }
+  };
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    if (onChangePage) {
+      onChangePage("catalog");
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      window.history.back();
+    }
+  };
+
+  const beforeAfter = inspiration.beforeAfter
+    ? {
+        before: {
+          src: inspiration.beforeAfter.before,
+          alt: `Sebelum ${inspiration.title}`,
+        },
+        after: {
+          src: inspiration.beforeAfter.after,
+          alt: `Sesudah ${inspiration.title}`,
+        },
+      }
+    : undefined;
+
+  const related: DetailRelatedItem[] = inspiration.related.map((item) => ({
+    id: item.id,
+    title: item.title,
+    style: item.style,
+    projectValue: item.projectValue,
+    image: item.image,
+  }));
+
+  return (
+    <ProjectDetailTemplate
+      title={inspiration.title}
+      category={inspiration.category}
+      packageLevel={inspiration.packageLevel}
+      style={inspiration.style}
+      projectValue={inspiration.budgetRange}
+      roomSize={inspiration.idealSize}
+      projectLocation={inspiration.projectLocation}
+      projectTimeline={inspiration.projectTimeline}
+      vendorName={inspiration.vendorProfile.vendorName}
+      vendorStudio={inspiration.vendorProfile.studioName}
+      propertyType={inspiration.spaceType}
+      materials={inspiration.materials}
+      shortDescription={inspiration.shortDescription}
+      fullDescription={inspiration.fullDescription}
+      designElements={inspiration.designElements}
+      materialPackages={inspiration.materialPackages}
+      images={images}
+      beforeAfter={beforeAfter}
+      related={related}
+      isSaved={isSaved}
+      backLabel="Kembali ke Inspirasi Desain"
+      breadcrumbLabel="Inspirasi Desain"
+      detailLabel="Detail Inspirasi"
+      primaryCtaLabel="Gunakan sebagai Preferensi"
+      secondaryCtaLabel="Konsultasi"
+      onBack={handleBack}
+      onPrimaryAction={goToRequest}
+      onSecondaryAction={goToConsultation}
+      onSave={saveSelectedInspiration}
+      onOpenRelated={onOpenRelated}
+    />
+  );
 }
