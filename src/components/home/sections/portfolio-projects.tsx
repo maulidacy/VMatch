@@ -2,7 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, Search } from "lucide-react";
+import {
+  ChevronDown,
+  Home,
+  Layers,
+  Search,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import {
   memo,
   useDeferredValue,
@@ -21,19 +28,89 @@ function createSlug(text: string) {
     .replace(/-+/g, "-");
 }
 
-const categories = ["Semua Kategori", "Bedroom", "Kitchen", "Living Room"];
-const properties = ["Semua Properti", "Rumah", "Apartemen", "Villa"];
+const properties = [
+  "Semua Properti",
+  "Rumah Tinggal",
+  "Apartemen",
+  "Kos & Kontrakan",
+  "Villa",
+  "Hotel",
+  "Kantor",
+  "Cafe & Resto",
+  "Retail & Toko",
+  "Commercial Space",
+];
+
+const locations = [
+  "Semua Lokasi",
+  "Jabodetabek",
+  "Jawa Barat",
+  "Jawa Tengah & DIY",
+  "Jawa Timur",
+  "Bali",
+  "Sumatera",
+  "Kalimantan",
+  "Sulawesi",
+];
+
+const styles = [
+  "Semua Gaya",
+  "Modern Minimalis",
+  "Modern Kontemporer",
+  "Japandi",
+  "Scandinavian",
+  "Industrial",
+  "Luxury Modern",
+  "Klasik Modern",
+  "Tropical Modern",
+];
+
+const projectValues = [
+  "Rp43.500.000",
+  "Rp38.000.000",
+  "Rp55.000.000",
+  "Rp24.500.000",
+  "Rp41.000.000",
+  "Rp22.500.000",
+  "Rp67.000.000",
+  "Rp31.500.000",
+];
+
+const materials = [
+  "HPL, plywood, solid surface",
+  "HPL, MDF, kaca, cermin",
+  "Panel dinding, rak TV, lighting",
+  "HPL, plywood, MDF",
+  "Panel dinding, lighting",
+  "Plywood, HPL, panel dinding",
+  "Duco, veneer, soft close hardware",
+  "Multiplek, HPL premium, LED strip",
+];
+
+type PortfolioMeta = {
+  style: string;
+  propertyType: string;
+  locationArea: string;
+  projectValue: string;
+  material: string;
+};
+
+type PortfolioItem = (typeof portfolioProjects)[number] & {
+  meta: PortfolioMeta;
+};
 
 type FilterState = {
   search: string;
-  category: string;
   property: string;
+  location: string;
+  style: string;
 };
 
 let filterState: FilterState = {
   search: "",
-  category: "Semua Kategori",
   property: "Semua Properti",
+  location: "Semua Lokasi",
+  style: "Semua Gaya",
 };
 
 const filterListeners = new Set<() => void>();
@@ -60,6 +137,25 @@ function useFilterStore() {
   );
 }
 
+function getMeta(index: number): PortfolioMeta {
+  return {
+    style: styles[((index + 1) % (styles.length - 1)) + 1],
+    propertyType: properties[((index + 1) % (properties.length - 1)) + 1],
+    locationArea: locations[((index + 1) % (locations.length - 1)) + 1],
+    projectValue: projectValues[index % projectValues.length],
+    material: materials[index % materials.length],
+  };
+}
+
+function cleanLocation(location: string) {
+  return location.replace(/\s*-\s*\d{4}\s*$/, "");
+}
+
+const enrichedProjects: PortfolioItem[] = portfolioProjects.map((project, index) => ({
+  ...project,
+  meta: getMeta(index),
+}));
+
 export function PortfolioProjects() {
   return (
     <section className="bg-white px-4 py-12 sm:px-6 md:py-16">
@@ -79,8 +175,8 @@ const FilterControls = memo(function FilterControls() {
   const [localSearch, setLocalSearch] = useState(filter.search);
 
   return (
-    <div className="grid grid-cols-3 gap-3 sm:gap-4 lg:grid-cols-[1.5fr_0.55fr_0.55fr_auto] lg:items-end">
-      <div className="col-span-3 lg:col-span-1">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1.45fr_0.62fr_0.62fr_0.62fr_auto] lg:items-end">
+      <div className="col-span-2 lg:col-span-1">
         <label className="mb-3 block text-[10px] uppercase tracking-[0.2em] text-[#8b8179]">
           Cari Proyek
         </label>
@@ -105,20 +201,27 @@ const FilterControls = memo(function FilterControls() {
       </div>
 
       <SelectField
-        label="Kategori"
-        value={filter.category}
-        options={categories}
-        onChange={(value) => setFilterState({ category: value })}
-      />
-
-      <SelectField
         label="Properti"
         value={filter.property}
         options={properties}
         onChange={(value) => setFilterState({ property: value })}
       />
 
-      <div className="col-span-1">
+      <SelectField
+        label="Lokasi"
+        value={filter.location}
+        options={locations}
+        onChange={(value) => setFilterState({ location: value })}
+      />
+
+      <SelectField
+        label="Gaya"
+        value={filter.style}
+        options={styles}
+        onChange={(value) => setFilterState({ style: value })}
+      />
+
+      <div className="col-span-2 sm:col-span-1">
         <label className="mb-3 block text-[10px] uppercase tracking-[0.2em] text-transparent">
           Filter
         </label>
@@ -129,13 +232,14 @@ const FilterControls = memo(function FilterControls() {
             setLocalSearch("");
             setFilterState({
               search: "",
-              category: "Semua Kategori",
               property: "Semua Properti",
+              location: "Semua Lokasi",
+              style: "Semua Gaya",
             });
           }}
           className="h-12 w-full bg-[#6b5b52] px-6 text-[9px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_4px_10px_rgba(0,0,0,0.12)] transition hover:bg-[#584941]"
         >
-          Terapkan Filter
+          Reset Filter
         </button>
       </div>
     </div>
@@ -146,71 +250,54 @@ const ProjectGrid = memo(function ProjectGrid() {
   const filter = useFilterStore();
 
   const deferredSearch = useDeferredValue(filter.search);
-  const deferredCategory = useDeferredValue(filter.category);
   const deferredProperty = useDeferredValue(filter.property);
+  const deferredLocation = useDeferredValue(filter.location);
+  const deferredStyle = useDeferredValue(filter.style);
 
   const filteredProjects = useMemo(() => {
     const keyword = deferredSearch.trim().toLowerCase();
 
-    return portfolioProjects.filter((project) => {
+    return enrichedProjects.filter((project) => {
       const matchSearch =
         keyword.length === 0 ||
         project.title.toLowerCase().includes(keyword) ||
         project.location.toLowerCase().includes(keyword) ||
-        project.category.toLowerCase().includes(keyword);
-
-      const matchCategory =
-        deferredCategory === "Semua Kategori" ||
-        project.category === deferredCategory;
+        project.category.toLowerCase().includes(keyword) ||
+        project.meta.style.toLowerCase().includes(keyword) ||
+        project.meta.propertyType.toLowerCase().includes(keyword) ||
+        project.meta.locationArea.toLowerCase().includes(keyword) ||
+        project.meta.material.toLowerCase().includes(keyword);
 
       const matchProperty =
         deferredProperty === "Semua Properti" ||
-        project.property === deferredProperty;
+        project.meta.propertyType === deferredProperty;
 
-      return matchSearch && matchCategory && matchProperty;
+      const matchLocation =
+        deferredLocation === "Semua Lokasi" ||
+        project.meta.locationArea === deferredLocation;
+
+      const matchStyle =
+        deferredStyle === "Semua Gaya" || project.meta.style === deferredStyle;
+
+      return matchSearch && matchProperty && matchLocation && matchStyle;
     });
-  }, [deferredSearch, deferredCategory, deferredProperty]);
+  }, [deferredSearch, deferredProperty, deferredLocation, deferredStyle]);
 
   return (
     <>
-      <div className="mt-10 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {filteredProjects.map((project, index) => (
-          <Link
-            key={project.title}
-            href={`/portfolio/${createSlug(project.title)}`}
-            className="group block bg-[#f4f4f4] shadow-[0_4px_10px_rgba(0,0,0,0.14)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(0,0,0,0.16)]"
-          >
-            <div className="relative aspect-[4/3] overflow-hidden">
-              <Image
-                src={project.image.src}
-                alt={project.image.alt}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                loading={index < 4 ? "eager" : "lazy"}
-                className="object-cover transition duration-700 group-hover:scale-105 group-hover:brightness-90"
-              />
-            </div>
-
-            <div className="p-4 sm:p-5">
-              <p className="text-[8px] uppercase tracking-[0.14em] text-[#8b8179] sm:text-[10px]">
-                {project.category}
-              </p>
-
-              <h3 className="mt-2 line-clamp-2 font-serif text-[16px] leading-snug text-[#31332c] sm:text-[20px]">
-                {project.title}
-              </h3>
-
-              <p className="mt-2 text-[11px] text-[#8b8179] sm:mt-3 sm:text-[13px]">
-                {project.location} - {project.year}
-              </p>
-            </div>
-          </Link>
+          <PortfolioCard
+            key={`${project.title}-${index}`}
+            project={project}
+            priority={index < 4}
+          />
         ))}
       </div>
 
       {filteredProjects.length === 0 && (
-        <div className="py-20 text-center">
-          <p className="font-serif text-[26px] italic text-[#31332c] sm:text-[30px]">
+        <div className="rounded-xl border border-dashed border-[#E4D8CD] bg-white py-14 text-center">
+          <p className="text-[14px] text-[#7B756E]">
             Proyek tidak ditemukan.
           </p>
         </div>
@@ -218,6 +305,80 @@ const ProjectGrid = memo(function ProjectGrid() {
     </>
   );
 });
+
+function PortfolioCard({
+  project,
+  priority,
+}: {
+  project: PortfolioItem;
+  priority?: boolean;
+}) {
+  return (
+    <Link
+      href={`/portfolio/${createSlug(project.title)}`}
+      className="group block h-full overflow-hidden rounded-xl border border-[#E8E2D9] bg-white text-left shadow-[0_8px_28px_rgba(49,51,44,0.03)] transition hover:-translate-y-1 hover:border-[#D8CABC] hover:shadow-[0_16px_38px_rgba(49,51,44,0.08)]"
+    >
+      <article className="h-full">
+        <div className="relative aspect-[4/3] overflow-hidden bg-[#EFE8DF]">
+          <Image
+            src={project.image.src}
+            alt={project.image.alt}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+            loading={priority ? "eager" : "lazy"}
+            className="object-cover transition duration-300 group-hover:scale-[1.03]"
+          />
+
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
+
+          <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-[#725F54] shadow-sm backdrop-blur-md">
+            {project.meta.style}
+          </span>
+        </div>
+
+        <div className="space-y-3 p-3 sm:p-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-semibold text-[#725F54] sm:text-[11px]">
+                {project.meta.propertyType}
+              </span>
+
+              <span className="rounded-full bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+                {project.meta.locationArea}
+              </span>
+
+              <span className="rounded-full bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+                {cleanLocation(project.location)}
+              </span>
+            </div>
+
+            <h3 className="mt-3 line-clamp-2 font-serif text-[21px] leading-tight text-[#31332C] sm:text-[24px]">
+              {project.title}
+            </h3>
+          </div>
+
+          <div className="grid gap-2">
+            <MetaRow
+              icon={Wallet}
+              label="Nilai Proyek"
+              value={project.meta.projectValue}
+            />
+            <MetaRow
+              icon={Home}
+              label="Properti"
+              value={project.meta.propertyType}
+            />
+            <MetaRow
+              icon={Layers}
+              label="Material"
+              value={project.meta.material}
+            />
+          </div>
+        </div>
+      </article>
+    </Link>
+  );
+}
 
 function SelectField({
   label,
@@ -251,6 +412,32 @@ function SelectField({
           size={17}
           className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b5b52] sm:right-4"
         />
+      </div>
+    </div>
+  );
+}
+
+function MetaRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex gap-2 rounded-xl bg-[#FCFBF9] px-2.5 py-2">
+      <Icon size={14} className="mt-0.5 shrink-0 text-[#725F54]" />
+
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B756E]">
+          {label}
+        </p>
+
+        <p className="mt-0.5 text-[11px] leading-4 text-[#31332C] sm:text-[12px] sm:leading-5">
+          {value}
+        </p>
       </div>
     </div>
   );

@@ -63,15 +63,15 @@ export function InspirationCategoriesSection() {
       <div className="mx-auto max-w-[1320px] px-6">
         <div
           className={`mb-10 transition-all duration-700 ease-out ${isVisible
-              ? "translate-y-0 opacity-100 blur-0"
-              : "translate-y-10 opacity-0 blur-sm"
+            ? "translate-y-0 opacity-100 blur-0"
+            : "translate-y-10 opacity-0 blur-sm"
             }`}
         >
-          <p className="font-sans text-[12px] uppercase leading-6 tracking-[0.27em] text-[#6b5b52] sm:text-base">
+          <p className="text-[12px] uppercase tracking-[0.28em] text-[#6b5b52] sm:text-[12px]">
             Kategori Inspirasi
           </p>
 
-          <h2 className="mt-4 max-w-[620px] font-serif text-[38px] font-medium leading-tight text-[#31332c] md:text-5xl">
+          <h2 className="mt-4 max-w-[720px] font-serif text-[32px] leading-tight text-[#31332c] sm:text-[38px] md:text-[46px]">
             Temukan inspirasi sesuai kebutuhan ruang Anda
           </h2>
         </div>
@@ -86,8 +86,8 @@ export function InspirationCategoriesSection() {
                 key={item.title}
                 href={`/inspirasi/${createSlug(item.title)}`}
                 className={`group block shrink-0 transition-all duration-700 ease-out ${isVisible
-                    ? "translate-y-0 scale-100 opacity-100 blur-0"
-                    : "translate-y-12 scale-[0.96] opacity-0 blur-sm"
+                  ? "translate-y-0 scale-100 opacity-100 blur-0"
+                  : "translate-y-12 scale-[0.96] opacity-0 blur-sm"
                   }`}
                 style={{
                   transitionDelay: isVisible ? `${index * 110 + 120}ms` : "0ms",
@@ -135,8 +135,8 @@ export function InspirationCategoriesSection() {
 
         <div
           className={`mx-auto mt-2 flex items-center justify-center gap-2 transition-all duration-700 ease-out ${isVisible
-              ? "translate-y-0 opacity-100"
-              : "translate-y-6 opacity-0"
+            ? "translate-y-0 opacity-100"
+            : "translate-y-6 opacity-0"
             }`}
           style={{
             transitionDelay: isVisible ? "780ms" : "0ms",
@@ -149,8 +149,8 @@ export function InspirationCategoriesSection() {
               onClick={() => handleDotClick(dot)}
               aria-label={`Geser ke bagian ${dot + 1}`}
               className={`h-2 rounded-full transition-all duration-300 ${activeDot === dot
-                  ? "w-6 bg-[#6B3E1E]"
-                  : "w-2 bg-[#6B3E1E]/60 hover:bg-[#6B3E1E]"
+                ? "w-6 bg-[#6B3E1E]"
+                : "w-2 bg-[#6B3E1E]/60 hover:bg-[#6B3E1E]"
                 }`}
             />
           ))}

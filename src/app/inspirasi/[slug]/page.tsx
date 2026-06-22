@@ -16,7 +16,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { Home, Layers, Wallet } from "lucide-react";
+import { Home, Layers, Wallet, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 
 function createSlug(text: string) {
@@ -121,15 +121,15 @@ const galleryItems = inspirations.flatMap((item, index) => [
     style: styles[(index % (styles.length - 1)) + 1],
 
     property: properties[(index % (properties.length - 1)) + 1],
-    location: locationList[index % locationList.length]
+    location: locationList[index % locationList.length],
   },
   {
     ...item,
     id: `${createSlug(item.title)}-${index}-alt`,
     title: `${item.title} ${index + 1}`,
-    style: index % 2 === 0 ? "Minimalis" : "Modern",
-    property: index % 2 === 0 ? "Rumah" : "Apartemen",
-    location: locationList[index % locationList.length]
+    style: styles[((index + 1) % (styles.length - 1)) + 1],
+    property: properties[((index + 1) % (properties.length - 1)) + 1],
+    location: locationList[(index + 1) % locationList.length],
   },
 ]);
 
@@ -296,14 +296,6 @@ function InspirationLandingCard({
       ? "Basic"
       : "Standard";
 
-  const vendorName = item.title.toLowerCase().includes("wardrobe") ||
-    item.title.toLowerCase().includes("lemari")
-    ? "Kayu Rapi Interior"
-    : item.title.toLowerCase().includes("dapur") ||
-      item.title.toLowerCase().includes("kitchen")
-      ? "Dapur Rapi Studio"
-      : "Vendor Partner VMatch";
-
   const projectValue =
     activeCategoryTitle === "Kitchen Set"
       ? "Rp43.500.000"
@@ -314,17 +306,6 @@ function InspirationLandingCard({
           : activeCategoryTitle === "Storage & Rak"
             ? "Rp28.500.000"
             : "Rp35.000.000";
-
-  const suitableFor =
-    activeCategoryTitle === "Kitchen Set"
-      ? "Dapur rumah, apartemen"
-      : activeCategoryTitle === "Lemari/Wardrobe"
-        ? "Kamar utama, kamar anak"
-        : activeCategoryTitle === "Ruang Tamu"
-          ? "Rumah tinggal, apartemen"
-          : activeCategoryTitle === "Storage & Rak"
-            ? "Kamar, ruang keluarga, apartemen"
-            : "Rumah, apartemen";
 
   const materials =
     activeCategoryTitle === "Kitchen Set"
@@ -340,7 +321,7 @@ function InspirationLandingCard({
   return (
     <Link
       href={`/inspirasi/${createSlug(activeCategoryTitle)}/${createSlug(item.title)}`}
-      className="group block overflow-hidden rounded-xl border border-[#E8E2D9] bg-white text-left shadow-[0_8px_28px_rgba(49,51,44,0.03)] transition hover:border-[#E4D8CD] hover:shadow-[0_12px_32px_rgba(49,51,44,0.06)]"
+      className="group block overflow-hidden rounded-xl border border-[#E8E2D9] bg-white text-left shadow-[0_8px_28px_rgba(49,51,44,0.03)] transition hover:-translate-y-1 hover:border-[#D8CABC] hover:shadow-[0_16px_38px_rgba(49,51,44,0.08)]"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-[#EFE8DF]">
         <Image
@@ -351,56 +332,39 @@ function InspirationLandingCard({
           sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
           className="object-cover transition duration-300 group-hover:scale-[1.03]"
         />
+
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
+
+        <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-[#725F54] shadow-sm backdrop-blur-md">
+          {item.style}
+        </span>
       </div>
 
       <div className="space-y-3 p-3 sm:p-4">
         <div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="inline-flex rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-semibold text-[#725F54] sm:text-[11px]">
-              {packageLabel}
-            </span>
-
-            <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
-              {item.style}
-            </span>
-
-            <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+            <span className="rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-semibold text-[#725F54] sm:text-[11px]">
               {item.property}
             </span>
 
-            <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+            <span className="rounded-full bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
               {item.location}
+            </span>
+
+            <span className="rounded-full bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+              {packageLabel}
             </span>
           </div>
 
-          <h2 className="mt-3 font-serif text-[20px] leading-tight text-[#31332C] sm:text-[24px]">
+          <h2 className="mt-3 line-clamp-2 font-serif text-[21px] leading-tight text-[#31332C] sm:text-[24px]">
             {item.title}
           </h2>
-
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#725F54]">
-            {vendorName}
-          </p>
-
-          <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-[#7B756E] sm:text-[13px] sm:leading-6">
-            {item.copy}
-          </p>
         </div>
 
         <div className="grid gap-2">
           <MetaInfo icon={Wallet} label="Nilai Proyek" value={projectValue} />
-          <MetaInfo icon={Home} label="Cocok" value={suitableFor} />
+          <MetaInfo icon={Home} label="Properti" value={item.property} />
           <MetaInfo icon={Layers} label="Material" value={materials} />
-        </div>
-
-        <div className="grid gap-2">
-          <span className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-3 text-[11px] font-semibold text-[#31332C] transition group-hover:bg-[#FCFBF9] sm:text-[12px]">
-            Lihat Detail
-            <span className="text-[14px] leading-none">›</span>
-          </span>
-
-          <span className="inline-flex h-10 items-center justify-center rounded-xl bg-[#725F54] px-3 text-[11px] font-semibold text-white transition group-hover:bg-[#5A4A42] sm:text-[12px]">
-            Gunakan sebagai Preferensi
-          </span>
         </div>
       </div>
     </Link>
@@ -412,7 +376,7 @@ function MetaInfo({
   label,
   value,
 }: {
-  icon: typeof Wallet;
+  icon: LucideIcon;
   label: string;
   value: string;
 }) {

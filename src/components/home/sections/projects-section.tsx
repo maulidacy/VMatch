@@ -224,10 +224,6 @@ function ProjectCard({
               value={project.meta.material}
             />
           </div>
-
-          <span className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-3 text-[11px] font-semibold text-[#31332C] transition group-hover:bg-[#FCFBF9] sm:text-[12px]">
-            Lihat Detail
-          </span>
         </div>
       </article>
     </Link>

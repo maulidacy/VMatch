@@ -605,43 +605,39 @@ function DesignCard({
     onUseDesign: () => void;
 }) {
     return (
-        <article className="overflow-hidden rounded-xl border border-[#E8E2D9] bg-white shadow-[0_8px_28px_rgba(49,51,44,0.03)] transition hover:border-[#E4D8CD] hover:shadow-[0_12px_32px_rgba(49,51,44,0.06)]">
+        <article className="group overflow-hidden rounded-xl border border-[#E8E2D9] bg-white shadow-[0_8px_28px_rgba(49,51,44,0.03)] transition hover:-translate-y-1 hover:border-[#D8CABC] hover:shadow-[0_16px_38px_rgba(49,51,44,0.08)]">
             <ImageBox
                 src={item.image}
                 alt={item.name}
                 title={item.name}
                 priority={priority}
+                badge={item.style}
             />
 
             <div className="space-y-3 p-3 sm:p-4">
                 <div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                        <PackageBadge label={item.packageType} />
-                        <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
-                            {item.style}
-                        </span>
-
-                        <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+                        <span className="rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-semibold text-[#725F54] sm:text-[11px]">
                             {item.propertyType}
                         </span>
 
-                        <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+                        <span className="rounded-full bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
                             {item.locationArea}
+                        </span>
+
+                        <span className="rounded-full bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+                            {item.packageType}
                         </span>
                     </div>
 
-                    <h2 className="mt-3 font-serif text-[20px] leading-tight text-[#31332C] sm:text-[24px]">
+                    <h2 className="mt-3 line-clamp-2 font-serif text-[21px] leading-tight text-[#31332C] sm:text-[24px]">
                         {item.name}
                     </h2>
-
-                    <p className="mt-2 text-[12px] leading-5 text-[#7B756E] sm:text-[13px] sm:leading-6">
-                        {item.description}
-                    </p>
                 </div>
 
                 <div className="grid gap-2">
                     <MetaRow icon={Wallet} label="Nilai Proyek" value={item.budget} />
-                    <MetaRow icon={Home} label="Cocok" value={item.suitableFor} />
+                    <MetaRow icon={Home} label="Properti" value={item.propertyType} />
                     <MetaRow icon={Layers} label="Material" value={item.materials} />
                 </div>
 
@@ -957,11 +953,13 @@ function ImageBox({
     alt,
     title,
     priority,
+    badge,
 }: {
     src: string;
     alt: string;
     title: string;
     priority?: boolean;
+    badge?: string;
 }) {
     const [error, setError] = useState(false);
 
@@ -974,15 +972,25 @@ function ImageBox({
                     <p className="text-[11px] text-[#7B756E]">Referensi visual</p>
                 </div>
             ) : (
-                <Image
-                    src={src}
-                    alt={alt}
-                    fill
-                    priority={priority}
-                    sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                    onError={() => setError(true)}
-                    className="object-cover transition duration-300 hover:scale-[1.03]"
-                />
+                <>
+                    <Image
+                        src={src}
+                        alt={alt}
+                        fill
+                        priority={priority}
+                        sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                        onError={() => setError(true)}
+                        className="object-cover transition duration-300 group-hover:scale-[1.03]"
+                    />
+
+                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
+
+                    {badge && (
+                        <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-[#725F54] shadow-sm backdrop-blur-md">
+                            {badge}
+                        </span>
+                    )}
+                </>
             )}
         </div>
     );
@@ -1074,14 +1082,6 @@ function FilterSelect({
                 />
             </div>
         </label>
-    );
-}
-
-function PackageBadge({ label }: { label: DesignItem["packageType"] }) {
-    return (
-        <span className="inline-flex rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-semibold text-[#725F54] sm:text-[11px]">
-            {label}
-        </span>
     );
 }
 

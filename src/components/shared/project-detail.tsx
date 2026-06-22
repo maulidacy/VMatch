@@ -1,6 +1,7 @@
 "use client";
 
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
+import Link from "next/link";
 import {
     ArrowLeft,
     ArrowRight,
@@ -15,377 +16,25 @@ import {
     Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState, type ReactNode } from "react";
 
-type CustomerPageTarget = "ajukan" | "ai-ide" | "konsultasi" | "catalog";
+export type ImageSource = string | StaticImageData;
 
-type MaterialPackage = {
-    name: "Basic" | "Standard" | "Premium";
-    description: string;
-};
-
-type RelatedInspiration = {
-    id: string;
-    title: string;
-    style: string;
-    budgetRange: string;
-    image: string;
-};
-
-type VendorPortfolioProfile = {
-    vendorName: string;
-    studioName: string;
-    location: string;
-    specialty: string;
-    experience: string;
-    completedProjects: string;
-    description: string;
-};
-
-type InspirationDetail = {
-    id: string;
-    title: string;
-    category: string;
-    packageLevel: string;
-    style: string;
-    budgetRange: string;
-    idealSize: string;
-    projectLocation: string;
-    projectTimeline: string;
-    vendorProfile: VendorPortfolioProfile;
-    spaceType: string;
-    suitableFor: string[];
-    materials: string[];
-    shortDescription: string;
-    fullDescription: string;
-    designElements: string[];
-    materialPackages: MaterialPackage[];
-    timeline: string[];
-    notes: string;
-    images: string[];
-    beforeAfter?: {
-        before: string;
-        after: string;
-    };
-    related: RelatedInspiration[];
-};
-
-type SelectedInspirationPayload = {
-    id: string;
-    title: string;
-    category: string;
-    style: string;
-    budgetRange: string;
-    packageLevel: string;
-    materials: string[];
-    suitableFor: string[];
-    mainImage: string;
-    notes: string;
-};
-
-type DetailImage = {
-    src: string;
+export type DetailImage = {
+    src: ImageSource;
     alt: string;
 };
 
-type DetailRelatedItem = {
+export type DetailRelatedItem = {
     id: string;
     title: string;
     style: string;
     projectValue: string;
-    image: string;
+    image: ImageSource;
+    href: string;
 };
 
-const STORAGE_KEY = "vmatch_selected_inspiration";
-const REQUEST_PAGE_TARGET: CustomerPageTarget = "ajukan";
-
-const inspirationDetail: InspirationDetail = {
-    id: "kitchen-set-modern-1",
-    title: "Kitchen Set Modern Minimalis",
-    category: "Kitchen Set",
-    packageLevel: "Standard / Premium",
-    style: "Modern minimalis",
-    budgetRange: "Rp43.500.000",
-    idealSize: "2.5m x 2m",
-    projectLocation: "Semarang",
-    projectTimeline: "05 Mei 2024 - 08 Agustus 2024 (3 bulan)",
-    vendorProfile: {
-        vendorName: "Kayu Rapi Interior",
-        studioName: "Vendor Partner VMatch",
-        location: "Semarang",
-        specialty: "Kitchen set, storage, dan custom cabinet",
-        experience: "5 tahun pengalaman",
-        completedProjects: "38 proyek selesai",
-        description: "Vendor Partner VMatch",
-    },
-    spaceType: "Rumah / Apartemen",
-    suitableFor: ["Dapur rumah", "Apartemen", "Ruang dapur compact"],
-    materials: ["HPL", "Multiplek", "Solid surface"],
-    shortDescription:
-        "Referensi desain dari portofolio vendor partner VMatch dengan konsep dapur modern, fungsional, bersih, dan elegan.",
-    fullDescription:
-        "Kitchen set ini merupakan referensi portofolio dari vendor partner VMatch. Konsepnya mengutamakan tampilan modern minimalis dengan warna netral dan aksen kayu hangat. Referensi ini cocok untuk kebutuhan dapur yang bersih, fungsional, mudah dirawat, dan tetap terlihat elegan.",
-    designElements: [
-        "Kabinet atas dan bawah",
-        "Area penyimpanan tertutup",
-        "Top table solid surface",
-        "Backsplash motif marble",
-        "Warna netral dan aksen kayu",
-        "Layout dapur efisien",
-    ],
-    materialPackages: [
-        {
-            name: "Basic",
-            description:
-                "Pilihan ekonomis menggunakan MDF Board dan finishing melamine untuk kebutuhan interior sederhana.",
-        },
-        {
-            name: "Standard",
-            description:
-                "Pilihan seimbang menggunakan multiplek 15mm dan finishing HPL dengan tampilan yang rapi dan tahan pakai.",
-        },
-        {
-            name: "Premium",
-            description:
-                "Pilihan terbaik menggunakan multiplek 18mm, finishing premium, dan hardware soft close untuk hasil yang lebih elegan dan tahan lama.",
-        },
-    ],
-    timeline: [
-        "Konsultasi & validasi kebutuhan",
-        "Survey ukuran",
-        "Finalisasi desain dan RAB",
-        "Produksi",
-        "Instalasi",
-        "QC dan handover",
-    ],
-    notes:
-        "Inspirasi ini digunakan sebagai referensi awal. Tim VMatch akan membantu menyesuaikan solusi berdasarkan ukuran ruang, kebutuhan penyimpanan, budget, material, dan kondisi ruangan customer.",
-    images: [
-        "/figma/benefits-kitchen.webp",
-        "/figma/project-library.webp",
-        "/figma/benefits-storage.webp",
-        "/figma/benefits-living.webp",
-        "/figma/benefits-wardrobe.webp",
-        "/figma/benefits-bedroom.webp",
-    ],
-    beforeAfter: {
-        before: "/figma/project-library.webp",
-        after: "/figma/benefits-kitchen.webp",
-    },
-    related: [
-        {
-            id: "storage-rak-modern",
-            title: "Storage Compact Modern",
-            style: "Modern minimalis",
-            budgetRange: "Rp15–35 juta",
-            image: "/figma/benefits-storage.webp",
-        },
-        {
-            id: "wardrobe-warm-modern",
-            title: "Wardrobe Warm Modern",
-            style: "Warm modern",
-            budgetRange: "Rp18–60 juta",
-            image: "/figma/benefits-wardrobe.webp",
-        },
-        {
-            id: "living-room-japandi",
-            title: "Ruang Tamu Japandi",
-            style: "Japandi",
-            budgetRange: "Rp20–80 juta",
-            image: "/figma/benefits-living.webp",
-        },
-    ],
-};
-
-export default function InspirationDetailPage() {
-    return <InspirationDetailView />;
-}
-
-export function InspirationDetailView({
-    inspiration = inspirationDetail,
-    onBack,
-    onChangePage,
-    onOpenRelated,
-}: {
-    inspiration?: InspirationDetail;
-    onBack?: () => void;
-    onChangePage?: (page: CustomerPageTarget) => void;
-    onOpenRelated?: (id: string) => void;
-}) {
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
-    const [isSaved, setIsSaved] = useState(false);
-
-    const images =
-        inspiration.images.length > 0
-            ? inspiration.images.map((image, index) => ({
-                src: image,
-                alt: `${inspiration.title} ${index + 1}`,
-            }))
-            : [
-                {
-                    src: "",
-                    alt: inspiration.title,
-                },
-            ];
-
-    const activeImage = images[activeImageIndex]?.src ?? images[0]?.src ?? "";
-
-    const selectedPayload = useMemo<SelectedInspirationPayload>(
-        () => ({
-            id: inspiration.id,
-            title: inspiration.title,
-            category: inspiration.category,
-            style: inspiration.style,
-            budgetRange: inspiration.budgetRange,
-            packageLevel: inspiration.packageLevel,
-            materials: inspiration.materials,
-            suitableFor: inspiration.suitableFor,
-            mainImage: activeImage,
-            notes: inspiration.notes,
-        }),
-        [activeImage, inspiration],
-    );
-
-    const saveSelectedInspiration = () => {
-        if (typeof window === "undefined") return;
-
-        window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(selectedPayload));
-        setIsSaved(true);
-    };
-
-    const goToRequest = () => {
-        saveSelectedInspiration();
-
-        if (onChangePage) {
-            onChangePage(REQUEST_PAGE_TARGET);
-            return;
-        }
-
-        if (typeof window !== "undefined") {
-            window.location.href = "/dashboard/user";
-        }
-    };
-
-    const goToConsultation = () => {
-        saveSelectedInspiration();
-
-        if (onChangePage) {
-            onChangePage("konsultasi");
-            return;
-        }
-
-        if (typeof window !== "undefined") {
-            window.location.href = "/dashboard/user";
-        }
-    };
-
-    const handleBack = () => {
-        if (onBack) {
-            onBack();
-            return;
-        }
-
-        if (onChangePage) {
-            onChangePage("catalog");
-            return;
-        }
-
-        if (typeof window !== "undefined") {
-            window.history.back();
-        }
-    };
-
-    return (
-        <ProjectDetailTemplate
-            title={inspiration.title}
-            category={inspiration.category}
-            packageLevel={inspiration.packageLevel}
-            style={inspiration.style}
-            projectValue={inspiration.budgetRange}
-            roomSize={inspiration.idealSize}
-            projectLocation={inspiration.projectLocation}
-            projectTimeline={inspiration.projectTimeline}
-            vendorName={inspiration.vendorProfile.vendorName}
-            vendorStudio={inspiration.vendorProfile.studioName}
-            propertyType={inspiration.spaceType}
-            materials={inspiration.materials}
-            shortDescription={inspiration.shortDescription}
-            fullDescription={inspiration.fullDescription}
-            designElements={inspiration.designElements}
-            materialPackages={inspiration.materialPackages}
-            images={images}
-            activeImageIndex={activeImageIndex}
-            onSelectImage={setActiveImageIndex}
-            beforeAfter={
-                inspiration.beforeAfter
-                    ? {
-                        before: {
-                            src: inspiration.beforeAfter.before,
-                            alt: `Sebelum ${inspiration.title}`,
-                        },
-                        after: {
-                            src: inspiration.beforeAfter.after,
-                            alt: `Sesudah ${inspiration.title}`,
-                        },
-                    }
-                    : undefined
-            }
-            related={inspiration.related.map((item) => ({
-                id: item.id,
-                title: item.title,
-                style: item.style,
-                projectValue: item.budgetRange,
-                image: item.image,
-            }))}
-            isSaved={isSaved}
-            backLabel="Kembali ke Inspirasi Desain"
-            breadcrumbLabel="Inspirasi Desain"
-            detailLabel="Detail Inspirasi"
-            primaryCtaLabel="Gunakan sebagai Preferensi"
-            secondaryCtaLabel="Konsultasi"
-            onBack={handleBack}
-            onPrimaryAction={goToRequest}
-            onSecondaryAction={goToConsultation}
-            onSave={saveSelectedInspiration}
-            onOpenRelated={onOpenRelated}
-        />
-    );
-}
-
-function ProjectDetailTemplate({
-    title,
-    category,
-    packageLevel,
-    style,
-    projectValue,
-    roomSize,
-    projectLocation,
-    projectTimeline,
-    vendorName,
-    vendorStudio,
-    propertyType,
-    materials,
-    shortDescription,
-    fullDescription,
-    designElements,
-    materialPackages,
-    images,
-    activeImageIndex,
-    onSelectImage,
-    beforeAfter,
-    related,
-    isSaved,
-    backLabel,
-    breadcrumbLabel,
-    detailLabel,
-    primaryCtaLabel,
-    secondaryCtaLabel,
-    onBack,
-    onPrimaryAction,
-    onSecondaryAction,
-    onSave,
-    onOpenRelated,
-}: {
+export type ProjectDetailTemplateProps = {
     title: string;
     category: string;
     packageLevel: string;
@@ -395,63 +44,100 @@ function ProjectDetailTemplate({
     projectLocation: string;
     projectTimeline: string;
     vendorName: string;
-    vendorStudio: string;
+    vendorStudio?: string;
     propertyType: string;
     materials: string[];
     shortDescription: string;
     fullDescription: string;
     designElements: string[];
-    materialPackages: MaterialPackage[];
     images: DetailImage[];
-    activeImageIndex: number;
-    onSelectImage: (index: number) => void;
     beforeAfter?: {
         before: DetailImage;
         after: DetailImage;
     };
-    related: DetailRelatedItem[];
-    isSaved: boolean;
-    backLabel: string;
-    breadcrumbLabel: string;
-    detailLabel: string;
-    primaryCtaLabel: string;
-    secondaryCtaLabel: string;
-    onBack: () => void;
-    onPrimaryAction: () => void;
-    onSecondaryAction: () => void;
-    onSave: () => void;
-    onOpenRelated?: (id: string) => void;
-}) {
-    const activeImage = images[activeImageIndex] ?? images[0];
+    related?: DetailRelatedItem[];
+    backHref: string;
+    backLabel?: string;
+    breadcrumbLabel?: string;
+    detailLabel?: string;
+    primaryCtaHref?: string;
+    primaryCtaLabel?: string;
+    secondaryCtaHref?: string;
+    secondaryCtaLabel?: string;
+};
+
+export function ProjectDetailTemplate({
+    title,
+    category,
+    packageLevel,
+    style,
+    projectValue,
+    roomSize,
+    projectLocation,
+    projectTimeline,
+    vendorName,
+    vendorStudio = "Vendor Partner VMatch",
+    materials,
+    shortDescription,
+    fullDescription,
+    designElements,
+    images,
+    beforeAfter,
+    related = [],
+    backHref,
+    backLabel = "Kembali",
+    breadcrumbLabel = "Portofolio Proyek",
+    detailLabel = "Detail Proyek",
+    primaryCtaHref = "/dashboard/user",
+    primaryCtaLabel = "Ajukan Proyek",
+    secondaryCtaHref = "https://wa.me/6281234567890",
+    secondaryCtaLabel = "WhatsApp",
+}: ProjectDetailTemplateProps) {
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+    const safeImages =
+        images.length > 0
+            ? images
+            : [
+                {
+                    src: "/figma/benefits-kitchen.webp",
+                    alt: title,
+                },
+            ];
+
+    const activeImage = safeImages[activeImageIndex] ?? safeImages[0];
 
     const goToPreviousImage = () => {
-        onSelectImage(activeImageIndex === 0 ? images.length - 1 : activeImageIndex - 1);
+        setActiveImageIndex((current) =>
+            current === 0 ? safeImages.length - 1 : current - 1,
+        );
     };
 
     const goToNextImage = () => {
-        onSelectImage(activeImageIndex === images.length - 1 ? 0 : activeImageIndex + 1);
+        setActiveImageIndex((current) =>
+            current === safeImages.length - 1 ? 0 : current + 1,
+        );
     };
 
     return (
-        <div className="w-full space-y-6 text-[#31332C]">
-            <button
-                type="button"
-                onClick={onBack}
+        <div className="w-full space-y-6">
+            <Link
+                href={backHref}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#F8F6F2]"
             >
                 <ArrowLeft size={15} />
                 {backLabel}
-            </button>
+            </Link>
 
             <section className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_380px]">
                 <ProjectImageGallery
                     title={title}
-                    images={images}
+                    images={safeImages}
                     activeImage={activeImage}
                     activeIndex={activeImageIndex}
                     onPrevious={goToPreviousImage}
                     onNext={goToNextImage}
-                    onSelect={onSelectImage}
+                    onSelect={setActiveImageIndex}
                 />
 
                 <ProjectSummaryCard
@@ -459,12 +145,10 @@ function ProjectDetailTemplate({
                     category={category}
                     style={style}
                     materials={materials}
-                    isSaved={isSaved}
+                    primaryCtaHref={primaryCtaHref}
                     primaryCtaLabel={primaryCtaLabel}
+                    secondaryCtaHref={secondaryCtaHref}
                     secondaryCtaLabel={secondaryCtaLabel}
-                    onPrimaryAction={onPrimaryAction}
-                    onSecondaryAction={onSecondaryAction}
-                    onSave={onSave}
                 />
             </section>
 
@@ -495,17 +179,20 @@ function ProjectDetailTemplate({
             </section>
 
             <ProjectInfoGrid
-                projectLocation={projectLocation}
                 roomSize={roomSize}
+                projectLocation={projectLocation}
                 projectTimeline={projectTimeline}
                 projectValue={projectValue}
                 packageLevel={packageLevel}
             />
 
-            <VendorPortfolioSection vendorName={vendorName} vendorStudio={vendorStudio} />
+            <VendorPortfolioSection
+                vendorName={vendorName}
+                vendorStudio={vendorStudio}
+            />
 
             <section className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-                <SectionCard title="Deskripsi Inspirasi">
+                <SectionCard title="Deskripsi Proyek">
                     <p className="text-[13px] leading-7 text-[#6F6860] sm:text-[14px]">
                         {fullDescription}
                     </p>
@@ -530,13 +217,13 @@ function ProjectDetailTemplate({
                 </SectionCard>
             </section>
 
-            <MaterialPackageSection packages={materialPackages} propertyType={propertyType} />
+            <MaterialPackageSection />
 
             <GalleryGridSection
                 title={title}
-                images={images}
+                images={safeImages}
                 activeIndex={activeImageIndex}
-                onSelect={onSelectImage}
+                onSelect={setActiveImageIndex}
             />
 
             {beforeAfter && (
@@ -551,7 +238,7 @@ function ProjectDetailTemplate({
                 <section className="space-y-4">
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                            Inspirasi Serupa
+                            Proyek Serupa
                         </p>
 
                         <h2 className="mt-2 font-serif text-[28px] leading-tight text-[#31332C] sm:text-[34px]">
@@ -561,11 +248,7 @@ function ProjectDetailTemplate({
 
                     <div className="grid gap-3 md:grid-cols-3">
                         {related.map((item) => (
-                            <RelatedInspirationCard
-                                key={item.id}
-                                item={item}
-                                onClick={() => onOpenRelated?.(item.id)}
-                            />
+                            <RelatedProjectCard key={item.id} item={item} />
                         ))}
                     </div>
                 </section>
@@ -631,12 +314,10 @@ function ProjectImageGallery({
 
                         return (
                             <button
-                                key={`${image.src}-${index}`}
+                                key={`${image.alt}-${index}`}
                                 type="button"
                                 onClick={() => onSelect(index)}
-                                className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-1xl transition sm:h-20 sm:w-28 ${active
-                                    ? "ring-2 ring-[#725F54]/25"
-                                    : "opacity-80 hover:opacity-100"
+                                className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl transition sm:h-20 sm:w-28 ${active ? "ring-2 ring-[#725F54]/25" : "opacity-80 hover:opacity-100"
                                     }`}
                                 aria-label={`Pilih gambar ${index + 1}`}
                             >
@@ -660,78 +341,62 @@ function ProjectSummaryCard({
     category,
     style,
     materials,
-    isSaved,
+    primaryCtaHref,
     primaryCtaLabel,
+    secondaryCtaHref,
     secondaryCtaLabel,
-    onPrimaryAction,
-    onSecondaryAction,
-    onSave,
 }: {
     title: string;
     category: string;
     style: string;
     materials: string[];
-    isSaved: boolean;
+    primaryCtaHref: string;
     primaryCtaLabel: string;
+    secondaryCtaHref: string;
     secondaryCtaLabel: string;
-    onPrimaryAction: () => void;
-    onSecondaryAction: () => void;
-    onSave: () => void;
 }) {
     return (
         <aside className="h-fit rounded-1xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6 xl:sticky xl:top-8">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                Ringkasan Inspirasi
+                Ringkasan Proyek
             </p>
 
             <div className="mt-4 space-y-3">
-                <SummaryRow label="Nama" value={title} />
+                <SummaryRow label="Nama Proyek" value={title} />
                 <SummaryRow label="Style" value={style} />
                 <SummaryRow label="Kategori" value={category} />
                 <SummaryRow label="Material" value={materials.join(", ")} />
             </div>
 
             <div className="mt-5 grid gap-2">
-                <button
-                    type="button"
-                    onClick={onPrimaryAction}
+                <Link
+                    href={primaryCtaHref}
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
                 >
                     {primaryCtaLabel}
                     <ArrowRight size={15} />
-                </button>
+                </Link>
 
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        type="button"
-                        onClick={onSave}
-                        className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
-                    >
-                        {isSaved ? "Tersimpan" : "Simpan"}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={onSecondaryAction}
-                        className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
-                    >
-                        {secondaryCtaLabel}
-                    </button>
-                </div>
+                <a
+                    href={secondaryCtaHref}
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                >
+                    {secondaryCtaLabel}
+                </a>
             </div>
         </aside>
     );
 }
 
 function ProjectInfoGrid({
-    projectLocation,
     roomSize,
+    projectLocation,
     projectTimeline,
     projectValue,
     packageLevel,
 }: {
-    projectLocation: string;
     roomSize: string;
+    projectLocation: string;
     projectTimeline: string;
     projectValue: string;
     packageLevel: string;
@@ -739,35 +404,11 @@ function ProjectInfoGrid({
     return (
         <section className="border-y border-[#E8E2D9] py-5">
             <div className="grid gap-y-5 sm:grid-cols-2 lg:grid-cols-5">
-                <InlineInfoItem
-                    icon={MapPin}
-                    label="Lokasi Proyek"
-                    value={projectLocation}
-                />
-
-                <InlineInfoItem
-                    icon={Ruler}
-                    label="Ukuran Ruang"
-                    value={roomSize}
-                />
-
-                <InlineInfoItem
-                    icon={CalendarDays}
-                    label="Timeline Proyek"
-                    value={projectTimeline}
-                />
-
-                <InlineInfoItem
-                    icon={Wallet}
-                    label="Nilai Proyek"
-                    value={projectValue}
-                />
-
-                <InlineInfoItem
-                    icon={Package}
-                    label="Paket Material"
-                    value={packageLevel}
-                />
+                <InlineInfoItem icon={MapPin} label="Lokasi Proyek" value={projectLocation} />
+                <InlineInfoItem icon={Ruler} label="Ukuran Ruang" value={roomSize} />
+                <InlineInfoItem icon={CalendarDays} label="Timeline Proyek" value={projectTimeline} />
+                <InlineInfoItem icon={Wallet} label="Nilai Proyek" value={projectValue} />
+                <InlineInfoItem icon={Package} label="Paket Material" value={packageLevel} />
             </div>
         </section>
     );
@@ -807,17 +448,15 @@ function VendorPortfolioSection({
     vendorName: string;
     vendorStudio: string;
 }) {
-    const initials = vendorName
-        .split(" ")
-        .slice(0, 2)
-        .map((word) => word[0])
-        .join("");
-
     return (
         <section className="rounded-1xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
             <div className="flex items-center gap-4">
                 <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border border-[#E4D8CD] bg-[#FCFBF9] text-[18px] font-semibold text-[#725F54]">
-                    {initials}
+                    {vendorName
+                        .split(" ")
+                        .slice(0, 2)
+                        .map((word) => word[0])
+                        .join("")}
                 </div>
 
                 <div className="min-w-0">
@@ -834,27 +473,38 @@ function VendorPortfolioSection({
     );
 }
 
-function MaterialPackageSection({
-    packages,
-}: {
-    packages: MaterialPackage[];
-    propertyType: string;
-}) {
+function MaterialPackageSection() {
+    const packages = [
+  {
+    name: "Basic",
+    description:
+      "Pilihan ekonomis menggunakan MDF Board dan finishing melamine untuk kebutuhan interior sederhana.",
+  },
+  {
+    name: "Standard",
+    description:
+      "Pilihan seimbang menggunakan multiplek 15mm dan finishing HPL dengan tampilan yang rapi dan tahan pakai.",
+  },
+  {
+    name: "Premium",
+    description:
+      "Pilihan terbaik menggunakan multiplek 18mm, finishing premium, dan hardware soft close untuk hasil yang lebih elegan dan tahan lama.",
+  },
+];
+
     return (
         <section className="space-y-4">
-            <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
-                    Referensi Material
-                </p>
-            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#725F54]">
+                Referensi Material
+            </p>
 
             <div className="grid gap-3 md:grid-cols-3">
                 {packages.map((item) => (
                     <div
                         key={item.name}
                         className={`rounded-1xl p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition ${item.name === "Standard"
-                            ? "bg-[#725F54] text-white"
-                            : "bg-white text-[#31332C] hover:bg-[#FCFBF9]"
+                                ? "bg-[#725F54] text-white"
+                                : "bg-white text-[#31332C] hover:bg-[#FCFBF9]"
                             }`}
                     >
                         <p
@@ -897,12 +547,10 @@ function GalleryGridSection({
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
                 {images.map((image, index) => (
                     <button
-                        key={`${image.src}-grid-${index}`}
+                        key={`${image.alt}-grid-${index}`}
                         type="button"
                         onClick={() => onSelect(index)}
-                        className={`relative aspect-[4/3] overflow-hidden rounded-1xl transition ${activeIndex === index
-                            ? "ring-2 ring-[#725F54]/25"
-                            : "opacity-95 hover:opacity-100"
+                        className={`relative aspect-[4/3] overflow-hidden rounded-1xl transition ${activeIndex === index ? "ring-2 ring-[#725F54]/25" : "opacity-95 hover:opacity-100"
                             }`}
                     >
                         <ImageWithFallback
@@ -966,15 +614,12 @@ function BeforeAfterImage({
     );
 }
 
-function RelatedInspirationCard({
-    item,
-    onClick,
-}: {
-    item: DetailRelatedItem;
-    onClick: () => void;
-}) {
+function RelatedProjectCard({ item }: { item: DetailRelatedItem }) {
     return (
-        <article className="overflow-hidden rounded-xl border border-[#E8E2D9] bg-white shadow-[0_8px_24px_rgba(49,51,44,0.025)]">
+        <Link
+            href={item.href}
+            className="overflow-hidden rounded-2xl border border-[#E8E2D9] bg-white shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:-translate-y-1 hover:border-[#725F54] hover:bg-[#FCFBF9]"
+        >
             <div className="relative aspect-[4/3] bg-[#EFE8DF]">
                 <ImageWithFallback
                     src={item.image}
@@ -992,19 +637,15 @@ function RelatedInspirationCard({
                 <p className="mt-1 text-[12px] text-[#7B756E]">{item.style}</p>
 
                 <p className="mt-2 text-[12px] font-semibold text-[#725F54]">
-                    Nilai referensi {item.projectValue}
+                    {item.projectValue}
                 </p>
 
-                <button
-                    type="button"
-                    onClick={onClick}
-                    className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
-                >
+                <span className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white">
                     Lihat Detail
                     <ChevronRight size={14} />
-                </button>
+                </span>
             </div>
-        </article>
+        </Link>
     );
 }
 
@@ -1013,7 +654,7 @@ function SectionCard({
     children,
 }: {
     title: string;
-    children: React.ReactNode;
+    children: ReactNode;
 }) {
     return (
         <section className="rounded-1xl border border-[#E8E2D9] bg-white p-5 shadow-[0_12px_34px_rgba(49,51,44,0.035)] sm:p-6">
@@ -1053,7 +694,7 @@ function ImageWithFallback({
     sizes,
     priority,
 }: {
-    src: string;
+    src: ImageSource;
     alt: string;
     className?: string;
     sizes: string;
@@ -1069,9 +710,7 @@ function ImageWithFallback({
 
                     <p className="text-[12px] font-semibold">Referensi visual</p>
 
-                    <p className="text-[11px] text-[#7B756E]">
-                        Gambar belum tersedia
-                    </p>
+                    <p className="text-[11px] text-[#7B756E]">Gambar belum tersedia</p>
                 </div>
             ) : (
                 <Image
