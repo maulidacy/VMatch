@@ -29,23 +29,23 @@ const designServices = [
 
 export function ServicesSection() {
   return (
-    <section className="relative overflow-hidden bg-[#191A17] py-16 text-white md:py-24">
+    <section className="relative overflow-hidden bg-[#F5F5F5] py-16 text-[#2F302B] md:py-24">
       <div className="mx-auto max-w-[1320px] px-6">
         <div className="mx-auto max-w-[780px] text-center">
           <AnimateIn direction="up" duration={0.65}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/65">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#8A7568]">
               Layanan Kami
             </p>
           </AnimateIn>
 
           <AnimateIn direction="up" delay={0.1} duration={0.7}>
-            <h2 className="mt-3 font-serif text-[34px] leading-tight text-white sm:text-[44px] md:text-[52px]">
+            <h2 className="mt-3 font-serif text-[34px] leading-tight text-[#2F302B] sm:text-[44px] md:text-[52px]">
               Layanan desain interior untuk ruang yang lebih tertata
             </h2>
           </AnimateIn>
 
           <AnimateIn direction="up" delay={0.18} duration={0.7}>
-            <p className="mx-auto mt-5 max-w-[650px] text-[15px] leading-7 text-white/65">
+            <p className="mx-auto mt-5 max-w-[650px] text-[15px] leading-7 text-[#746D66]">
               Kami membantu merancang konsep interior, pemilihan material,
               penataan ruang, hingga arahan visual agar hasil akhir lebih rapi,
               fungsional, dan sesuai karakter hunian Anda.
@@ -54,7 +54,7 @@ export function ServicesSection() {
         </div>
 
         <div className="relative mt-14 md:mt-20">
-          <div className="absolute left-8 top-0 h-full w-px bg-white/18 md:left-0 md:right-0 md:top-[34px] md:mx-auto md:h-px md:w-full" />
+          <div className="absolute left-8 top-0 h-full w-px bg-[#D9CEC3] md:left-0 md:right-0 md:top-[34px] md:mx-auto md:h-px md:w-full" />
 
           <div className="grid gap-12 md:grid-cols-4 md:gap-8">
             {designServices.map((service, index) => (
@@ -66,20 +66,20 @@ export function ServicesSection() {
                 once={true}
               >
                 <article className="relative flex gap-5 pl-20 text-left md:block md:pl-0 md:text-center">
-                  <div className="absolute left-0 top-0 z-10 grid h-16 w-16 place-items-center rounded-full bg-[#7a6a42] text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] ring-8 ring-[#191A17] md:relative md:left-auto md:top-auto md:mx-auto">
+                  <div className="absolute left-0 top-0 z-10 grid h-16 w-16 place-items-center rounded-full bg-[#6B5B52] text-white shadow-[0_18px_45px_rgba(107,91,82,0.22)] ring-8 ring-[#F7F3EE] md:relative md:left-auto md:top-auto md:mx-auto">
                     <ServiceIcon type={service.icon} />
                   </div>
 
                   <div className="pt-1 md:pt-7">
-                    <span className="font-serif text-[15px] italic text-[#d8c79a]">
+                    <span className="font-serif text-[15px] italic text-[#A88974]">
                       {service.number}
                     </span>
 
-                    <h3 className="mt-2 font-serif text-[22px] italic leading-snug text-white md:text-[23px]">
+                    <h3 className="mt-2 font-serif text-[22px] italic leading-snug text-[#2F302B] md:text-[23px]">
                       {service.title}
                     </h3>
 
-                    <p className="mt-4 max-w-[280px] text-[14px] leading-7 text-white/62 md:mx-auto md:text-[13px]">
+                    <p className="mt-4 max-w-[280px] text-[14px] leading-7 text-[#746D66] md:mx-auto md:text-[13px]">
                       {service.copy}
                     </p>
                   </div>
@@ -93,7 +93,7 @@ export function ServicesSection() {
           <div className="mt-14 flex justify-center">
             <a
               href="/login"
-              className="inline-flex items-center justify-center bg-white px-9 py-4 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#6b5b52] transition-all duration-300 hover:-translate-y-1 hover:bg-[#d8c79a] hover:text-white active:scale-95"
+              className="inline-flex items-center justify-center bg-[#6B5B52] px-9 py-4 text-[12px] font-semibold uppercase tracking-[0.18em] text-white transition-all duration-300 hover:-translate-y-1 hover:bg-[#4F433D] active:scale-95"
             >
               Mulai Konsultasi
             </a>

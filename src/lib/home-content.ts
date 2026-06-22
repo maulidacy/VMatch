@@ -277,61 +277,99 @@ export const projects: Project[] = [
 
 export const inspirations: Inspiration[] = [
   {
-    title: "Storage & Rak",
-    copy: "Solusi penyimpanan rapi dan efisien.",
-    image: {
-      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572091/storage_gjjkhl.png",
-      alt: "Storage dan rak interior",
-      width: 736,
-      height: 1104,
-    },
-  },
-  {
-    title: "Kitchen Set",
-    copy: "Inspirasi dapur cantik yang fungsional, bersih, dan elegan.",
-    image: {
-      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777571859/white_kitchen_ugkcsg.png",
-      alt: "Kitchen set modern",
-      width: 736,
-      height: 1104,
-    },
-  },
-  {
-    title: "Lemari/Wardrobe",
-    copy: "Penyimpanan rapi dan efisien yang menyesuaikan kebutuhan ruang.",
-    image: {
-      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777571657/Lemari_Wardrobe_gk7pdx.png",
-      alt: "Lemari wardrobe modern",
-      width: 736,
-      height: 1104,
-    },
-  },
-  {
-    title: "Ruang Tamu",
-    copy: "Ruang santai yang nyaman dengan suasana hangat dan elegan.",
+    title: "Rumah Tinggal",
+    copy: "Inspirasi interior rumah yang nyaman, fungsional, dan sesuai kebutuhan keluarga.",
     image: {
       src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572162/ruang_tamu_qpmb5k.png",
-      alt: "Ruang tamu modern",
+      alt: "Interior rumah tinggal",
       width: 736,
       height: 736,
     },
   },
+
   {
-    title: "Ruang Kerja",
-    copy: "Ruang kerja yang nyaman dan mendukung produktivitas.",
+    title: "Apartemen",
+    copy: "Solusi interior modern untuk ruang apartemen yang lebih optimal dan efisien.",
     image: {
-      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572294/ruang_kerja_iy3ebf.png",
-      alt: "Ruang kerja interior",
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777571859/white_kitchen_ugkcsg.png",
+      alt: "Interior apartemen",
       width: 736,
       height: 1104,
     },
   },
+
   {
-    title: "Kamar Tidur",
-    copy: "Ruang istirahat yang nyaman dan menenangkan.",
+    title: "Kos & Kontrakan",
+    copy: "Desain praktis dan tahan lama untuk meningkatkan kenyamanan penghuni.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572091/storage_gjjkhl.png",
+      alt: "Interior kos dan kontrakan",
+      width: 736,
+      height: 1104,
+    },
+  },
+
+  {
+    title: "Villa",
+    copy: "Konsep interior premium dengan suasana hangat dan pengalaman menginap yang berkesan.",
     image: {
       src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572362/kamar_tidur_cgnbcn.png",
-      alt: "Kamar tidur modern",
+      alt: "Interior villa",
+      width: 736,
+      height: 1104,
+    },
+  },
+
+  {
+    title: "Hotel",
+    copy: "Interior hospitality yang elegan untuk meningkatkan kenyamanan dan nilai properti.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572162/ruang_tamu_qpmb5k.png",
+      alt: "Interior hotel",
+      width: 736,
+      height: 736,
+    },
+  },
+
+  {
+    title: "Kantor",
+    copy: "Ruang kerja profesional yang mendukung produktivitas dan kolaborasi tim.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572294/ruang_kerja_iy3ebf.png",
+      alt: "Interior kantor",
+      width: 736,
+      height: 1104,
+    },
+  },
+
+  {
+    title: "Cafe & Resto",
+    copy: "Desain interior yang memperkuat pengalaman pelanggan dan identitas bisnis.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777571859/white_kitchen_ugkcsg.png",
+      alt: "Interior cafe dan restoran",
+      width: 736,
+      height: 1104,
+    },
+  },
+
+  {
+    title: "Retail & Toko",
+    copy: "Tata ruang yang menarik untuk meningkatkan kenyamanan dan penjualan pelanggan.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572091/storage_gjjkhl.png",
+      alt: "Interior retail dan toko",
+      width: 736,
+      height: 1104,
+    },
+  },
+
+  {
+    title: "Commercial Space",
+    copy: "Solusi interior untuk showroom, klinik, studio, dan ruang usaha profesional lainnya.",
+    image: {
+      src: "https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777572294/ruang_kerja_iy3ebf.png",
+      alt: "Commercial space interior",
       width: 736,
       height: 1104,
     },

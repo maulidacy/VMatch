@@ -16,6 +16,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { Home, Layers, Wallet } from "lucide-react";
 import Image from "next/image";
 
 function createSlug(text: string) {
@@ -26,19 +27,55 @@ function createSlug(text: string) {
     .replace(/-+/g, "-");
 }
 
-const styles = ["Semua Gaya", "Modern", "Minimalis"];
-const properties = ["Semua Properti", "Rumah", "Apartemen"];
+const styles = [
+  "Semua Gaya",
+  "Modern Minimalis",
+  "Modern Kontemporer",
+  "Japandi",
+  "Scandinavian",
+  "Industrial",
+  "Luxury Modern",
+  "Klasik Modern",
+  "Tropical Modern",
+];
+
+const properties = [
+  "Semua Properti",
+  "Rumah Tinggal",
+  "Apartemen",
+  "Kos & Kontrakan",
+  "Villa",
+  "Hotel",
+  "Kantor",
+  "Cafe & Resto",
+  "Retail & Toko",
+  "Commercial Space",
+];
 
 type FilterState = {
   search: string;
   style: string;
   property: string;
+  location: string;
 };
+
+const locations = [
+  "Semua Lokasi",
+  "Jabodetabek",
+  "Jawa Barat",
+  "Jawa Tengah",
+  "DI Yogyakarta",
+  "Jawa Timur",
+  "Bali",
+  "Sumatera Utara",
+  "Sulawesi Selatan",
+];
 
 let filterState: FilterState = {
   search: "",
   style: "Semua Gaya",
   property: "Semua Properti",
+  location: "Semua Lokasi",
 };
 
 const filterListeners = new Set<() => void>();
@@ -65,13 +102,26 @@ function useFilterStore() {
   );
 }
 
+const locationList = [
+  "Jabodetabek",
+  "Jawa Barat",
+  "Jawa Tengah",
+  "DI Yogyakarta",
+  "Jawa Timur",
+  "Bali",
+  "Sumatera Utara",
+  "Sulawesi Selatan",
+];
+
 const galleryItems = inspirations.flatMap((item, index) => [
   {
     ...item,
     id: `${createSlug(item.title)}-${index}-main`,
     title: item.title,
-    style: index % 2 === 0 ? "Modern" : "Minimalis",
-    property: index % 3 === 0 ? "Apartemen" : "Rumah",
+    style: styles[(index % (styles.length - 1)) + 1],
+
+    property: properties[(index % (properties.length - 1)) + 1],
+    location: locationList[index % locationList.length]
   },
   {
     ...item,
@@ -79,6 +129,7 @@ const galleryItems = inspirations.flatMap((item, index) => [
     title: `${item.title} ${index + 1}`,
     style: index % 2 === 0 ? "Minimalis" : "Modern",
     property: index % 2 === 0 ? "Rumah" : "Apartemen",
+    location: locationList[index % locationList.length]
   },
 ]);
 
@@ -94,7 +145,6 @@ export default function InspirasiDetailPage() {
     <main className="bg-white text-[#31332c]">
       <ResultsSection activeCategory={activeCategory} />
       <ExploreOtherRooms />
-      <CTASection activeCategoryTitle={activeCategory.title} />
       <Footer />
     </main>
   );
@@ -165,6 +215,7 @@ const GallerySection = memo(function GallerySection({
   const deferredSearch = useDeferredValue(filter.search);
   const deferredStyle = useDeferredValue(filter.style);
   const deferredProperty = useDeferredValue(filter.property);
+  const deferredLocation = useDeferredValue(filter.location);
 
   const visibleItems = useMemo(() => {
     const keyword = deferredSearch.trim().toLowerCase();
@@ -173,6 +224,10 @@ const GallerySection = memo(function GallerySection({
     return galleryItems.filter((item) => {
       const baseTitle = item.title.replace(/\s+\d+$/, "");
       const sameCategory = createSlug(baseTitle) === categorySlug;
+
+      const matchLocation =
+        deferredLocation === "Semua Lokasi" ||
+        item.location === deferredLocation;
 
       const matchSearch =
         keyword.length === 0 ||
@@ -186,51 +241,197 @@ const GallerySection = memo(function GallerySection({
         deferredProperty === "Semua Properti" ||
         item.property === deferredProperty;
 
-      return sameCategory && matchSearch && matchStyle && matchProperty;
+      return (
+        sameCategory &&
+        matchSearch &&
+        matchStyle &&
+        matchProperty &&
+        matchLocation
+      );
     });
-  }, [activeCategoryTitle, deferredSearch, deferredStyle, deferredProperty]);
+  }, [
+    activeCategoryTitle,
+    deferredSearch,
+    deferredStyle,
+    deferredProperty,
+    deferredLocation,
+  ]);
 
   return (
     <section className="mx-auto max-w-[1320px] px-4 py-12 sm:px-6 md:py-16">
       {visibleItems.length > 0 ? (
-        <div className="columns-2 gap-4 sm:columns-3 lg:columns-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {visibleItems.map((item, index) => (
-            <Link
+            <InspirationLandingCard
               key={item.id}
-              href={`/inspirasi/${createSlug(activeCategoryTitle)}/${createSlug(item.title)}`}
-              className="group relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-[22px] bg-[#f7f4ef] text-left outline-none transition duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[#6b5b52]"
-            >
-              <Image
-                src={item.image}
-                alt={item.title}
-                width={800}
-                height={1100}
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                priority={index <= 1}
-                className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.03] group-hover:brightness-75"
-              />
-
-              <div className="pointer-events-none absolute inset-0 bg-black/0 transition duration-300 group-hover:bg-black/25" />
-
-              <div className="absolute bottom-4 left-4 translate-y-3 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                <span className="inline-flex items-center gap-2 rounded-[16px] bg-white px-4 py-3 text-[14px] font-semibold leading-none text-[#191A17] shadow-lg">
-                  <span className="text-[18px] leading-none">↗</span>
-                  Lihat detail
-                </span>
-              </div>
-            </Link>
+              item={item}
+              activeCategoryTitle={activeCategoryTitle}
+              priority={index === 0}
+            />
           ))}
         </div>
       ) : (
-        <div className="py-20 text-center">
-          <p className="font-serif text-[28px] italic text-[#31332c] sm:text-[32px]">
-            Inspirasi tidak ditemukan.
+        <div className="rounded-xl border border-dashed border-[#E4D8CD] bg-white py-14 text-center">
+          <p className="text-[14px] text-[#7B756E]">
+            Belum ada inspirasi yang cocok dengan filter ini.
           </p>
         </div>
       )}
     </section>
   );
 });
+
+function InspirationLandingCard({
+  item,
+  activeCategoryTitle,
+  priority,
+}: {
+  item: (typeof galleryItems)[number];
+  activeCategoryTitle: string;
+  priority?: boolean;
+}) {
+  const packageLabel = item.title.toLowerCase().includes("premium")
+    ? "Premium"
+    : item.title.toLowerCase().includes("basic")
+      ? "Basic"
+      : "Standard";
+
+  const vendorName = item.title.toLowerCase().includes("wardrobe") ||
+    item.title.toLowerCase().includes("lemari")
+    ? "Kayu Rapi Interior"
+    : item.title.toLowerCase().includes("dapur") ||
+      item.title.toLowerCase().includes("kitchen")
+      ? "Dapur Rapi Studio"
+      : "Vendor Partner VMatch";
+
+  const projectValue =
+    activeCategoryTitle === "Kitchen Set"
+      ? "Rp43.500.000"
+      : activeCategoryTitle === "Lemari/Wardrobe"
+        ? "Rp38.000.000"
+        : activeCategoryTitle === "Ruang Tamu"
+          ? "Rp55.000.000"
+          : activeCategoryTitle === "Storage & Rak"
+            ? "Rp28.500.000"
+            : "Rp35.000.000";
+
+  const suitableFor =
+    activeCategoryTitle === "Kitchen Set"
+      ? "Dapur rumah, apartemen"
+      : activeCategoryTitle === "Lemari/Wardrobe"
+        ? "Kamar utama, kamar anak"
+        : activeCategoryTitle === "Ruang Tamu"
+          ? "Rumah tinggal, apartemen"
+          : activeCategoryTitle === "Storage & Rak"
+            ? "Kamar, ruang keluarga, apartemen"
+            : "Rumah, apartemen";
+
+  const materials =
+    activeCategoryTitle === "Kitchen Set"
+      ? "HPL, plywood, solid surface"
+      : activeCategoryTitle === "Lemari/Wardrobe"
+        ? "HPL, MDF, kaca, cermin"
+        : activeCategoryTitle === "Ruang Tamu"
+          ? "Panel dinding, rak TV, lighting"
+          : activeCategoryTitle === "Storage & Rak"
+            ? "HPL, plywood, MDF"
+            : "HPL, panel dinding, lighting";
+
+  return (
+    <Link
+      href={`/inspirasi/${createSlug(activeCategoryTitle)}/${createSlug(item.title)}`}
+      className="group block overflow-hidden rounded-xl border border-[#E8E2D9] bg-white text-left shadow-[0_8px_28px_rgba(49,51,44,0.03)] transition hover:border-[#E4D8CD] hover:shadow-[0_12px_32px_rgba(49,51,44,0.06)]"
+    >
+      <div className="relative aspect-[4/3] overflow-hidden bg-[#EFE8DF]">
+        <Image
+          src={item.image}
+          alt={item.title}
+          fill
+          priority={priority}
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+          className="object-cover transition duration-300 group-hover:scale-[1.03]"
+        />
+      </div>
+
+      <div className="space-y-3 p-3 sm:p-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-semibold text-[#725F54] sm:text-[11px]">
+              {packageLabel}
+            </span>
+
+            <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+              {item.style}
+            </span>
+
+            <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+              {item.property}
+            </span>
+
+            <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+              {item.location}
+            </span>
+          </div>
+
+          <h2 className="mt-3 font-serif text-[20px] leading-tight text-[#31332C] sm:text-[24px]">
+            {item.title}
+          </h2>
+
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#725F54]">
+            {vendorName}
+          </p>
+
+          <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-[#7B756E] sm:text-[13px] sm:leading-6">
+            {item.copy}
+          </p>
+        </div>
+
+        <div className="grid gap-2">
+          <MetaInfo icon={Wallet} label="Nilai Proyek" value={projectValue} />
+          <MetaInfo icon={Home} label="Cocok" value={suitableFor} />
+          <MetaInfo icon={Layers} label="Material" value={materials} />
+        </div>
+
+        <div className="grid gap-2">
+          <span className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-3 text-[11px] font-semibold text-[#31332C] transition group-hover:bg-[#FCFBF9] sm:text-[12px]">
+            Lihat Detail
+            <span className="text-[14px] leading-none">›</span>
+          </span>
+
+          <span className="inline-flex h-10 items-center justify-center rounded-xl bg-[#725F54] px-3 text-[11px] font-semibold text-white transition group-hover:bg-[#5A4A42] sm:text-[12px]">
+            Gunakan sebagai Preferensi
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function MetaInfo({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Wallet;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex gap-2 rounded-xl bg-[#FCFBF9] px-2.5 py-2">
+      <Icon size={14} className="mt-0.5 shrink-0 text-[#725F54]" />
+
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B756E]">
+          {label}
+        </p>
+
+        <p className="mt-0.5 text-[11px] leading-4 text-[#31332C] sm:text-[12px] sm:leading-5">
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const FilterBar = memo(function FilterBar() {
   const filter = useFilterStore();
@@ -245,18 +446,18 @@ const FilterBar = memo(function FilterBar() {
   }, [localSearch]);
 
   return (
-    <div className="mt-12 bg-black/18 p-4 backdrop-blur-sm sm:p-5 md:mt-14 lg:bg-transparent lg:p-0 lg:backdrop-blur-0">
-      <div className="grid grid-cols-2 gap-5 lg:grid-cols-[1.35fr_0.55fr_0.55fr_auto] lg:items-end">
+    <div className="mt-12 p-4 sm:p-5 md:mt-14 lg:bg-transparent lg:p-0 lg:backdrop-blur-0">
+      <div className="grid grid-cols-2 gap-5 lg:grid-cols-[1.4fr_0.9fr_0.9fr_0.9fr_auto] lg:items-end">
         <div className="col-span-2 lg:col-span-1">
           <label className="mb-3 block text-[11px] font-semibold uppercase tracking-[0.22em] text-white/85">
-            Cari Proyek
+            Cari Inspirasi
           </label>
 
           <div className="relative">
             <input
               value={localSearch}
               onChange={(event) => setLocalSearch(event.target.value)}
-              placeholder="Cari inspirasi..."
+              placeholder="Kitchen set, apartemen, kantor, hotel..."
               className="h-14 w-full bg-white px-12 text-sm text-[#31332c] outline-none placeholder:text-[#b8b2aa] focus:bg-[#f8f6f3]"
             />
 
@@ -266,7 +467,13 @@ const FilterBar = memo(function FilterBar() {
               fill="none"
               aria-hidden="true"
             >
-              <circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.7" />
+              <circle
+                cx="9"
+                cy="9"
+                r="5.5"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              />
               <path
                 d="M13.2 13.2L17 17"
                 stroke="currentColor"
@@ -278,17 +485,24 @@ const FilterBar = memo(function FilterBar() {
         </div>
 
         <SelectField
+          label="Properti"
+          value={filter.property}
+          onChange={(value) => setFilterState({ property: value })}
+          options={properties}
+        />
+
+        <SelectField
+          label="Lokasi"
+          value={filter.location}
+          onChange={(value) => setFilterState({ location: value })}
+          options={locations}
+        />
+
+        <SelectField
           label="Gaya"
           value={filter.style}
           onChange={(value) => setFilterState({ style: value })}
           options={styles}
-        />
-
-        <SelectField
-          label="Jenis Properti"
-          value={filter.property}
-          onChange={(value) => setFilterState({ property: value })}
-          options={properties}
         />
 
         <div className="col-span-2 flex justify-center lg:col-span-1 lg:block">
@@ -296,10 +510,12 @@ const FilterBar = memo(function FilterBar() {
             type="button"
             onClick={() => {
               setLocalSearch("");
+
               setFilterState({
                 search: "",
                 style: "Semua Gaya",
                 property: "Semua Properti",
+                location: "Semua Lokasi",
               });
             }}
             className="h-14 w-full max-w-[260px] bg-[#6b5b52] px-7 text-[10px] font-semibold uppercase tracking-[0.16em] text-white transition-all duration-300 hover:bg-[#5a4a42] lg:max-w-none"
@@ -432,46 +648,6 @@ const ExploreOtherRooms = memo(function ExploreOtherRooms() {
                 }`}
             />
           ))}
-        </div>
-      </AnimateIn>
-    </section>
-  );
-});
-
-const CTASection = memo(function CTASection({
-  activeCategoryTitle,
-}: {
-  activeCategoryTitle: string;
-}) {
-  return (
-    <section className="mx-auto max-w-[900px] px-4 pb-20 sm:px-6">
-      <AnimateIn direction="up" duration={0.7} once={true}>
-        <div className="bg-[#f4f1ed] px-6 py-10 text-center shadow-[0_12px_35px_rgba(0,0,0,0.1)] sm:px-8 sm:py-12">
-          <h2 className="font-serif text-[30px] leading-tight text-[#6b5b52] md:text-[42px]">
-            Ingin {activeCategoryTitle.toLowerCase()} seperti ini?
-          </h2>
-
-          <p className="mx-auto mt-5 max-w-[620px] text-[15px] leading-7 text-[#797C73]">
-            Kami dapat membantu Anda merancang dan mewujudkannya dengan proses
-            yang lebih mudah, mulai dari konsultasi desain hingga pemasangan
-            akhir.
-          </p>
-
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link
-              href="/#kontak"
-              className="inline-flex justify-center bg-[#6b5b52] px-9 py-4 text-[12px] uppercase tracking-[0.16em] text-white"
-            >
-              Mulai Proyek
-            </Link>
-
-            <a
-              href="https://wa.me/6281234567890"
-              className="inline-flex justify-center border border-[#6b5b52]/55 px-9 py-4 text-[12px] uppercase tracking-[0.16em] text-[#6b5b52]"
-            >
-              Konsultasi via WhatsApp
-            </a>
-          </div>
         </div>
       </AnimateIn>
     </section>

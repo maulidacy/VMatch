@@ -8,7 +8,7 @@ import { PhilosophySection } from "@/components/home/sections/philosophy-section
 import { ProcessSection } from "@/components/home/sections/process-section";
 import { ProjectsSection } from "@/components/home/sections/projects-section";
 import { StatsStrip } from "@/components/home/sections/stats-strip";
-import { TestimonialsSection } from "@/components/home/sections/testimonials-section";
+// import { TestimonialsSection } from "@/components/home/sections/testimonials-section";
 import { FAQSection } from "@/components/home/sections/faq-section";
 import { PromoPopup } from "@/components/home/sections/promo-popup";
 
@@ -24,7 +24,7 @@ export default function Home() {
       <ProcessSection />
       <BenefitsSection />
       <PhilosophySection />
-      <TestimonialsSection />
+      {/* <TestimonialsSection /> */}
       <FAQSection />
       <ContactSection />
       <Footer />

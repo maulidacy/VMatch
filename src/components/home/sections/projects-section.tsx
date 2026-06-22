@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Home, Layers, Wallet, type LucideIcon } from "lucide-react";
 import { FillImage } from "@/components/home/fill-image";
 import { projects } from "@/lib/home-content";
 
@@ -13,20 +14,74 @@ function createSlug(text: string) {
     .replace(/-+/g, "-");
 }
 
-const ITEM_WIDTH = "clamp(210px, 31vw, 420px)";
-const ITEM_GAP = 24;
+const projectValues = [
+  "Rp43.500.000",
+  "Rp38.000.000",
+  "Rp55.000.000",
+  "Rp24.500.000",
+  "Rp41.000.000",
+  "Rp22.500.000",
+];
+
+const propertyTypes = [
+  "Rumah Tinggal",
+  "Apartemen",
+  "Villa",
+  "Hotel",
+  "Kantor",
+  "Cafe & Resto",
+];
+
+const materialTypes = [
+  "HPL, plywood, solid surface",
+  "HPL, MDF, kaca, cermin",
+  "Panel dinding, rak TV, lighting",
+  "HPL, plywood, MDF",
+  "Panel dinding, lighting",
+  "Plywood, HPL, panel dinding",
+];
+
+const projectStyles = [
+  "Modern Minimalis",
+  "Japandi",
+  "Modern Kontemporer",
+  "Scandinavian",
+  "Luxury Modern",
+  "Tropical Modern",
+];
+
+type ProjectMeta = {
+  projectValue: string;
+  propertyType: string;
+  material: string;
+  style: string;
+};
+
+function getProjectMeta(index: number): ProjectMeta {
+  return {
+    projectValue: projectValues[index % projectValues.length],
+    propertyType: propertyTypes[index % propertyTypes.length],
+    material: materialTypes[index % materialTypes.length],
+    style: projectStyles[index % projectStyles.length],
+  };
+}
+
+function cleanLocation(location: string) {
+  return location.replace(/\s*-\s*\d{4}\s*$/, "");
+}
 
 export function ProjectsSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
-
-  const repeatedProjects = [...projects, ...projects, ...projects];
-  const middleStart = projects.length;
-
-  const [activeIndex, setActiveIndex] = useState(middleStart + 1);
-  const [enableTransition, setEnableTransition] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 
-  const realIndex = activeIndex % projects.length;
+  const portfolioItems = useMemo(() => {
+    const items = projects.map((project, index) => ({
+      ...project,
+      meta: getProjectMeta(index),
+    }));
+
+    return items.length < 8 ? [...items, ...items] : items;
+  }, []);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -39,50 +94,18 @@ export function ProjectsSection() {
           observer.disconnect();
         }
       },
-      { threshold: 0.2 }
+      { threshold: 0.2 },
     );
 
     observer.observe(section);
     return () => observer.disconnect();
   }, []);
 
-  const normalizeIndex = (index: number) => {
-    setEnableTransition(false);
-    setActiveIndex(middleStart + (index % projects.length));
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setEnableTransition(true);
-      });
-    });
-  };
-
-  const handleTransitionEnd = () => {
-    if (activeIndex < middleStart) normalizeIndex(activeIndex);
-    if (activeIndex >= middleStart * 2) normalizeIndex(activeIndex);
-  };
-
-  const chooseProject = (index: number) => {
-    const currentRealIndex = activeIndex % projects.length;
-    let targetIndex = activeIndex + (index - currentRealIndex);
-
-    if (index - currentRealIndex > projects.length / 2) {
-      targetIndex -= projects.length;
-    }
-
-    if (currentRealIndex - index > projects.length / 2) {
-      targetIndex += projects.length;
-    }
-
-    setEnableTransition(true);
-    setActiveIndex(targetIndex);
-  };
-
   return (
     <section
       ref={sectionRef}
       id="portfolio"
-      className="overflow-hidden bg-white py-16 md:py-20"
+      className="overflow-hidden bg-white py-14 md:py-20"
     >
       <div className="mx-auto max-w-[1320px] px-4 sm:px-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
@@ -99,172 +122,140 @@ export function ProjectsSection() {
               Proyek yang telah kami tangani
             </h2>
           </div>
-
-          <Link
-            href="/portfolio"
-            className={`group inline-flex w-fit items-center gap-2 border-b border-[#6b5b52]/25 pb-1 text-sm font-medium text-[#6b5b52] transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#6b5b52] hover:text-[#31332c] ${
-              isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-            }`}
-          >
-            Eksplorasi Semua Portofolio
-            <svg
-              viewBox="0 0 16 16"
-              className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-0.5"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M4.5 11.5L11.5 4.5M6.5 4.5H11.5V9.5"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
         </div>
 
         <div
-          className={`relative mt-14 overflow-hidden py-10 transition-all delay-150 duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          className={`relative mt-10 transition-all delay-150 duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:mt-14 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
-          <div
-            onTransitionEnd={handleTransitionEnd}
-            className={`flex items-center ${
-              enableTransition
-                ? "transition-transform duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-                : ""
-            }`}
-            style={{
-              gap: `${ITEM_GAP}px`,
-              transform: `translateX(calc(50% - (${activeIndex} * (${ITEM_WIDTH} + ${ITEM_GAP}px)) - (${ITEM_WIDTH} / 2)))`,
-            }}
-          >
-            {repeatedProjects.map((project, index) => {
-              const originalIndex = index % projects.length;
-              const isActive = index === activeIndex;
-
-              const cardClass = `group shrink-0 text-left transition-all duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                isActive
-                  ? "z-20 scale-100 opacity-100 grayscale-0"
-                  : "z-10 scale-[0.86] opacity-45 grayscale hover:opacity-80 hover:grayscale-0"
-              }`;
-
-              const articleClass = `overflow-hidden transition-all duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                isActive
-                  ? "bg-[#f4f2ef] shadow-[0_20px_55px_rgba(0,0,0,0.16)] hover:-translate-y-2"
-                  : "bg-[#efeeeb] hover:-translate-y-1"
-              }`;
-
-              const content = (
-                <article className={articleClass}>
-                  <div
-                    className={`relative overflow-hidden transition-all duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                      isActive
-                        ? "h-[290px] sm:h-[380px] md:h-[470px]"
-                        : "h-[230px] sm:h-[310px] md:h-[380px]"
-                    }`}
-                  >
-                    <div className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-105">
-                      <FillImage
-                        image={project.image}
-                        sizes="(min-width: 768px) 31vw, 80vw"
-                      />
-                    </div>
-
-                    {isActive ? (
-                      <>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent" />
-                        <span className="absolute left-4 top-4 bg-white/90 px-3 py-1.5 text-[8px] uppercase tracking-[0.18em] text-[#6b5b52] backdrop-blur-md sm:left-6 sm:top-6 sm:px-4 sm:py-2 sm:text-[10px]">
-                          Proyek Utama
-                        </span>
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 bg-black/15" />
-                    )}
-                  </div>
-
-                  <div className="px-4 py-5 sm:px-6 sm:py-6">
-                    <h3
-                      className={`line-clamp-2 font-serif italic leading-tight text-[#31332c] ${
-                        isActive
-                          ? "text-[24px] sm:text-[30px] md:text-[36px]"
-                          : "text-[17px] sm:text-[22px] md:text-[26px]"
-                      }`}
-                    >
-                      {project.title}
-                    </h3>
-
-                    <p
-                      className={`mt-3 uppercase tracking-[0.14em] text-[#858078] ${
-                        isActive
-                          ? "text-[9px] sm:text-[10px] md:text-[11px]"
-                          : "text-[7px] sm:text-[9px] md:text-[10px]"
-                      }`}
-                    >
-                      {project.location}
-                    </p>
-
-                    {isActive && (
-                      <span className="mt-4 inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-[#6b5b52] sm:text-[11px]">
-                        Lihat Detail
-                      </span>
-                    )}
-                  </div>
-                </article>
-              );
-
-              if (isActive) {
-                return (
-                  <Link
-                    key={`${project.title}-${index}`}
-                    href={`/portfolio/${createSlug(project.title)}`}
-                    className={cardClass}
-                    style={{ width: ITEM_WIDTH }}
-                  >
-                    {content}
-                  </Link>
-                );
-              }
-
-              return (
-                <button
+          <div className="-mx-4 overflow-x-auto px-4 pb-6 [scrollbar-width:none] sm:-mx-6 sm:px-6 [&::-webkit-scrollbar]:hidden">
+            <div className="grid auto-cols-[minmax(280px,86vw)] grid-flow-col grid-rows-1 gap-4 sm:auto-cols-[minmax(330px,48vw)] lg:auto-cols-[minmax(260px,280px)] lg:grid-rows-2 lg:gap-5 xl:auto-cols-[minmax(285px,305px)] 2xl:auto-cols-[minmax(300px,320px)]">
+              {portfolioItems.map((project, index) => (
+                <ProjectCard
                   key={`${project.title}-${index}`}
-                  type="button"
-                  onClick={() => chooseProject(originalIndex)}
-                  className={cardClass}
-                  style={{ width: ITEM_WIDTH }}
-                >
-                  {content}
-                </button>
-              );
-            })}
+                  project={project}
+                  priority={index === 0}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
         <div
-          className={`mt-6 flex items-center justify-center gap-4 transition-all delay-300 duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          className={`mt-4 flex justify-center transition-all delay-300 duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
           }`}
         >
-          <div className="flex gap-2">
-            {projects.slice(0, 6).map((project, index) => (
-              <button
-                key={project.title}
-                type="button"
-                onClick={() => chooseProject(index)}
-                className={`h-2 rounded-full transition-all duration-500 ease-out ${
-                  realIndex === index
-                    ? "w-7 bg-[#6b5b52]"
-                    : "w-2 bg-[#6b5b52]/35 hover:bg-[#6b5b52]"
-                }`}
-                aria-label={`Lihat proyek ${index + 1}`}
-              />
-            ))}
-          </div>
+          <Link
+            href="/portfolio"
+            className="inline-flex w-full items-center justify-center rounded-1xl bg-[#6b5b52] px-6 py-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition hover:-translate-y-1 hover:bg-[#5a4a42] active:scale-95 sm:w-auto"
+          >
+            Lihat Selengkapnya
+          </Link>
         </div>
       </div>
     </section>
+  );
+}
+
+function ProjectCard({
+  project,
+  priority,
+}: {
+  project: (typeof projects)[number] & {
+    meta: ProjectMeta;
+  };
+  priority?: boolean;
+}) {
+  return (
+    <Link
+      href={`/portfolio/${createSlug(project.title)}`}
+      className="group block h-full overflow-hidden rounded-xl border border-[#E8E2D9] bg-white text-left shadow-[0_8px_28px_rgba(49,51,44,0.03)] transition hover:-translate-y-1 hover:border-[#D8CABC] hover:shadow-[0_16px_38px_rgba(49,51,44,0.08)]"
+    >
+      <article className="h-full">
+        <div className="relative aspect-[4/3] overflow-hidden bg-[#EFE8DF]">
+          <div className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-105">
+            <FillImage
+              image={project.image}
+              sizes="(max-width: 640px) 86vw, (max-width: 1024px) 48vw, 320px"
+              priority={priority}
+            />
+          </div>
+
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
+
+          <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/90 px-3 py-1.5 text-[10px] font-semibold text-[#725F54] shadow-sm backdrop-blur-md">
+            {project.meta.style}
+          </span>
+        </div>
+
+        <div className="space-y-3 p-3 sm:p-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full border border-[#E4D8CD] bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-semibold text-[#725F54] sm:text-[11px]">
+                {project.meta.propertyType}
+              </span>
+
+              <span className="rounded-full bg-[#FCFBF9] px-2.5 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+                {cleanLocation(project.location)}
+              </span>
+            </div>
+
+            <h3 className="mt-3 line-clamp-2 font-serif text-[20px] leading-tight text-[#31332C] sm:text-[22px]">
+              {project.title}
+            </h3>
+          </div>
+
+          <div className="grid gap-2">
+            <MetaInfo
+              icon={Wallet}
+              label="Nilai Proyek"
+              value={project.meta.projectValue}
+            />
+            <MetaInfo
+              icon={Home}
+              label="Properti"
+              value={project.meta.propertyType}
+            />
+            <MetaInfo
+              icon={Layers}
+              label="Material"
+              value={project.meta.material}
+            />
+          </div>
+
+          <span className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-3 text-[11px] font-semibold text-[#31332C] transition group-hover:bg-[#FCFBF9] sm:text-[12px]">
+            Lihat Detail
+          </span>
+        </div>
+      </article>
+    </Link>
+  );
+}
+
+function MetaInfo({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex gap-2 rounded-xl bg-[#FCFBF9] px-2.5 py-2">
+      <Icon size={14} className="mt-0.5 shrink-0 text-[#725F54]" />
+
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#7B756E]">
+          {label}
+        </p>
+
+        <p className="mt-0.5 text-[11px] leading-4 text-[#31332C] sm:text-[12px] sm:leading-5">
+          {value}
+        </p>
+      </div>
+    </div>
   );
 }

@@ -43,7 +43,7 @@ export function BenefitsSection() {
                 }
                 className="h-full"
               >
-                <article className="group relative h-full overflow-hidden rounded-[26px] bg-[#6b5b52] px-6 py-7 text-center shadow-[0_14px_34px_rgba(49,51,44,0.14)] transition-all duration-500 hover:-translate-y-2 hover:bg-[#58483f] hover:shadow-[0_24px_55px_rgba(49,51,44,0.22)]">
+                <article className="group relative h-full overflow-hidden rounded-[1px] bg-[#6b5b52] px-6 py-7 text-center shadow-[0_14px_34px_rgba(49,51,44,0.14)] transition-all duration-500 hover:-translate-y-2 hover:bg-[#58483f] hover:shadow-[0_24px_55px_rgba(49,51,44,0.22)]">
                   <div className="relative z-10 mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white ring-1 ring-white/25 transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 group-hover:bg-white/15">
                     <BenefitIcon index={index} />
                   </div>
@@ -62,7 +62,7 @@ export function BenefitsSection() {
         </div>
 
         <AnimateIn direction="left" delay={0.2} duration={0.75}>
-          <div className="relative min-h-[360px] overflow-hidden rounded-[30px] bg-[#eee9e3] shadow-[0_18px_50px_rgba(0,0,0,0.10)] sm:min-h-[430px] lg:min-h-[520px]">
+          <div className="relative min-h-[360px] overflow-hidden rounded-[1px] bg-[#eee9e3] shadow-[0_18px_50px_rgba(0,0,0,0.10)] sm:min-h-[430px] lg:min-h-[520px]">
             <Image
               src="https://res.cloudinary.com/dxdb3dj8f/image/upload/v1777571462/Kitchen_set_hpzioo.png"
               alt="Kitchen detail with warm cabinetry"
@@ -78,7 +78,7 @@ export function BenefitsSection() {
               Managed Service
             </div>
 
-            <div className="absolute bottom-5 left-5 right-5 rounded-[24px] bg-white/90 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.14)] backdrop-blur-md sm:p-6">
+            <div className="absolute bottom-5 left-5 right-5 rounded-[1px] bg-white/90 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.14)] backdrop-blur-md sm:p-6">
               <p className="text-[11px] uppercase tracking-[0.25em] text-[#6b5b52]">
                 Solusi Terarah
               </p>

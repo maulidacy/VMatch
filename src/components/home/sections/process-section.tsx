@@ -6,7 +6,7 @@ export function ProcessSection() {
   return (
     <section
       id="cara-kerja"
-      className="bg-white pb-20 pt-20 text-center text-[#31332c] md:pb-20 md:pt-20"
+      className="bg-[#F5F5F5] pb-20 pt-0 text-center text-[#31332c] md:pb-20 md:pt-0"
     >
       <div className="relative min-h-[380px] overflow-hidden md:min-h-[460px]">
         <Image

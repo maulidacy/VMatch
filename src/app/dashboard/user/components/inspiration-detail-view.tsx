@@ -312,7 +312,6 @@ export function InspirationDetailView({
                     <div className="mt-4 flex flex-wrap gap-2">
                         <Badge label={inspiration.category} />
                         <Badge label={inspiration.packageLevel} />
-                        <Badge label="Portofolio Vendor" />
                     </div>
                 </div>
             </section>

@@ -26,6 +26,8 @@ type DesignItem = {
     projectType: string;
     category: string;
     style: string;
+    propertyType: string;
+    locationArea: string;
     description: string;
     budget: string;
     suitableFor: string;
@@ -59,23 +61,41 @@ type SelectedInspiration = {
 
 const STORAGE_KEY = "vmatch_selected_inspiration";
 
-const categories = [
-    "Semua",
-    "Storage & Rak",
-    "Kitchen Set",
-    "Lemari/Wardrobe",
-    "Ruang Tamu",
-    "Kamar Tidur",
-    "Area Kerja",
+const propertyTypes = [
+    "Semua Properti",
+    "Rumah Tinggal",
+    "Apartemen",
+    "Kos & Kontrakan",
+    "Villa",
+    "Hotel",
+    "Kantor",
+    "Cafe & Resto",
+    "Retail & Toko",
+    "Commercial Space",
+];
+
+const locations = [
+    "Semua Lokasi",
+    "Jabodetabek",
+    "Jawa Barat",
+    "Jawa Tengah & DIY",
+    "Jawa Timur",
+    "Bali",
+    "Sumatera",
+    "Kalimantan",
+    "Sulawesi",
 ];
 
 const styles = [
-    "Semua",
-    "Modern minimalis",
+    "Semua Gaya",
+    "Modern Minimalis",
+    "Modern Kontemporer",
     "Japandi",
     "Scandinavian",
-    "Warm modern",
-    "Luxury simple",
+    "Industrial",
+    "Luxury Modern",
+    "Klasik Modern",
+    "Tropical Modern",
 ];
 
 const designItems: DesignItem[] = [
@@ -84,9 +104,11 @@ const designItems: DesignItem[] = [
         name: "Storage & Rak",
         projectType: "Storage & Rak / Furniture Built-in",
         category: "Storage & Rak",
-        style: "Modern minimalis",
+        style: "Modern Minimalis",
+        propertyType: "Apartemen",
+        locationArea: "Jawa Tengah & DIY",
         description: "Solusi penyimpanan rapi dan efisien.",
-        budget: "Rp15-35 juta",
+        budget: "Rp24.500.000",
         suitableFor: "Kamar, ruang keluarga, apartemen",
         materials: "HPL, plywood, MDF",
         packageType: "Standard",
@@ -99,9 +121,11 @@ const designItems: DesignItem[] = [
         name: "Kitchen Set",
         projectType: "Kitchen Set",
         category: "Kitchen Set",
-        style: "Modern minimalis",
+        style: "Modern Minimalis",
+        propertyType: "Rumah Tinggal",
+        locationArea: "Jabodetabek",
         description: "Inspirasi dapur fungsional, bersih, dan elegan.",
-        budget: "Rp25-70 juta",
+        budget: "Rp43.500.000",
         suitableFor: "Dapur rumah, apartemen",
         materials: "HPL, plywood, solid surface",
         packageType: "Standard/Premium",
@@ -114,10 +138,12 @@ const designItems: DesignItem[] = [
         name: "Lemari/Wardrobe",
         projectType: "Wardrobe",
         category: "Lemari/Wardrobe",
-        style: "Warm modern",
+        style: "Modern Kontemporer",
+        propertyType: "Rumah Tinggal",
+        locationArea: "Jawa Barat",
         description:
             "Penyimpanan pakaian yang rapi dan menyesuaikan kebutuhan ruang.",
-        budget: "Rp18-60 juta",
+        budget: "Rp38.000.000",
         suitableFor: "Kamar utama, kamar anak",
         materials: "HPL, MDF, kaca, cermin",
         packageType: "Standard",
@@ -131,9 +157,11 @@ const designItems: DesignItem[] = [
         projectType: "Ruang Tamu",
         category: "Ruang Tamu",
         style: "Japandi",
+        propertyType: "Villa",
+        locationArea: "Bali",
         description:
             "Ruang santai yang nyaman dengan suasana hangat dan elegan.",
-        budget: "Rp20-80 juta",
+        budget: "Rp55.000.000",
         suitableFor: "Rumah tinggal, apartemen",
         materials: "Panel dinding, rak TV, lighting",
         packageType: "Premium",
@@ -147,9 +175,11 @@ const designItems: DesignItem[] = [
         projectType: "Kamar Tidur",
         category: "Kamar Tidur",
         style: "Scandinavian",
+        propertyType: "Hotel",
+        locationArea: "Jawa Timur",
         description:
             "Inspirasi kamar yang tenang, ringan, dan nyaman untuk istirahat.",
-        budget: "Rp18-55 juta",
+        budget: "Rp41.000.000",
         suitableFor: "Kamar utama, kamar anak, apartemen",
         materials: "HPL, panel dinding, lighting, fabric accent",
         packageType: "Standard",
@@ -162,10 +192,12 @@ const designItems: DesignItem[] = [
         name: "Area Kerja",
         projectType: "Ruang Kerja",
         category: "Area Kerja",
-        style: "Luxury simple",
+        style: "Luxury Modern",
+        propertyType: "Kantor",
+        locationArea: "Jabodetabek",
         description:
             "Area kerja compact yang rapi, fokus, dan tetap terlihat premium.",
-        budget: "Rp12-40 juta",
+        budget: "Rp22.500.000",
         suitableFor: "Home office, kamar, apartemen",
         materials: "Plywood, HPL, panel dinding, lighting",
         packageType: "Basic",
@@ -237,8 +269,9 @@ export function CatalogDesign({
     onChangePage?: (page: CatalogPageTarget) => void;
 }) {
     const [activeTab, setActiveTab] = useState<"design" | "material">("design");
-    const [activeCategory, setActiveCategory] = useState("Semua");
-    const [activeStyle, setActiveStyle] = useState("Semua");
+    const [activeProperty, setActiveProperty] = useState("Semua Properti");
+    const [activeLocation, setActiveLocation] = useState("Semua Lokasi");
+    const [activeStyle, setActiveStyle] = useState("Semua Gaya");
     const [search, setSearch] = useState("");
     const [detailItem, setDetailItem] = useState<DesignItem | null>(null);
     const [pendingReference, setPendingReference] =
@@ -246,23 +279,32 @@ export function CatalogDesign({
 
     const filteredDesigns = useMemo(() => {
         return designItems.filter((item) => {
-            const matchCategory =
-                activeCategory === "Semua" || item.category === activeCategory;
+            const matchProperty =
+                activeProperty === "Semua Properti" ||
+                item.propertyType === activeProperty;
 
-            const matchStyle = activeStyle === "Semua" || item.style === activeStyle;
+            const matchLocation =
+                activeLocation === "Semua Lokasi" ||
+                item.locationArea === activeLocation;
 
-            const keyword = search.toLowerCase();
+            const matchStyle =
+                activeStyle === "Semua Gaya" || item.style === activeStyle;
+
+            const keyword = search.trim().toLowerCase();
 
             const matchSearch =
                 !keyword ||
                 item.name.toLowerCase().includes(keyword) ||
+                item.category.toLowerCase().includes(keyword) ||
                 item.description.toLowerCase().includes(keyword) ||
                 item.materials.toLowerCase().includes(keyword) ||
-                item.suitableFor.toLowerCase().includes(keyword);
+                item.suitableFor.toLowerCase().includes(keyword) ||
+                item.propertyType.toLowerCase().includes(keyword) ||
+                item.locationArea.toLowerCase().includes(keyword);
 
-            return matchCategory && matchStyle && matchSearch;
+            return matchProperty && matchLocation && matchStyle && matchSearch;
         });
-    }, [activeCategory, activeStyle, search]);
+    }, [activeProperty, activeLocation, activeStyle, search]);
 
     const openUseDesignPopup = (item: DesignItem) => {
         setPendingReference({
@@ -322,13 +364,13 @@ export function CatalogDesign({
     };
 
     if (detailItem) {
-  return (
-    <InspirationDetailView
-      onBack={() => setDetailItem(null)}
-      onChangePage={onChangePage}
-    />
-  );
-}
+        return (
+            <InspirationDetailView
+                onBack={() => setDetailItem(null)}
+                onChangePage={onChangePage}
+            />
+        );
+    }
 
     return (
         <div className="w-full space-y-6">
@@ -394,13 +436,21 @@ export function CatalogDesign({
 
             {activeTab === "design" ? (
                 <DesignTab
-                    activeCategory={activeCategory}
+                    activeProperty={activeProperty}
+                    activeLocation={activeLocation}
                     activeStyle={activeStyle}
                     search={search}
                     filteredDesigns={filteredDesigns}
                     onSearchChange={setSearch}
-                    onCategoryChange={setActiveCategory}
+                    onPropertyChange={setActiveProperty}
+                    onLocationChange={setActiveLocation}
                     onStyleChange={setActiveStyle}
+                    onResetFilter={() => {
+                        setSearch("");
+                        setActiveProperty("Semua Properti");
+                        setActiveLocation("Semua Lokasi");
+                        setActiveStyle("Semua Gaya");
+                    }}
                     onOpenDetail={setDetailItem}
                     onUseDesign={openUseDesignPopup}
                 />
@@ -430,30 +480,36 @@ export function CatalogDesign({
 }
 
 function DesignTab({
-    activeCategory,
+    activeProperty,
+    activeLocation,
     activeStyle,
     search,
     filteredDesigns,
     onSearchChange,
-    onCategoryChange,
+    onPropertyChange,
+    onLocationChange,
     onStyleChange,
+    onResetFilter,
     onOpenDetail,
     onUseDesign,
 }: {
-    activeCategory: string;
+    activeProperty: string;
+    activeLocation: string;
     activeStyle: string;
     search: string;
     filteredDesigns: DesignItem[];
     onSearchChange: (value: string) => void;
-    onCategoryChange: (value: string) => void;
+    onPropertyChange: (value: string) => void;
+    onLocationChange: (value: string) => void;
     onStyleChange: (value: string) => void;
+    onResetFilter: () => void;
     onOpenDetail: (item: DesignItem) => void;
     onUseDesign: (item: DesignItem) => void;
 }) {
     return (
         <div className="space-y-5">
             <section className="rounded-xl border border-[#E8E2D9] bg-white p-4 sm:p-5">
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_220px_220px_220px_150px] lg:items-end">
                     <label className="grid gap-1.5">
                         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7B756E]">
                             Cari Inspirasi
@@ -469,30 +525,48 @@ function DesignTab({
                                 value={search}
                                 onChange={(event) => onSearchChange(event.target.value)}
                                 className="h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] pl-11 pr-4 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54]"
-                                placeholder="Cari desain, material, atau ruangan..."
+                                placeholder="Cari desain, material, ruangan, atau area..."
                             />
                         </div>
                     </label>
 
                     <FilterSelect
-                        label="Kategori"
-                        value={activeCategory}
-                        onChange={onCategoryChange}
-                        options={categories.map((item) => ({
+                        label="Properti"
+                        value={activeProperty}
+                        onChange={onPropertyChange}
+                        options={propertyTypes.map((item) => ({
                             value: item,
-                            label: item === "Semua" ? "Semua kategori" : item,
+                            label: item,
                         }))}
                     />
 
                     <FilterSelect
-                        label="Style Desain"
+                        label="Lokasi"
+                        value={activeLocation}
+                        onChange={onLocationChange}
+                        options={locations.map((item) => ({
+                            value: item,
+                            label: item,
+                        }))}
+                    />
+
+                    <FilterSelect
+                        label="Gaya"
                         value={activeStyle}
                         onChange={onStyleChange}
                         options={styles.map((item) => ({
                             value: item,
-                            label: item === "Semua" ? "Semua style" : item,
+                            label: item,
                         }))}
                     />
+
+                    <button
+                        type="button"
+                        onClick={onResetFilter}
+                        className="h-11 rounded-xl bg-[#725F54] px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#5A4A42]"
+                    >
+                        Reset
+                    </button>
                 </div>
             </section>
 
@@ -546,6 +620,14 @@ function DesignCard({
                         <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
                             {item.style}
                         </span>
+
+                        <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+                            {item.propertyType}
+                        </span>
+
+                        <span className="rounded-full bg-[#FCFBF9] px-2 py-1 text-[10px] font-medium text-[#7B756E] sm:text-[11px]">
+                            {item.locationArea}
+                        </span>
                     </div>
 
                     <h2 className="mt-3 font-serif text-[20px] leading-tight text-[#31332C] sm:text-[24px]">
@@ -558,7 +640,7 @@ function DesignCard({
                 </div>
 
                 <div className="grid gap-2">
-                    <MetaRow icon={Wallet} label="Estimasi" value={item.budget} />
+                    <MetaRow icon={Wallet} label="Nilai Proyek" value={item.budget} />
                     <MetaRow icon={Home} label="Cocok" value={item.suitableFor} />
                     <MetaRow icon={Layers} label="Material" value={item.materials} />
                 </div>
@@ -578,7 +660,7 @@ function DesignCard({
                         onClick={onUseDesign}
                         className="inline-flex h-10 items-center justify-center rounded-xl bg-[#725F54] px-3 text-[11px] font-semibold text-white transition hover:bg-[#5A4A42] sm:text-[12px]"
                     >
-                        Gunakan untuk Proyek
+                        Gunakan sebagai Preferensi
                     </button>
                 </div>
             </div>
@@ -741,7 +823,10 @@ function UseReferencePopup({
                 <div className="mt-5 space-y-2 rounded-xl bg-[#FCFBF9] p-4">
                     <PreviewRow label="Nama" value={reference.referenceName} />
                     <PreviewRow label="Style" value={reference.designStyle || "-"} />
-                    <PreviewRow label="Budget" value={reference.estimatedBudget || "-"} />
+                    <PreviewRow
+                        label={isDesign ? "Nilai Proyek" : "Budget Preferensi"}
+                        value={reference.estimatedBudget || "-"}
+                    />
                     <PreviewRow
                         label="Material"
                         value={reference.materialPreference || "-"}
