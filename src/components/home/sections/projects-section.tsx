@@ -110,9 +110,8 @@ export function ProjectsSection() {
       <div className="mx-auto max-w-[1320px] px-4 sm:px-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div
-            className={`transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-            }`}
+            className={`transition-all duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+              }`}
           >
             <p className="text-[12px] uppercase tracking-[0.28em] text-[#6b5b52] sm:text-[12px]">
               Portofolio Proyek
@@ -125,9 +124,8 @@ export function ProjectsSection() {
         </div>
 
         <div
-          className={`relative mt-10 transition-all delay-150 duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:mt-14 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
+          className={`relative mt-10 transition-all delay-150 duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:mt-14 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+            }`}
         >
           <div className="-mx-4 overflow-x-auto px-4 pb-6 [scrollbar-width:none] sm:-mx-6 sm:px-6 [&::-webkit-scrollbar]:hidden">
             <div className="grid auto-cols-[minmax(280px,86vw)] grid-flow-col grid-rows-1 gap-4 sm:auto-cols-[minmax(330px,48vw)] lg:auto-cols-[minmax(260px,280px)] lg:grid-rows-2 lg:gap-5 xl:auto-cols-[minmax(285px,305px)] 2xl:auto-cols-[minmax(300px,320px)]">
@@ -143,13 +141,12 @@ export function ProjectsSection() {
         </div>
 
         <div
-          className={`mt-4 flex justify-center transition-all delay-300 duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-          }`}
+          className={`mt-4 flex justify-center transition-all delay-300 duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+            }`}
         >
           <Link
             href="/portfolio"
-            className="inline-flex w-full items-center justify-center rounded-1xl bg-[#6b5b52] px-6 py-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition hover:-translate-y-1 hover:bg-[#5a4a42] active:scale-95 sm:w-auto"
+            className="inline-flex w-full items-center justify-center bg-[#6b5b52] px-6 py-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#5a4a42] active:scale-95 sm:w-auto"
           >
             Lihat Selengkapnya
           </Link>
