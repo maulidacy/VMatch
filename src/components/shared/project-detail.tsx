@@ -173,7 +173,7 @@ export function ProjectDetailTemplate({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#F8F6F2]"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#F8F6F2] active:scale-[0.98] active:bg-[#F8F6F2]"
         >
           <ArrowLeft size={15} />
           {backLabel}
@@ -181,7 +181,7 @@ export function ProjectDetailTemplate({
       ) : (
         <Link
           href={backHref}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#F8F6F2]"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#F8F6F2] active:scale-[0.98] active:bg-[#F8F6F2]"
         >
           <ArrowLeft size={15} />
           {backLabel}
@@ -359,7 +359,7 @@ function ProjectImageGallery({
             <button
               type="button"
               onClick={onPrevious}
-              className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#725F54] shadow-sm transition hover:bg-white"
+              className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#725F54] shadow-sm transition hover:bg-white active:scale-95 active:bg-white"
               aria-label="Gambar sebelumnya"
             >
               <ChevronLeft size={18} />
@@ -368,7 +368,7 @@ function ProjectImageGallery({
             <button
               type="button"
               onClick={onNext}
-              className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#725F54] shadow-sm transition hover:bg-white"
+              className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#725F54] shadow-sm transition hover:bg-white active:scale-95 active:bg-white"
               aria-label="Gambar berikutnya"
             >
               <ChevronRight size={18} />
@@ -388,7 +388,7 @@ function ProjectImageGallery({
                 type="button"
                 onClick={() => onSelect(index)}
                 className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl transition sm:h-20 sm:w-28 ${
-                  active ? "ring-2 ring-[#725F54]/25" : "opacity-80 hover:opacity-100"
+                  active ? "ring-2 ring-[#725F54]/25" : "opacity-80 hover:opacity-100 active:opacity-100"
                 }`}
                 aria-label={`Pilih gambar ${index + 1}`}
               >
@@ -462,7 +462,7 @@ function ProjectSummaryCard({
           href={primaryCtaHref}
           label={primaryCtaLabel}
           onClick={onPrimaryAction}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] active:scale-[0.98] active:bg-[#5A4A42]"
           icon={<ArrowRight size={15} />}
         />
 
@@ -471,7 +471,7 @@ function ProjectSummaryCard({
             <button
               type="button"
               onClick={onSave}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white active:scale-[0.98] active:border-[#725F54] active:bg-[#725F54] active:text-white"
             >
               {isSaved ? "Tersimpan" : "Simpan"}
             </button>
@@ -480,7 +480,7 @@ function ProjectSummaryCard({
               href={secondaryCtaHref}
               label={secondaryCtaLabel}
               onClick={onSecondaryAction}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white active:scale-[0.98] active:border-[#725F54] active:bg-[#725F54] active:text-white"
             />
           )}
 
@@ -488,7 +488,7 @@ function ProjectSummaryCard({
             href={tertiaryCtaHref ?? secondaryCtaHref}
             label={tertiaryCtaLabel ?? secondaryCtaLabel}
             onClick={onTertiaryAction ?? (onSave ? onSecondaryAction : undefined)}
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white active:scale-[0.98] active:border-[#725F54] active:bg-[#725F54] active:text-white"
           />
         </div>
       </div>
@@ -636,7 +636,7 @@ function MaterialPackageSection({ packages }: { packages: MaterialPackage[] }) {
             className={`rounded-xl p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition ${
               item.name === "Standard"
                 ? "bg-[#725F54] text-white"
-                : "bg-white text-[#31332C] hover:bg-[#FCFBF9]"
+                : "bg-white text-[#31332C] hover:bg-[#FCFBF9] active:bg-[#FCFBF9]"
             }`}
           >
             <p
@@ -685,7 +685,7 @@ function GalleryGridSection({
             type="button"
             onClick={() => onSelect(index)}
             className={`relative aspect-[4/3] overflow-hidden rounded-xl transition ${
-              activeIndex === index ? "ring-2 ring-[#725F54]/25" : "opacity-95 hover:opacity-100"
+              activeIndex === index ? "ring-2 ring-[#725F54]/25" : "opacity-95 hover:opacity-100 active:opacity-100"
             }`}
           >
             <ImageWithFallback
@@ -778,7 +778,7 @@ function RelatedProjectCard({
           Nilai Proyek {item.projectValue}
         </p>
 
-        <span className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition group-hover:border-[#725F54] group-hover:bg-[#725F54] group-hover:text-white">
+        <span className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition group-hover:border-[#725F54] group-hover:bg-[#725F54] group-hover:text-white group-active:border-[#725F54] group-active:bg-[#725F54] group-active:text-white">
           Lihat Detail
           <ChevronRight size={14} />
         </span>
@@ -787,7 +787,7 @@ function RelatedProjectCard({
   );
 
   const className =
-    "group overflow-hidden rounded-2xl border border-[#E8E2D9] bg-white shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:-translate-y-1 hover:border-[#725F54] hover:bg-[#FCFBF9]";
+    "group overflow-hidden rounded-2xl border border-[#E8E2D9] bg-white shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:-translate-y-1 hover:border-[#725F54] hover:bg-[#FCFBF9] active:-translate-y-1 active:border-[#725F54] active:bg-[#FCFBF9]";
 
   if (onOpenRelated) {
     return (
