@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getProjectRequests, getProjects, updateProjectRequest } from "@/lib/api/projects";
+import { getProjectRequests, getProjects, updateProjectRequest, createProject } from "@/lib/api/projects";
 import { getVendors } from "@/lib/api/profiles";
 import type { ProjectRequest as DBRequest, Profile } from "@/lib/supabase/types";
 import { toast } from "sonner";
@@ -71,6 +71,7 @@ type VendorRecommendation = {
 type ProjectRequest = {
     id: string;
     title: string;
+    customerId: string;
     customerName: string;
     customerEmail: string;
     location: string;
@@ -125,6 +126,7 @@ function mapDbToLocalRequest(r: DBRequest): ProjectRequest {
     return {
         id: r.id,
         title: r.project_name,
+        customerId: r.customer_id,
         customerName: r.customer?.full_name || "Customer",
         customerEmail: r.customer?.phone || "",
         location: r.location,
@@ -364,30 +366,46 @@ export function RequestProjectView({
         }
     };
 
-    const updateStatus = (id: string, status: RequestStatus) => {
-        updateRequest(id, (request) => ({
-            ...request,
-            status,
-        })).then(() => {
+    const updateStatus = async (id: string, status: RequestStatus) => {
+        try {
+            await updateRequest(id, (request) => ({
+                ...request,
+                status,
+            }));
+            
             toast.success(`Status berhasil diubah menjadi ${status}`);
-        });
 
-        if (status === "Butuh Konsultasi") setActiveTab("Konsultasi");
-        if (status === "Menunggu Estimasi Vendor") setActiveTab("Vendor");
-        if (
-            status === "Estimasi Dikirim Vendor" ||
-            status === "RAB Direview Admin" ||
-            status === "RAB Dikirim ke Customer"
-        ) {
-            setActiveTab("Estimasi");
+            if (status === "Butuh Konsultasi") setActiveTab("Konsultasi");
+            if (status === "Menunggu Estimasi Vendor") setActiveTab("Vendor");
+            if (
+                status === "Estimasi Dikirim Vendor" ||
+                status === "RAB Direview Admin" ||
+                status === "RAB Dikirim ke Customer"
+            ) {
+                setActiveTab("Estimasi");
+            }
+            if (status === "Menjadi Proyek Aktif") {
+                const req = requests.find((r) => r.id === id);
+                if (req) {
+                    await createProject({
+                        customer_id: req.customerId,
+                        vendor_id: req.selectedVendorId || null,
+                        title: req.title,
+                        project_type: req.projectType,
+                        location: req.location,
+                        status: "Persiapan",
+                        progress: 0,
+                    });
+                }
+                setActiveTab("Aktif");
+                setFeedbackMessage(
+                    "Request berhasil dijadikan proyek aktif. Klik tombol di bawah untuk melihat di halaman Proyek Aktif.",
+                );
+            }
+            if (status === "Ditolak") setActiveTab("Ditolak");
+        } catch {
+            toast.error("Terjadi kesalahan saat mengupdate status.");
         }
-        if (status === "Menjadi Proyek Aktif") {
-            setActiveTab("Aktif");
-            setFeedbackMessage(
-                "Request berhasil dijadikan proyek aktif. Klik tombol di bawah untuk melihat di halaman Proyek Aktif.",
-            );
-        }
-        if (status === "Ditolak") setActiveTab("Ditolak");
     };
 
     const openBriefDocument = (requestId: string) => {

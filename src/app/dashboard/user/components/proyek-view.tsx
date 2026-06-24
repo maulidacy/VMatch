@@ -584,6 +584,7 @@ function ProjectDetail({
         <ProgressTab
           projectData={projectData}
           projectDone={projectDone}
+          progressLogs={progressLogs}
           progressTimeline={progressTimeline}
           workSchedules={workSchedules}
           materialStatus={materialStatus}
@@ -1029,6 +1030,7 @@ function RabTab({
 function ProgressTab({
   projectData,
   projectDone,
+  progressLogs,
   progressTimeline,
   workSchedules,
   materialStatus,
@@ -1044,6 +1046,7 @@ function ProgressTab({
 }: {
   projectData: ProjectItem;
   projectDone: boolean;
+  progressLogs: DBProgressLog[];
   progressTimeline: { title: string; status: string; desc: string }[];
   workSchedules: { label: string; date: string }[];
   materialStatus: string;
@@ -1093,8 +1096,22 @@ function ProgressTab({
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <MockPhoto label="Progress pekerjaan" />
-              <MockPhoto label="Finishing material" />
+              {progressLogs.filter(log => log.photo_path).length > 0 ? (
+                progressLogs
+                  .filter(log => log.photo_path)
+                  .map((log) => (
+                    <VendorPhoto
+                      key={log.id}
+                      label={log.photo_label || "Update Progress"}
+                      path={log.photo_path!}
+                    />
+                  ))
+              ) : (
+                <>
+                  <MockPhoto label="Progress pekerjaan" />
+                  <MockPhoto label="Finishing material" />
+                </>
+              )}
             </div>
           </Card>
         </div>
@@ -1787,10 +1804,28 @@ function ScheduleRow({ label, date }: { label: string; date: string }) {
 
 function MockPhoto({ label }: { label: string }) {
   return (
-    <div className="flex aspect-[4/3] items-center justify-center rounded-[18px] border border-[#EFE7DD] bg-[#FCFBF9] p-4 text-center">
-      <div>
-        <Upload size={20} className="mx-auto text-[#725F54]" />
-        <p className="mt-2 text-[12px] font-semibold text-[#31332C]">
+    <div className="group relative aspect-video w-full overflow-hidden rounded-[16px] border border-[#E8E2D9] bg-[#FCFBF9]">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-[#9A8F86] transition-transform duration-500 group-hover:scale-110">
+        <Upload size={24} className="mb-2 opacity-40" />
+        <span className="text-[12px] font-medium">{label}</span>
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-t from-[#725F54]/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+    </div>
+  );
+}
+
+function VendorPhoto({ label, path }: { label: string; path: string }) {
+  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vmatch-files/${path}`;
+  return (
+    <div className="group relative aspect-video w-full overflow-hidden rounded-[16px] border border-[#E8E2D9] bg-[#FCFBF9]">
+      <img
+        src={url}
+        alt={label}
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+        <p className="text-[12px] font-semibold text-white drop-shadow-md">
           {label}
         </p>
         <p className="mt-1 text-[11px] text-[#7B756E]">Mock image</p>
