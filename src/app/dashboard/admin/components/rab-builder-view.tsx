@@ -20,8 +20,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { getRabs, updateRab as updateRabRecord } from "@/lib/api/projects";
-import type { Rab as DBRab } from "@/lib/supabase/types";
+import { getRabs, updateRab as updateRabRecord, createRab, getProjects, getProjectRequests } from "@/lib/api/projects";
+import type { Rab as DBRab, Project as DBProject, ProjectRequest as DBProjectRequest } from "@/lib/supabase/types";
 
 import type { AdminPageId } from "../types";
 
@@ -163,6 +163,64 @@ export function RabBuilderView({
             toast.error("Gagal memuat RAB dari server.");
         }
     }, []);
+
+    // Buat RAB Baru
+    const [isCreateRabOpen, setIsCreateRabOpen] = useState(false);
+    const [availableProjects, setAvailableProjects] = useState<DBProject[]>([]);
+    const [newRabForm, setNewRabForm] = useState({
+        project_title: "",
+        project_id: "",
+        customer_id: "",
+        vendor_id: "",
+        project_type: "",
+        location: "",
+        grand_total: "Rp0",
+        vmatch_service_fee: "Rp0",
+    });
+    const [isCreatingRab, setIsCreatingRab] = useState(false);
+
+    const openCreateRabModal = useCallback(async () => {
+        try {
+            const projects = await getProjects();
+            setAvailableProjects(projects);
+        } catch {
+            toast.error("Gagal memuat proyek.");
+        }
+        setNewRabForm({ project_title: "", project_id: "", customer_id: "", vendor_id: "", project_type: "", location: "", grand_total: "Rp0", vmatch_service_fee: "Rp0" });
+        setIsCreateRabOpen(true);
+    }, []);
+
+    const handleCreateRab = async () => {
+        if (!newRabForm.project_title.trim()) {
+            toast.error("Judul proyek wajib diisi.");
+            return;
+        }
+        if (!newRabForm.customer_id) {
+            toast.error("Pilih proyek terlebih dahulu.");
+            return;
+        }
+        setIsCreatingRab(true);
+        try {
+            await createRab({
+                project_title: newRabForm.project_title.trim(),
+                project_id: newRabForm.project_id || null,
+                customer_id: newRabForm.customer_id,
+                vendor_id: newRabForm.vendor_id || null,
+                project_type: newRabForm.project_type || null,
+                location: newRabForm.location || null,
+                grand_total: newRabForm.grand_total || "Rp0",
+                vmatch_service_fee: newRabForm.vmatch_service_fee || "Rp0",
+                status: "Menunggu Estimasi Vendor",
+            });
+            toast.success("RAB baru berhasil dibuat.");
+            setIsCreateRabOpen(false);
+            await loadRabs();
+        } catch {
+            toast.error("Gagal membuat RAB. Coba lagi.");
+        } finally {
+            setIsCreatingRab(false);
+        }
+    };
 
     useEffect(() => {
         loadRabs();
@@ -470,21 +528,135 @@ export function RabBuilderView({
     return (
         <div className="space-y-5">
             <section className="pb-1">
-                <div className="max-w-[860px]">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#725F54]">
-                        RAB Builder
-                    </p>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="max-w-[860px]">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#725F54]">
+                            RAB Builder
+                        </p>
 
-                    <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
-                        Review RAB Proyek
-                    </h1>
+                        <h1 className="mt-2 font-serif text-[34px] leading-tight text-[#31332C] sm:text-[42px]">
+                            Review RAB Proyek
+                        </h1>
 
-                    <p className="mt-2 text-[13px] leading-6 text-[#7B756E] sm:text-[14px]">
-                        Review estimasi dari vendor, finalisasi RAB versi VMatch, kirim RAB
-                        final ke customer, lalu lanjut ke invoice jika customer menyetujui.
-                    </p>
+                        <p className="mt-2 text-[13px] leading-6 text-[#7B756E] sm:text-[14px]">
+                            Review estimasi dari vendor, finalisasi RAB versi VMatch, kirim RAB
+                            final ke customer, lalu lanjut ke invoice jika customer menyetujui.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={openCreateRabModal}
+                        className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[#725F54] px-5 text-[13px] font-semibold text-white shadow-[0_6px_16px_rgba(114,95,84,0.28)] transition hover:bg-[#5A4A42]"
+                    >
+                        <ArrowRight size={16} className="rotate-90" />
+                        Buat RAB Baru
+                    </button>
                 </div>
             </section>
+
+            {/* Modal Buat RAB Baru */}
+            {isCreateRabOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-lg rounded-3xl border border-[#E8E2D9] bg-white p-6 shadow-[0_24px_64px_rgba(49,51,44,0.14)]">
+                        <div className="flex items-center justify-between">
+                            <h2 className="font-serif text-[24px] text-[#31332C]">Buat RAB Baru</h2>
+                            <button
+                                type="button"
+                                onClick={() => setIsCreateRabOpen(false)}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E8E2D9] text-[#7B756E] hover:bg-[#FCFBF9]"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+
+                        <p className="mt-1 text-[13px] text-[#7B756E]">Pilih proyek aktif sebagai dasar RAB.</p>
+
+                        <div className="mt-5 space-y-4">
+                            {availableProjects.length > 0 && (
+                                <div>
+                                    <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">Pilih Proyek Aktif</label>
+                                    <div className="relative mt-2">
+                                        <select
+                                            value={newRabForm.project_id}
+                                            onChange={(e) => {
+                                                const proj = availableProjects.find(p => p.id === e.target.value);
+                                                if (proj) {
+                                                    setNewRabForm(prev => ({
+                                                        ...prev,
+                                                        project_id: proj.id,
+                                                        project_title: proj.title,
+                                                        customer_id: proj.customer_id,
+                                                        vendor_id: proj.vendor_id || "",
+                                                        project_type: proj.project_type || "",
+                                                        location: proj.location || "",
+                                                    }));
+                                                }
+                                            }}
+                                            className="h-11 w-full appearance-none rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] pl-4 pr-10 text-[13px] text-[#31332C] outline-none focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                                        >
+                                            <option value="">-- Pilih Proyek --</option>
+                                            {availableProjects.map(p => (
+                                                <option key={p.id} value={p.id}>{p.title} ({p.project_type})</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#7B756E]" />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">Judul RAB <span className="text-red-500">*</span></label>
+                                <input
+                                    value={newRabForm.project_title}
+                                    onChange={(e) => setNewRabForm(prev => ({ ...prev, project_title: e.target.value }))}
+                                    placeholder="Contoh: Kitchen Set — Kel. Kebayoran"
+                                    className="mt-2 h-11 w-full rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-4 text-[13px] text-[#31332C] outline-none placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">Grand Total</label>
+                                    <input
+                                        value={newRabForm.grand_total}
+                                        onChange={(e) => setNewRabForm(prev => ({ ...prev, grand_total: e.target.value }))}
+                                        placeholder="Rp 80.000.000"
+                                        className="mt-2 h-11 w-full rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-4 text-[13px] text-[#31332C] outline-none placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">Service Fee VMatch</label>
+                                    <input
+                                        value={newRabForm.vmatch_service_fee}
+                                        onChange={(e) => setNewRabForm(prev => ({ ...prev, vmatch_service_fee: e.target.value }))}
+                                        placeholder="Rp 5.000.000"
+                                        className="mt-2 h-11 w-full rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-4 text-[13px] text-[#31332C] outline-none placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setIsCreateRabOpen(false)}
+                                className="flex-1 h-11 rounded-xl border border-[#E8E2D9] text-[13px] font-semibold text-[#7B756E] hover:bg-[#FCFBF9] transition"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCreateRab}
+                                disabled={isCreatingRab}
+                                className="flex-1 h-11 rounded-xl bg-[#725F54] text-[13px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-60"
+                            >
+                                {isCreatingRab ? "Membuat..." : "Buat RAB"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <section className="rounded-3xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.025)]">
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">

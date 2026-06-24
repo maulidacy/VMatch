@@ -23,7 +23,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { createVendorEstimate, getVendorBriefs, updateBrief } from "@/lib/api/projects";
 import type { Brief as DBBrief } from "@/lib/supabase/types";
-import type { VendorPageId, WorkBrief, WorkPlanStatus } from "../types";
+import type { VendorPageId, WorkBrief, WorkPlanStatus, AdminBriefFile } from "../types";
 import {
   VendorChecklistItem,
   VendorEmptyState,
@@ -32,16 +32,7 @@ import {
   VendorStatusBadge,
 } from "./shared";
 
-type AdminBriefFile = {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploadedBy: string;
-  uploadedAt: string;
-  description: string;
-  url: string;
-};
+type BriefTab = "Semua" | "Belum Dibaca" | "Sudah Dibaca" | "Estimasi Dikirim";
 
 type VendorEstimateDraft = {
   estimatedCost: string;
@@ -57,57 +48,7 @@ const emptyEstimateDraft: VendorEstimateDraft = {
   vendorNote: "",
 };
 
-
-type BriefTab = "Semua" | "Belum Dibaca" | "Sudah Dibaca" | "Estimasi Dikirim";
-
 const briefTabs: BriefTab[] = ["Semua", "Belum Dibaca", "Sudah Dibaca", "Estimasi Dikirim"];
-
-const adminBriefFiles: Record<string, AdminBriefFile[]> = {
-  "brief-1": [
-    {
-      id: "file-1",
-      name: "Project Brief - Wardrobe Kamar Utama.pdf",
-      type: "PDF",
-      size: "2.4 MB",
-      uploadedBy: "Admin VMatch",
-      uploadedAt: "28 Juni 2026",
-      description:
-        "Dokumen utama berisi scope pekerjaan, ukuran, material, timeline, dan standar hasil akhir.",
-      url: "#",
-    },
-    {
-      id: "file-2",
-      name: "Referensi Desain Wardrobe.png",
-      type: "Gambar",
-      size: "840 KB",
-      uploadedBy: "Admin VMatch",
-      uploadedAt: "28 Juni 2026",
-      description:
-        "Gambar referensi desain yang sudah disetujui customer dan VMatch.",
-      url: "#",
-    },
-  ],
-  "brief-2": [
-    {
-      id: "file-3",
-      name: "Project Brief - Kitchen Set Minimalis.pdf",
-      type: "PDF",
-      size: "3.1 MB",
-      uploadedBy: "Admin VMatch",
-      uploadedAt: "29 Juni 2026",
-      description:
-        "Dokumen pekerjaan kitchen set, pembagian area, material, dan catatan instalasi.",
-      url: "#",
-    },
-  ],
-};
-
-const vendorBriefScopes: Record<string, string> = {
-  "brief-1":
-    "Pembuatan wardrobe built-in full plafon untuk kamar utama. Pekerjaan mencakup pintu sliding, area gantung, rak lipat, dan storage tambahan. Vendor mengikuti ukuran dan referensi desain yang sudah dikirim oleh admin VMatch.",
-  "brief-2":
-    "Pembuatan kitchen set minimalis untuk area dapur kecil. Pekerjaan mencakup kabinet bawah, kabinet atas, area penyimpanan, dan finishing HPL. Vendor perlu memastikan area instalasi sesuai hasil survey dan file brief dari admin.",
-};
 
 function mapBriefStatusToWorkPlan(status: string): WorkPlanStatus {
   const map: Record<string, WorkPlanStatus> = {
@@ -162,6 +103,16 @@ export function BriefWorkPlanView({
         qcChecklist: (b.qc_checklist as string[]) || [],
         notes: b.vendor_note || b.admin_note || "",
         status: mapBriefStatusToWorkPlan(b.status),
+        files: (b.files || []).map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          type: f.file_type || "File",
+          size: f.size || "100 KB",
+          uploadedBy: f.uploaded_by || "Admin VMatch",
+          uploadedAt: new Date(f.created_at).toLocaleDateString("id-ID"),
+          description: "-",
+          url: f.storage_path || "#"
+        }))
       }));
       setWorkBriefs(mapped);
     } catch {
@@ -213,13 +164,9 @@ export function BriefWorkPlanView({
     ? briefStatuses[selectedBrief.id] ?? selectedBrief.status
     : "Belum Dibaca";
 
-  const selectedBriefFiles = selectedBrief
-    ? adminBriefFiles[selectedBrief.id] ?? []
-    : [];
+  const selectedBriefFiles = selectedBrief?.files || [];
 
-  const selectedBriefScope = selectedBrief
-    ? vendorBriefScopes[selectedBrief.id] ?? ""
-    : "";
+  const selectedBriefScope = selectedBrief?.scope.join("\n") || "";
 
   const isVendorNoteChanged = selectedBrief
     ? vendorNoteDraft !== (vendorNotes[selectedBrief.id] ?? "")
@@ -983,7 +930,7 @@ function BriefListCard({
   status: WorkPlanStatus;
   onClick: () => void;
 }) {
-  const fileCount = adminBriefFiles[brief.id]?.length ?? 0;
+  const fileCount = brief.files?.length ?? 0;
 
   return (
     <button

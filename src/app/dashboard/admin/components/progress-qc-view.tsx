@@ -19,8 +19,9 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getProjects } from "@/lib/api/projects";
-import type { Project as DBProject } from "@/lib/supabase/types";
+import { getProjects, updateProject, getQcChecklist, upsertQcChecklist } from "@/lib/api/projects";
+import type { Project as DBProject, QcChecklist as DBQcChecklist } from "@/lib/supabase/types";
+import { toast } from "sonner";
 
 type ProgressStatus =
   | "Berjalan"
@@ -158,10 +159,26 @@ export function ProgressQcView() {
     return logs.find((log) => log.id === selectedLogId) ?? null;
   }, [logs, selectedLogId]);
 
-  const openDetail = (log: ProgressLog) => {
+  const openDetail = async (log: ProgressLog) => {
     setSelectedLogId(log.id);
     setAdminNoteDraft(log.adminNote);
     setIsAdminNoteSaved(false);
+
+    try {
+      const qc = await getQcChecklist(log.id);
+      if (qc && qc.items) {
+        updateLog(log.id, (l) => ({
+          ...l,
+          qcChecklist: (qc.items as any[]).map((item, index) => ({
+            id: `qc-${index}`,
+            label: item.label,
+            checked: item.completed,
+          })),
+        }));
+      }
+    } catch {
+      // silent
+    }
   };
 
   const closeDetail = () => {
@@ -186,55 +203,91 @@ export function ProgressQcView() {
     );
   };
 
-  const updateChecklist = (id: string, checkId: string) => {
-    updateLog(id, (log) => ({
-      ...log,
-      qcChecklist: log.qcChecklist.map((item) =>
-        item.id === checkId
-          ? {
-            ...item,
-            checked: !item.checked,
-          }
-          : item,
-      ),
-    }));
+  const updateChecklist = async (id: string, checkId: string) => {
+    const log = logs.find((l) => l.id === id);
+    if (!log) return;
+
+    const newChecklist = log.qcChecklist.map((item) =>
+      item.id === checkId
+        ? {
+          ...item,
+          checked: !item.checked,
+        }
+        : item,
+    );
+
+    try {
+      await upsertQcChecklist({
+        project_id: id,
+        items: newChecklist.map((c) => ({
+          label: c.label,
+          completed: c.checked,
+        })),
+      });
+      updateLog(id, (l) => ({
+        ...l,
+        qcChecklist: newChecklist,
+      }));
+    } catch {
+      toast.error("Gagal menyimpan checklist QC.");
+    }
   };
 
-  const updateStatus = (id: string, status: ProgressStatus) => {
-    updateLog(id, (log) => ({
-      ...log,
-      status,
-      progress: status === "Selesai" ? 100 : log.progress,
-      currentStage: status === "Selesai" ? "Selesai" : log.currentStage,
-    }));
+  const updateStatus = async (id: string, status: ProgressStatus) => {
+    const log = logs.find((l) => l.id === id);
+    if (!log) return;
 
-    if (status === "Selesai") {
-      setActiveTab("Selesai");
-      return;
+    const newProgress = status === "Selesai" ? 100 : log.progress;
+    const newStage = status === "Selesai" ? "Selesai" : log.currentStage;
+
+    try {
+      await updateProject(id, {
+        status,
+        progress: newProgress,
+        current_stage: newStage,
+      });
+
+      updateLog(id, (l) => ({
+        ...l,
+        status,
+        progress: newProgress,
+        currentStage: newStage,
+      }));
+
+      if (status === "Selesai") {
+        setActiveTab("Selesai");
+      } else if (status === "Butuh QC") {
+        setActiveTab("QC");
+      } else if (status === "Ada Kendala") {
+        setActiveTab("Kendala");
+      } else {
+        setActiveTab("Berjalan");
+      }
+
+      toast.success(`Status berhasil diubah menjadi ${status}`);
+    } catch {
+      toast.error("Gagal mengubah status proyek.");
     }
-
-    if (status === "Butuh QC") {
-      setActiveTab("QC");
-      return;
-    }
-
-    if (status === "Ada Kendala") {
-      setActiveTab("Kendala");
-      return;
-    }
-
-    setActiveTab("Berjalan");
   };
 
-  const saveAdminNote = () => {
+  const saveAdminNote = async () => {
     if (!selectedLog) return;
 
-    updateLog(selectedLog.id, (log) => ({
-      ...log,
-      adminNote: adminNoteDraft,
-    }));
+    try {
+      await updateProject(selectedLog.id, {
+        admin_note: adminNoteDraft,
+      });
 
-    setIsAdminNoteSaved(true);
+      updateLog(selectedLog.id, (log) => ({
+        ...log,
+        adminNote: adminNoteDraft,
+      }));
+
+      setIsAdminNoteSaved(true);
+      toast.success("Catatan admin berhasil disimpan.");
+    } catch {
+      toast.error("Gagal menyimpan catatan admin.");
+    }
   };
 
   if (selectedLog) {

@@ -18,8 +18,9 @@ import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AdminPageId } from "../types";
-import { getProjects } from "@/lib/api/projects";
+import { getProjects, updateProject as updateProjectRecord } from "@/lib/api/projects";
 import type { Project as DBProject } from "@/lib/supabase/types";
+import { toast } from "sonner";
 
 type ProjectStatus =
   | "Berjalan"
@@ -132,7 +133,7 @@ export function ActiveProjectsView({
     return projects.find((project) => project.id === selectedProjectId) ?? null;
   }, [projects, selectedProjectId]);
 
-  const updateProject = (
+  const updateLocalProject = (
     id: string,
     field: keyof ActiveProject,
     value: string | number | ProjectStatus,
@@ -149,19 +150,36 @@ export function ActiveProjectsView({
     );
   };
 
-  const updateStatus = (id: string, status: ProjectStatus) => {
-    setProjects((current) =>
-      current.map((project) =>
-        project.id === id
-          ? {
-              ...project,
-              status,
-              progress: status === "Selesai" ? 100 : project.progress,
-              currentStage: status === "Selesai" ? "Selesai" : project.currentStage,
-            }
-          : project,
-      ),
-    );
+  const updateStatus = async (id: string, status: ProjectStatus) => {
+    const project = projects.find((p) => p.id === id);
+    if (!project) return;
+    
+    const newProgress = status === "Selesai" ? 100 : project.progress;
+    const newStage = status === "Selesai" ? "Selesai" : project.currentStage;
+
+    try {
+      await updateProjectRecord(id, {
+        status,
+        progress: newProgress,
+        current_stage: newStage,
+      });
+
+      setProjects((current) =>
+        current.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                status,
+                progress: newProgress,
+                currentStage: newStage,
+              }
+            : p,
+        ),
+      );
+      toast.success(`Status berhasil diubah menjadi ${status}`);
+    } catch {
+      toast.error("Gagal mengubah status proyek.");
+    }
   };
 
   const openDetail = (project: ActiveProject) => {
@@ -187,9 +205,15 @@ export function ActiveProjectsView({
           setAdminNoteDraft(value);
           setIsNoteSaved(false);
         }}
-        onSaveNote={() => {
-          updateProject(selectedProject.id, "adminNote", adminNoteDraft);
-          setIsNoteSaved(true);
+        onSaveNote={async () => {
+          try {
+            await updateProjectRecord(selectedProject.id, { admin_note: adminNoteDraft });
+            updateLocalProject(selectedProject.id, "adminNote", adminNoteDraft);
+            setIsNoteSaved(true);
+            toast.success("Catatan admin berhasil disimpan.");
+          } catch {
+            toast.error("Gagal menyimpan catatan admin.");
+          }
         }}
         onUpdateStatus={(status) => updateStatus(selectedProject.id, status)}
         onChangePage={onChangePage}

@@ -307,7 +307,7 @@ export function ProgressLogView({ vendorId }: { vendorId: string }) {
                                     </p>
 
                                     <p className="text-[11px] leading-5 text-[#7B756E]">
-                                        Upload foto masih mock pada prototype.
+                                        Format JPG, PNG (Maks 5MB)
                                     </p>
                                 </div>
                             </div>

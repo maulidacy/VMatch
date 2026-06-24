@@ -81,6 +81,17 @@ export type VendorProject = {
   fieldTeam: FieldTeamMember[];
 };
 
+export type AdminBriefFile = {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  description: string;
+  url: string;
+};
+
 export type WorkBrief = {
   id: string;
   projectId: string;
@@ -94,6 +105,7 @@ export type WorkBrief = {
   qcChecklist: string[];
   notes: string;
   status: WorkPlanStatus;
+  files: AdminBriefFile[];
 };
 
 export type ProgressLog = {

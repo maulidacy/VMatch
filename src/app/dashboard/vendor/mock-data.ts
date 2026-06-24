@@ -191,6 +191,7 @@ export const workBriefs: WorkBrief[] = [
     notes:
       "Jika ada kendala material, ukuran, atau timeline, vendor wajib melapor melalui Log Progress agar VMatch dapat menyesuaikan komunikasi ke customer.",
     status: "Sudah Dibaca",
+    files: [],
   },
   {
     id: "brief-2",
@@ -228,6 +229,7 @@ export const workBriefs: WorkBrief[] = [
     notes:
       "Vendor belum perlu memulai pengerjaan sampai brief final dan material disetujui.",
     status: "Belum Dibaca",
+    files: [],
   },
 ];
 

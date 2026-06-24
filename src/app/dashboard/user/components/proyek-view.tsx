@@ -27,6 +27,9 @@ import {
   getWarrantyClaims,
   updateInvoice,
   createWarrantyClaim,
+  getCustomerRabs,
+  updateRab,
+  upsertQcChecklist,
 } from "@/lib/api/projects";
 import { toast } from "sonner";
 import type {
@@ -35,6 +38,7 @@ import type {
   Project as DBProject,
   QcChecklist as DBQcChecklist,
   WarrantyClaim as DBWarrantyClaim,
+  Rab as DBRab,
 } from "@/lib/supabase/types";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -375,23 +379,34 @@ function ProjectDetail({
   const [rabRevisionNote, setRabRevisionNote] = useState("");
   const [rabRevisionOpen, setRabRevisionOpen] = useState(false);
   const [rabApproveOpen, setRabApproveOpen] = useState(false);
+  const [customerRab, setCustomerRab] = useState<DBRab | null>(null);
 
   const warrantyActive = projectDone && qcStatus === "Disetujui";
 
   useEffect(() => {
     const loadProjectDetail = async () => {
       try {
-        const [invoiceRows, progressRows, qcRow, warrantyRows] = await Promise.all([
+        const [invoiceRows, progressRows, qcRow, warrantyRows, rabs] = await Promise.all([
           getProjectInvoices(projectData.id),
           getProgressLogs(projectData.id),
           getQcChecklist(projectData.id),
           getWarrantyClaims(projectData.id),
+          getCustomerRabs(userId),
         ]);
 
         setInvoices(invoiceRows.map(mapDbInvoiceToLocalInvoice));
         setProgressLogs(progressRows);
         setQcChecklistData(qcRow);
         setWarrantyClaims(warrantyRows.map(mapDbWarrantyToLocalWarranty));
+
+        const projRab = rabs.find(r => r.project_id === projectData.id);
+        if (projRab) {
+          setCustomerRab(projRab);
+          if (projRab.status === "RAB Dikirim ke Customer") setRabStatus("RAB Diterima");
+          else if (projRab.status === "Revisi Diminta Customer") setRabStatus("Minta Revisi");
+          else if (projRab.status === "RAB Disetujui Customer") setRabStatus("Disetujui");
+          else if (projRab.status === "Menunggu Estimasi Vendor" || projRab.status === "Estimasi Dikirim Vendor" || projRab.status === "RAB Direview Admin") setRabStatus("Menunggu RAB");
+        }
 
         if (qcRow?.status === "Disetujui" || qcRow?.customer_approved_at) {
           setQcStatus("Disetujui");
@@ -456,19 +471,29 @@ function ProjectDetail({
     }
   };
 
-  const handleApproveQC = () => {
-    setQcStatus("Disetujui");
-    setProjectDone(true);
+  const handleApproveQC = async () => {
+    try {
+      await upsertQcChecklist({
+        project_id: projectData.id,
+        status: "Disetujui",
+        customer_approved_at: new Date().toISOString()
+      });
+      setQcStatus("Disetujui");
+      setProjectDone(true);
 
-    setInvoices((current) =>
-      current.map((item) =>
-        item.title === "Pelunasan" && item.status === "Belum Tersedia"
-          ? { ...item, status: "Menunggu Pembayaran" }
-          : item,
-      ),
-    );
-
-    setQcConfirmModalOpen(false);
+      setInvoices((current) =>
+        current.map((item) =>
+          item.title === "Pelunasan" && item.status === "Belum Tersedia"
+            ? { ...item, status: "Menunggu Pembayaran" }
+            : item,
+        ),
+      );
+      toast.success("Hasil QC berhasil disetujui.");
+    } catch {
+      toast.error("Gagal menyetujui hasil QC.");
+    } finally {
+      setQcConfirmModalOpen(false);
+    }
   };
 
   return (
@@ -565,6 +590,7 @@ function ProjectDetail({
           materialDetails={materialDetails}
           revisions={revisions}
           qcStatus={qcStatus}
+          qcChecklistData={qcChecklistData}
           onApproveMaterial={() => setMaterialStatus("Disetujui")}
           onRequestMaterialChange={() => setMaterialModalOpen(true)}
           onCreateRevision={() => setRevisionModalOpen(true)}
@@ -721,9 +747,23 @@ function ProjectDetail({
           placeholder="Contoh: budget terlalu tinggi, minta opsi material yang lebih hemat."
           submitLabel="Kirim Permintaan Revisi"
           onClose={() => setRabRevisionOpen(false)}
-          onSubmit={(text) => {
-            setRabRevisionNote(text || "Customer meminta revisi RAB.");
-            setRabStatus("Minta Revisi");
+          onSubmit={async (text) => {
+            if (customerRab) {
+              try {
+                await updateRab(customerRab.id, { 
+                  status: "Revisi Diminta Customer", 
+                  revision_note: text || "Customer meminta revisi RAB." 
+                });
+                setRabRevisionNote(text || "Customer meminta revisi RAB.");
+                setRabStatus("Minta Revisi");
+                toast.success("Permintaan revisi RAB berhasil dikirim.");
+              } catch {
+                toast.error("Gagal mengirim permintaan revisi RAB.");
+              }
+            } else {
+              setRabRevisionNote(text || "Customer meminta revisi RAB.");
+              setRabStatus("Minta Revisi");
+            }
             setRabRevisionOpen(false);
           }}
         />
@@ -735,8 +775,18 @@ function ProjectDetail({
           description="Dengan menyetujui RAB ini, tim VMatch akan melanjutkan ke tahap produksi dan mengirimkan invoice pembayaran pertama."
           confirmLabel="Setujui RAB"
           onClose={() => setRabApproveOpen(false)}
-          onConfirm={() => {
-            setRabStatus("Disetujui");
+          onConfirm={async () => {
+            if (customerRab) {
+              try {
+                await updateRab(customerRab.id, { status: "RAB Disetujui Customer" });
+                setRabStatus("Disetujui");
+                toast.success("RAB berhasil disetujui.");
+              } catch {
+                toast.error("Gagal menyetujui RAB.");
+              }
+            } else {
+              setRabStatus("Disetujui");
+            }
             setRabApproveOpen(false);
           }}
         />
@@ -985,6 +1035,7 @@ function ProgressTab({
   materialDetails,
   revisions,
   qcStatus,
+  qcChecklistData,
   onApproveMaterial,
   onRequestMaterialChange,
   onCreateRevision,
@@ -999,6 +1050,7 @@ function ProgressTab({
   materialDetails: { part: string; material: string }[];
   revisions: Revision[];
   qcStatus: QCStatus;
+  qcChecklistData: DBQcChecklist | null;
   onApproveMaterial: () => void;
   onRequestMaterialChange: () => void;
   onCreateRevision: () => void;
@@ -1156,16 +1208,16 @@ function ProgressTab({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              {qcChecklist.map((item) => (
+              {(qcChecklistData?.items || qcChecklist.map((l) => ({ label: l, completed: false }))).map((item, idx) => (
                 <div
-                  key={item}
+                  key={idx}
                   className="flex items-center gap-3 rounded-[18px] border border-[#EFE7DD] bg-[#FCFBF9] p-4"
                 >
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#725F54] text-white">
+                  <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${item.completed ? "bg-[#725F54] text-white" : "border border-[#DCCBBC] bg-transparent text-transparent"}`}>
                     <Check size={14} />
                   </span>
-                  <p className="text-[13px] font-medium text-[#31332C]">
-                    {item}
+                  <p className={`text-[13px] font-medium ${item.completed ? "text-[#31332C]" : "text-[#7B756E]"}`}>
+                    {item.label}
                   </p>
                 </div>
               ))}
@@ -1967,7 +2019,7 @@ function DocumentPreviewModal({
           {document.description}
         </p>
         <p className="mt-4 text-[12px] font-semibold text-[#31332C]">
-          Preview dokumen mock. Tidak ada file asli yang diunduh.
+          Dokumen ini tersedia di storage.
         </p>
       </div>
 
