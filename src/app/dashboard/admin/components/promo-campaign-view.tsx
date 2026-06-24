@@ -536,13 +536,19 @@ function PromoDetailPage({
             </p>
 
             <div className="relative mt-4 h-[260px] overflow-hidden rounded-2xl border border-[#E4D8CD] bg-[#FCFBF9]">
-              <NextImage
-                src={previewPromo.imageUrl}
-                alt={previewPromo.title}
-                fill
-                sizes="(max-width: 1024px) 100vw, 320px"
-                className="object-cover"
-              />
+              {previewPromo.imageUrl ? (
+                <NextImage
+                  src={previewPromo.imageUrl}
+                  alt={previewPromo.title}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 320px"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[#B8AEA5]">
+                  <ImageIcon size={32} />
+                </div>
+              )}
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
 
@@ -770,13 +776,19 @@ function PromoCard({
       className="group w-full overflow-hidden rounded-2xl border border-[#E8E2D9] bg-white text-left shadow-[0_8px_24px_rgba(49,51,44,0.025)] transition hover:border-[#725F54] hover:bg-[#FCFBF9]"
     >
       <div className="relative h-[150px] bg-[#FCFBF9]">
-        <NextImage
-          src={promo.imageUrl}
-          alt={promo.title}
-          fill
-          sizes="(max-width: 768px) 100vw, 380px"
-          className="object-cover"
-        />
+        {promo.imageUrl ? (
+          <NextImage
+            src={promo.imageUrl}
+            alt={promo.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 380px"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[#B8AEA5]">
+            <ImageIcon size={32} />
+          </div>
+        )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
 
@@ -903,13 +915,19 @@ function PromoPopupPreview({ promo }: { promo: PromoCampaign }) {
 
       <div className="mx-auto w-full max-w-[440px] overflow-hidden rounded-[20px] border border-[#E4D8CD] bg-[#31332C] shadow-[0_24px_60px_rgba(49,51,44,0.16)]">
         <div className="relative h-[420px]">
-          <NextImage
-            src={promo.imageUrl}
-            alt={promo.title}
-            fill
-            sizes="440px"
-            className="object-cover"
-          />
+          {promo.imageUrl ? (
+            <NextImage
+              src={promo.imageUrl}
+              alt={promo.title}
+              fill
+              sizes="440px"
+              className="object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#1A1A1A] text-[#7B756E]">
+              <ImageIcon size={48} />
+            </div>
+          )}
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/35 to-black/10" />
 

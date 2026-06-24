@@ -102,9 +102,12 @@ export function ProjectView({
   }, [loadProjects]);
 
   const filteredProjects = useMemo(() => {
-    return vendorProjects.filter((project) => {
-      if (activeFilter === "all") return true;
+    if (activeFilter === "all") {
+      // "Semua" harus menampilkan seluruh proyek tanpa terkecuali.
+      return vendorProjects;
+    }
 
+    return vendorProjects.filter((project) => {
       if (activeFilter === "active") {
         return [
           "Siap Dikerjakan",
@@ -114,11 +117,17 @@ export function ProjectView({
         ].includes(project.status);
       }
 
-      if (activeFilter === "waiting") return project.status === "Menunggu Brief";
+      if (activeFilter === "waiting") {
+        return project.status === "Menunggu Brief";
+      }
 
-      return project.status === "Selesai";
+      if (activeFilter === "done") {
+        return project.status === "Selesai";
+      }
+
+      return true;
     });
-  }, [activeFilter]);
+  }, [activeFilter, vendorProjects]);
 
   const selectedProject = useMemo(() => {
     return (

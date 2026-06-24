@@ -107,6 +107,7 @@ export function AnalyticsView() {
     customers: "0",
     conversion: "0%",
   });
+  const [vendorPerf, setVendorPerf] = useState<VendorPerformance[]>(vendorPerformance);
 
   const loadAnalytics = useCallback(async () => {
     try {
@@ -165,7 +166,21 @@ export function AnalyticsView() {
         }),
       );
 
-      void vendors;
+      const realVendorPerf = vendors.slice(0, 3).map((vendor) => {
+        const vendorProjects = projects.filter((p) => p.vendor_id === vendor.id);
+        const completedProjects = vendorProjects.filter((p) => p.status === "Selesai").length;
+        const completionRate = vendorProjects.length > 0 ? Math.round((completedProjects / vendorProjects.length) * 100) : 0;
+        
+        return {
+          name: vendor.full_name || "Vendor Partner",
+          projects: completedProjects,
+          completion: completionRate,
+        };
+      });
+
+      if (realVendorPerf.length > 0) {
+        setVendorPerf(realVendorPerf);
+      }
     } catch {
       setRevenueData(defaultRevenueData);
       setProjectStatusData(defaultProjectStatusData);
@@ -282,17 +297,12 @@ export function AnalyticsView() {
             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
                 <p className="font-serif text-[26px] leading-none text-[#31332C] sm:text-[28px]">
-                  Rp72 Juta
+                  {summary.revenue}
                 </p>
 
                 <p className="mt-2 text-[12px] leading-5 text-[#7B756E]">
-                  Revenue bulan ini naik dibanding bulan sebelumnya.
+                  Total pendapatan dari seluruh invoice yang terdaftar.
                 </p>
-              </div>
-
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#DCEBDD] bg-[#F5FAF6] px-3 py-1.5 text-[12px] font-semibold text-[#4F7A5F]">
-                <TrendingUp size={14} />
-                +18% growth
               </div>
             </div>
 
@@ -402,7 +412,7 @@ export function AnalyticsView() {
 
       <AdminSectionCard title="Performa Vendor Partner">
         <div className="grid gap-3 md:grid-cols-3">
-          {vendorPerformance.map((vendor) => (
+          {vendorPerf.map((vendor) => (
             <div
               key={vendor.name}
               className="min-w-0 rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 transition hover:border-[#725F54] hover:bg-[#F4EEE8]"
