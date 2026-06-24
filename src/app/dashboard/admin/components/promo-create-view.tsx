@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ImageIcon, Save } from "lucide-react";
 import { useState } from "react";
+import { createPromo } from "@/lib/api/promos";
 
 import { AdminSectionCard } from "./shared";
 import {
@@ -48,8 +49,8 @@ export function PromoCreateView({
     }));
   };
 
-  const handleSave = () => {
-    const newPromo: PromoCampaign = {
+  const handleSave = async () => {
+    const draftPromo: PromoCampaign = {
       id: `promo-${nextPromoNumber}`,
       title: form.title.trim() || "Promo Baru",
       description:
@@ -65,7 +66,26 @@ export function PromoCreateView({
       createdAt: "Hari ini",
     };
 
-    onCreate(newPromo);
+    try {
+      const savedPromo = await createPromo({
+        title: draftPromo.title,
+        description: draftPromo.description,
+        image_url: draftPromo.imageUrl,
+        cta_label: draftPromo.ctaLabel,
+        cta_url: draftPromo.ctaTarget,
+        start_date: draftPromo.startDate || null,
+        end_date: draftPromo.endDate || null,
+        status: "Draft",
+      });
+
+      onCreate({
+        ...draftPromo,
+        id: savedPromo.id,
+        createdAt: new Date(savedPromo.created_at).toLocaleDateString("id-ID"),
+      });
+    } catch {
+      // silent
+    }
   };
 
   return (

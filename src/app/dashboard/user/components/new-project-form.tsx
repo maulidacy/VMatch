@@ -12,13 +12,14 @@ import {
 import { useMemo, useRef, useState } from "react";
 
 import { fieldClass, FormField, SectionCard, textareaClass } from "./shared";
+import { toast } from "sonner";
 import {
     BriefResultCard,
-    mockBriefResult,
     ReadinessScoreCard,
     ReviewSubmitCard,
     type BriefResultData,
 } from "./brief-result-card";
+import { createProjectRequest } from "@/lib/api/projects";
 
 type SelectedInspiration = {
     source: "design" | "material";
@@ -39,6 +40,7 @@ type ManualFormState = {
     projectType: string;
     designStyle: string;
     location: string;
+    roomSize: string;
     budget: string;
     materialPreference: string;
     materialPackage: string;
@@ -77,6 +79,7 @@ function createManualFormFromInspiration(
         materialPackage: data.materialPackage || "",
         referenceName: data.referenceName || "",
         notes: data.initialNotes || "",
+        roomSize: "",
     };
 }
 
@@ -98,6 +101,7 @@ const defaultManualForm: ManualFormState = {
     projectType: "Kitchen Set",
     designStyle: "",
     location: "",
+    roomSize: "",
     budget: "Rp60–100 juta",
     materialPreference: "",
     materialPackage: "",
@@ -107,7 +111,7 @@ const defaultManualForm: ManualFormState = {
     finishTarget: "Fleksibel",
 };
 
-export function NewProjectForm() {
+export function NewProjectForm({ userId }: { userId: string }) {
     const [storedInspiration] = useState<SelectedInspiration | null>(() =>
         getStoredInspiration(),
     );
@@ -115,32 +119,6 @@ export function NewProjectForm() {
     const [mode, setMode] = useState<"ai" | "manual">(
         storedInspiration ? "manual" : "ai",
     );
-
-    const [notice, setNotice] = useState("");
-
-    const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const showNotice = (message: string) => {
-        if (noticeTimerRef.current) {
-            clearTimeout(noticeTimerRef.current);
-        }
-
-        setNotice(message);
-
-        noticeTimerRef.current = setTimeout(() => {
-            setNotice("");
-            noticeTimerRef.current = null;
-        }, 2500);
-    };
-
-    const closeNotice = () => {
-        if (noticeTimerRef.current) {
-            clearTimeout(noticeTimerRef.current);
-            noticeTimerRef.current = null;
-        }
-
-        setNotice("");
-    };
 
     const [selectedInspiration, setSelectedInspiration] =
         useState<SelectedInspiration | null>(storedInspiration);
@@ -154,9 +132,10 @@ export function NewProjectForm() {
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     const [generatedBrief, setGeneratedBrief] = useState("");
     const [briefResult, setBriefResult] =
-        useState<BriefResultData>(mockBriefResult);
+        useState<BriefResultData | null>(null);
 
     const [isBriefSelected, setIsBriefSelected] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
     const [isRegenerating, setIsRegenerating] = useState(false);
 
     const [requestStatus, setRequestStatus] = useState<
@@ -187,11 +166,12 @@ export function NewProjectForm() {
 
         if (manualForm.projectName.trim()) score += 12;
         if (manualForm.projectType.trim()) score += 10;
-        if (manualForm.designStyle.trim()) score += 10;
-        if (manualForm.budget.trim()) score += 10;
-        if (manualForm.materialPreference.trim()) score += 10;
-        if (manualForm.materialPackage.trim()) score += 8;
-        if (manualForm.notes.trim()) score += 10;
+        if (manualForm.designStyle.trim()) score += 8;
+        if (manualForm.roomSize.trim()) score += 8;
+        if (manualForm.budget.trim()) score += 8;
+        if (manualForm.materialPreference.trim()) score += 8;
+        if (manualForm.materialPackage.trim()) score += 6;
+        if (manualForm.notes.trim()) score += 8;
         if (selectedInspiration) score += 5;
 
         return Math.min(score, 100);
@@ -205,57 +185,71 @@ export function NewProjectForm() {
         selectedInspiration,
     ]);
 
-    const handleGenerateBrief = () => {
+    const handleGenerateBrief = async () => {
         if (!aiDescription.trim()) {
-            showNotice("Isi deskripsi kebutuhan proyek dulu ya.");
+            toast.error("Isi deskripsi kebutuhan proyek dulu ya.");
             return;
         }
 
-        setGeneratedBrief("generated");
+        setIsGenerating(true);
 
-        setBriefResult({
-            ...mockBriefResult,
-            summary:
-                aiDescription.trim().length > 40
-                    ? aiDescription.trim()
-                    : mockBriefResult.summary,
-        });
+        try {
+            const response = await fetch("/api/ai/brief", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ description: aiDescription }),
+            });
 
-        setIsBriefSelected(false);
-        setRequestStatus("draft");
-        showNotice("Brief awal berhasil dibuat.");
+            if (!response.ok) throw new Error("Gagal membuat brief");
+
+            const { data } = await response.json();
+            
+            setGeneratedBrief("generated");
+            setBriefResult(data);
+            setIsBriefSelected(false);
+            setRequestStatus("draft");
+            toast.success("Brief awal berhasil dibuat.");
+        } catch (error) {
+            toast.error("Terjadi kesalahan saat membuat brief awal.");
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
-    const handleRegenerateBrief = () => {
+    const handleRegenerateBrief = async () => {
         if (!generatedBrief) {
-            showNotice("Buat brief awal dulu sebelum analisis ulang.");
+            toast.error("Buat brief awal dulu sebelum analisis ulang.");
             return;
         }
 
         setIsRegenerating(true);
 
-        window.setTimeout(() => {
-            setBriefResult((current) => ({
-                ...current,
-                recommendations: [
-                    "Gunakan konsep modern minimalis dengan layout rapi dan mudah dibaca.",
-                    "Maksimalkan penyimpanan vertikal agar ruangan tetap terasa lega.",
-                    "Pilih material finishing matte agar lebih mudah dirawat.",
-                    "Prioritaskan kombinasi gantungan, laci, dan rak lipat sesuai kebutuhan storage.",
-                ],
-            }));
+        try {
+            const response = await fetch("/api/ai/brief", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ description: aiDescription + " Tolong buat lebih detail." }),
+            });
 
+            if (!response.ok) throw new Error("Gagal regenerasi brief");
+
+            const { data } = await response.json();
+            
+            setBriefResult(data);
             setIsBriefSelected(false);
             setRequestStatus("draft");
+            toast.success("Brief berhasil dianalisis ulang.");
+        } catch (error) {
+            toast.error("Terjadi kesalahan saat menganalisis ulang brief.");
+        } finally {
             setIsRegenerating(false);
-            showNotice("Brief berhasil dianalisis ulang.");
-        }, 700);
+        }
     };
 
     const handleUseBrief = () => {
         setIsBriefSelected(true);
         setRequestStatus("selected");
-        showNotice(
+        toast.success(
             "Brief ini sudah dipilih untuk review. Ini belum mengirim request proyek.",
         );
     };
@@ -264,30 +258,78 @@ export function NewProjectForm() {
         setBriefResult(data);
         setIsBriefSelected(false);
         setRequestStatus("draft");
-        showNotice("Perubahan brief berhasil disimpan.");
+        toast.success("Perubahan brief berhasil disimpan.");
     };
 
-    const handleSaveDraft = () => {
-        showNotice("Draft berhasil disimpan sementara di frontend.");
+    const handleSaveDraft = async () => {
+        try {
+            await createProjectRequest({
+                customer_id: userId,
+                project_name: mode === "ai" ? (briefResult?.summary?.slice(0, 50) || "Proyek Baru") : manualForm.projectName,
+                project_type: mode === "ai" ? "Belum ditentukan" : manualForm.projectType,
+                design_style: manualForm.designStyle || null,
+                location: manualForm.location || "Belum ditentukan",
+                room_size: manualForm.roomSize || null,
+                budget: manualForm.budget || null,
+                material_preference: manualForm.materialPreference || null,
+                material_package: manualForm.materialPackage || null,
+                reference_name: manualForm.referenceName || null,
+                start_target: manualForm.startTarget || null,
+                finish_target: manualForm.finishTarget || null,
+                notes: manualForm.notes || null,
+                ai_description: mode === "ai" ? aiDescription : null,
+                ai_brief_summary: mode === "ai" ? (briefResult?.summary || null) : null,
+                inspiration_reference: selectedInspiration?.referenceName || null,
+                status: "Baru Masuk",
+            });
+            toast.success("Draft berhasil disimpan ke database.");
+        } catch {
+            toast.error("Gagal menyimpan draft. Silakan coba lagi.");
+        }
     };
 
-    const handleSubmitRequest = () => {
+    const handleSubmitRequest = async () => {
         if (mode === "ai" && generatedBrief && !isBriefSelected) {
-            showNotice("Pilih Gunakan Brief Ini dulu sebelum mengirim request.");
+            toast.error("Pilih Gunakan Brief Ini dulu sebelum mengirim request.");
             return;
         }
 
         if (readinessScore < 60) {
-            showNotice(
+            toast.error(
                 "Data masih kurang lengkap. Lengkapi brief terlebih dahulu sebelum kirim request.",
             );
             return;
         }
 
-        setRequestStatus("submitted");
-        showNotice(
-            "Request proyek berhasil dikirim dan sedang menunggu review tim VMatch.",
-        );
+        try {
+            await createProjectRequest({
+                customer_id: userId,
+                project_name: mode === "ai" ? (briefResult?.summary?.slice(0, 50) || "Proyek Baru") : manualForm.projectName,
+                project_type: mode === "ai" ? "Belum ditentukan" : manualForm.projectType,
+                design_style: manualForm.designStyle || null,
+                location: manualForm.location || "Belum ditentukan",
+                room_size: manualForm.roomSize || null,
+                budget: manualForm.budget || null,
+                material_preference: manualForm.materialPreference || null,
+                material_package: manualForm.materialPackage || null,
+                reference_name: manualForm.referenceName || null,
+                start_target: manualForm.startTarget || null,
+                finish_target: manualForm.finishTarget || null,
+                notes: manualForm.notes || null,
+                ai_description: mode === "ai" ? aiDescription : null,
+                ai_brief_summary: mode === "ai" ? (briefResult?.summary || null) : null,
+                ai_brief_recommendations: mode === "ai" ? (briefResult?.recommendations?.join("\n") || null) : null,
+                inspiration_reference: selectedInspiration?.referenceName || null,
+                status: "Baru Masuk",
+            });
+
+            setRequestStatus("submitted");
+            toast.success(
+                "Request proyek berhasil dikirim dan sedang menunggu review tim VMatch.",
+            );
+        } catch {
+            toast.error("Gagal mengirim request. Silakan coba lagi.");
+        }
     };
 
 
@@ -299,32 +341,11 @@ export function NewProjectForm() {
         setSelectedInspiration(null);
         setManualForm(defaultManualForm);
         setRequestStatus("draft");
-        showNotice("Referensi inspirasi berhasil dihapus.");
+        toast.success("Referensi inspirasi berhasil dihapus.");
     };
 
     return (
         <div className="w-full space-y-6">
-            {notice && (
-                <div className="fixed right-5 top-20 z-50 flex max-w-[340px] items-start gap-3 rounded-2xl border border-[#D4C9BD] bg-white p-4 shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
-                    <CheckCircle2
-                        size={18}
-                        className="mt-0.5 shrink-0 text-[#6B5B52]"
-                    />
-
-                    <p className="flex-1 text-[13px] leading-6 text-[#3D3530]">
-                        {notice}
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={closeNotice}
-                        className="grid h-6 w-6 place-items-center rounded-full text-[#8B8179] hover:bg-[#F5F0EA]"
-                        aria-label="Tutup notifikasi"
-                    >
-                        <X size={14} />
-                    </button>
-                </div>
-            )}
 
             <section className="pb-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8B8179]">
@@ -347,7 +368,6 @@ export function NewProjectForm() {
                         type="button"
                         onClick={() => {
                             setMode("ai");
-                            closeNotice();
                         }}
                         className={`flex min-w-0 items-center justify-center gap-2 rounded-xl px-3 py-3 text-[12px] font-semibold transition sm:px-4 sm:text-[13px] ${mode === "ai"
                             ? "bg-[#6B5B52] text-white shadow-[0_10px_24px_rgba(107,91,82,0.22)]"
@@ -362,7 +382,6 @@ export function NewProjectForm() {
                         type="button"
                         onClick={() => {
                             setMode("manual");
-                            closeNotice();
                         }}
                         className={`flex min-w-0 items-center justify-center gap-2 rounded-xl px-3 py-3 text-[12px] font-semibold transition sm:px-4 sm:text-[13px] ${mode === "manual"
                             ? "bg-[#6B5B52] text-white shadow-[0_10px_24px_rgba(107,91,82,0.22)]"
@@ -382,14 +401,20 @@ export function NewProjectForm() {
                     uploadedFiles={uploadedFiles}
                     onFilesChange={setUploadedFiles}
                     generatedBrief={generatedBrief}
-                    briefResult={briefResult}
-                    isBriefSelected={isBriefSelected}
-                    isRegenerating={isRegenerating}
+                    isGenerating={isGenerating}
                     onGenerateBrief={handleGenerateBrief}
-                    onRegenerateBrief={handleRegenerateBrief}
-                    onUseBrief={handleUseBrief}
-                    onChangeBriefData={handleChangeBriefData}
-                />
+                >
+                    {generatedBrief && briefResult && (
+                        <BriefResultCard
+                            data={briefResult}
+                            isSelected={isBriefSelected}
+                            isRegenerating={isRegenerating}
+                            onChangeData={handleChangeBriefData}
+                            onUseBrief={handleUseBrief}
+                            onRegenerate={handleRegenerateBrief}
+                        />
+                    )}
+                </AiBriefForm>
             ) : (
                 <ManualBriefForm
                     form={manualForm}
@@ -409,7 +434,7 @@ export function NewProjectForm() {
                     isBriefSelected={Boolean(isBriefSelected || selectedInspiration)}
                     requestStatus={requestStatus}
                     onCompleteData={() =>
-                        showNotice("Silakan lengkapi bagian yang masih kosong pada form.")
+                        toast.error("Silakan lengkapi bagian yang masih kosong pada form.")
                     }
                     onSaveDraft={handleSaveDraft}
                     onSubmitRequest={handleSubmitRequest}
@@ -425,26 +450,18 @@ function AiBriefForm({
     uploadedFiles,
     onFilesChange,
     generatedBrief,
-    briefResult,
-    isBriefSelected,
-    isRegenerating,
+    isGenerating,
     onGenerateBrief,
-    onRegenerateBrief,
-    onUseBrief,
-    onChangeBriefData,
+    children,
 }: {
     description: string;
     onDescriptionChange: (value: string) => void;
     uploadedFiles: File[];
     onFilesChange: (files: File[]) => void;
     generatedBrief: string;
-    briefResult: BriefResultData;
-    isBriefSelected: boolean;
-    isRegenerating: boolean;
+    isGenerating: boolean;
     onGenerateBrief: () => void;
-    onRegenerateBrief: () => void;
-    onUseBrief: () => void;
-    onChangeBriefData: (data: BriefResultData) => void;
+    children?: React.ReactNode;
 }) {
     return (
         <SectionCard
@@ -470,22 +487,14 @@ function AiBriefForm({
                 <button
                     type="button"
                     onClick={onGenerateBrief}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#3D3530] px-5 text-[12px] font-semibold text-white transition hover:bg-[#2C2C2C]"
+                    disabled={isGenerating}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#3D3530] px-5 text-[12px] font-semibold text-white transition hover:bg-[#2C2C2C] disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    <Send size={15} />
-                    Buat Brief Awal
+                    <Send size={15} className={isGenerating ? "animate-bounce" : ""} />
+                    {isGenerating ? "Membuat Brief..." : "Buat Brief Awal"}
                 </button>
 
-                {generatedBrief && (
-                    <BriefResultCard
-                        data={briefResult}
-                        isSelected={isBriefSelected}
-                        isRegenerating={isRegenerating}
-                        onChangeData={onChangeBriefData}
-                        onUseBrief={onUseBrief}
-                        onRegenerate={onRegenerateBrief}
-                    />
-                )}
+                {children}
             </div>
         </SectionCard>
     );
@@ -569,6 +578,15 @@ function ManualBriefForm({
                             onChange={(event) => onChange("location", event.target.value)}
                             className={fieldClass}
                             placeholder="Contoh: Semarang"
+                        />
+                    </FormField>
+
+                    <FormField label="Ukuran ruangan">
+                        <input
+                            value={form.roomSize}
+                            onChange={(event) => onChange("roomSize", event.target.value)}
+                            className={fieldClass}
+                            placeholder="Contoh: 3m x 2.5m"
                         />
                     </FormField>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   CalendarDays,
@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { workBriefs } from "../mock-data";
+import { createVendorEstimate, getVendorBriefs, updateBrief } from "@/lib/api/projects";
+import type { Brief as DBBrief } from "@/lib/supabase/types";
 import type { VendorPageId, WorkBrief, WorkPlanStatus } from "../types";
 import {
   VendorChecklistItem,
@@ -108,15 +109,31 @@ const vendorBriefScopes: Record<string, string> = {
     "Pembuatan kitchen set minimalis untuk area dapur kecil. Pekerjaan mencakup kabinet bawah, kabinet atas, area penyimpanan, dan finishing HPL. Vendor perlu memastikan area instalasi sesuai hasil survey dan file brief dari admin.",
 };
 
+function mapBriefStatusToWorkPlan(status: string): WorkPlanStatus {
+  const map: Record<string, WorkPlanStatus> = {
+    "Draft": "Belum Dibaca",
+    "Siap Dikirim": "Belum Dibaca",
+    "Dikirim ke Vendor": "Belum Dibaca",
+    "Dibaca Vendor": "Sudah Dibaca",
+    "Estimasi Dikirim": "Estimasi Dikirim",
+    "Revisi Brief": "Butuh Diskusi",
+  };
+  return map[status] || "Belum Dibaca";
+}
+
 export function BriefWorkPlanView({
   onChangePage,
+  vendorId,
 }: {
   onChangePage: (page: VendorPageId) => void;
+  vendorId: string;
 }) {
   const [activeTab, setActiveTab] = useState<BriefTab>("Semua");
   const [keyword, setKeyword] = useState("");
   const [selectedBriefId, setSelectedBriefId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [workBriefs, setWorkBriefs] = useState<WorkBrief[]>([]);
+  const [isLoadingBriefs, setIsLoadingBriefs] = useState(true);
 
   const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
   const [vendorNoteDraft, setVendorNoteDraft] = useState("");
@@ -130,14 +147,37 @@ export function BriefWorkPlanView({
   >({});
   const [estimateFeedback, setEstimateFeedback] = useState("");
 
+  // Fetch briefs from database
+  const loadBriefs = useCallback(async () => {
+    try {
+      setIsLoadingBriefs(true);
+      const dbBriefs = await getVendorBriefs(vendorId);
+      const mapped: WorkBrief[] = dbBriefs.map((b: DBBrief) => ({
+        id: b.id,
+        projectId: b.project_id || "",
+        projectName: b.project_title,
+        scope: b.scope ? [b.scope] : [],
+        materialApproved: (b.materials as string[]) || [],
+        timeline: (b.timeline as { label: string; date: string }[]) || [],
+        qcChecklist: (b.qc_checklist as string[]) || [],
+        notes: b.vendor_note || b.admin_note || "",
+        status: mapBriefStatusToWorkPlan(b.status),
+      }));
+      setWorkBriefs(mapped);
+    } catch {
+      // silent
+    } finally {
+      setIsLoadingBriefs(false);
+    }
+  }, [vendorId]);
+
+  useEffect(() => {
+    loadBriefs();
+  }, [loadBriefs]);
+
   const [briefStatuses, setBriefStatuses] = useState<
     Record<string, WorkPlanStatus>
-  >(
-    () =>
-      Object.fromEntries(
-        workBriefs.map((brief) => [brief.id, brief.status]),
-      ) as Record<string, WorkPlanStatus>,
-  );
+  >({});
 
   const filteredBriefs = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -166,9 +206,8 @@ export function BriefWorkPlanView({
 
   const selectedBrief = useMemo(() => {
     if (!selectedBriefId) return null;
-
     return workBriefs.find((brief) => brief.id === selectedBriefId) ?? null;
-  }, [selectedBriefId]);
+  }, [selectedBriefId, workBriefs]);
 
   const selectedStatus = selectedBrief
     ? briefStatuses[selectedBrief.id] ?? selectedBrief.status
@@ -213,24 +252,39 @@ export function BriefWorkPlanView({
     setConfirmOpen(false);
   };
 
-  const handleMarkAsRead = () => {
+  const handleMarkAsRead = async () => {
     if (!selectedBrief) return;
 
-    setBriefStatuses((current) => ({
-      ...current,
-      [selectedBrief.id]: "Sudah Dibaca",
-    }));
+    try {
+      await updateBrief(selectedBrief.id, {
+        status: "Dibaca Vendor",
+        vendor_read_at: new Date().toISOString(),
+      });
+      setBriefStatuses((current) => ({
+        ...current,
+        [selectedBrief.id]: "Sudah Dibaca",
+      }));
+    } catch {
+      return;
+    }
 
     setConfirmOpen(false);
   };
 
-  const saveVendorNote = () => {
+  const saveVendorNote = async () => {
     if (!selectedBrief) return;
 
-    setVendorNotes((current) => ({
-      ...current,
-      [selectedBrief.id]: vendorNoteDraft,
-    }));
+    try {
+      await updateBrief(selectedBrief.id, {
+        vendor_note: vendorNoteDraft || null,
+      });
+      setVendorNotes((current) => ({
+        ...current,
+        [selectedBrief.id]: vendorNoteDraft,
+      }));
+    } catch {
+      return;
+    }
 
     setIsVendorNoteSaved(true);
   };
@@ -246,23 +300,46 @@ export function BriefWorkPlanView({
     setEstimateFeedback("");
   };
 
-  const sendEstimateToAdmin = () => {
+  const sendEstimateToAdmin = async () => {
     if (!selectedBrief || !isEstimateReady) return;
 
-    setEstimateDrafts((current) => ({
-      ...current,
-      [selectedBrief.id]: currentEstimateDraft,
-    }));
+    try {
+      await createVendorEstimate({
+        brief_id: selectedBrief.id,
+        project_id: selectedBrief.projectId || null,
+        vendor_id: vendorId,
+        estimated_cost: currentEstimateDraft.estimatedCost,
+        estimated_duration: currentEstimateDraft.estimatedDuration,
+        suggested_material: currentEstimateDraft.suggestedMaterial || null,
+        vendor_note: currentEstimateDraft.vendorNote || vendorNoteDraft || null,
+        status: "Estimasi Dikirim",
+        sent_at: new Date().toISOString(),
+      });
 
-    setEstimateSentBriefIds((current) => ({
-      ...current,
-      [selectedBrief.id]: true,
-    }));
+      await updateBrief(selectedBrief.id, {
+        status: "Estimasi Dikirim",
+        vendor_note: vendorNoteDraft || currentEstimateDraft.vendorNote || null,
+        vendor_responded_at: new Date().toISOString(),
+      });
 
-    setBriefStatuses((current) => ({
-      ...current,
-      [selectedBrief.id]: "Estimasi Dikirim",
-    }));
+      setEstimateDrafts((current) => ({
+        ...current,
+        [selectedBrief.id]: currentEstimateDraft,
+      }));
+
+      setEstimateSentBriefIds((current) => ({
+        ...current,
+        [selectedBrief.id]: true,
+      }));
+
+      setBriefStatuses((current) => ({
+        ...current,
+        [selectedBrief.id]: "Estimasi Dikirim",
+      }));
+    } catch {
+      setEstimateFeedback("Estimasi gagal dikirim. Coba beberapa saat lagi.");
+      return;
+    }
 
     setEstimateFeedback(
       "Estimasi RAB berhasil dikirim ke admin untuk direview di RAB Builder.",

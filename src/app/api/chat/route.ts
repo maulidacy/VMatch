@@ -1,80 +1,146 @@
 import { NextRequest } from "next/server";
 
-const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY ?? "";
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "https://ollama.com/api";
+const GROQ_API_KEY = process.env.GROQ_API_KEY ?? "";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-// Katalog gambar inspirasi lokal yang bisa di-retrieve AI
-const IMAGE_CATALOG = [
-  { keywords: ["dapur", "kitchen", "kitchen set"], src: "/inspirations/rumah-dapur.webp", label: "Kitchen Set Modern" },
-  { keywords: ["dapur", "kitchen", "apartment"], src: "/inspirations/apartment-kitchen-set.webp", label: "Kitchen Set Apartemen" },
-  { keywords: ["kamar tidur", "bedroom", "tidur"], src: "/inspirations/rumah-kamar-tidur.webp", label: "Kamar Tidur" },
-  { keywords: ["kamar tidur", "bedroom", "apartment"], src: "/inspirations/apartment-bedroom.webp", label: "Bedroom Apartemen" },
-  { keywords: ["kamar mandi", "bathroom", "vanity"], src: "/inspirations/rumah-kamar-mandi.webp", label: "Kamar Mandi" },
-  { keywords: ["kamar mandi", "bathroom", "hotel"], src: "/inspirations/hotel-bathroom-vanity.webp", label: "Bathroom Vanity Hotel" },
-  { keywords: ["ruang tamu", "living", "tamu"], src: "/inspirations/rumah-ruang-tamu.webp", label: "Ruang Tamu" },
-  { keywords: ["ruang keluarga", "living", "keluarga", "family"], src: "/inspirations/rumah-ruang-keluarga.webp", label: "Ruang Keluarga" },
-  { keywords: ["living", "apartment", "ruang"], src: "/inspirations/apartment-living-area.webp", label: "Living Area Apartemen" },
-  { keywords: ["wardrobe", "lemari", "pakaian"], src: "/inspirations/rumah-wardrobe.webp", label: "Wardrobe" },
-  { keywords: ["storage", "penyimpanan", "rak"], src: "/inspirations/apartment-storage.webp", label: "Storage Apartemen" },
-  { keywords: ["laundry", "cuci"], src: "/inspirations/apartment-laundry.webp", label: "Laundry Area" },
-  { keywords: ["hotel", "lobby"], src: "/inspirations/hotel-lobby.webp", label: "Hotel Lobby" },
-  { keywords: ["hotel", "room", "kamar hotel"], src: "/inspirations/hotel-room.webp", label: "Hotel Room" },
-  { keywords: ["hotel", "restaurant", "restoran"], src: "/inspirations/hotel-restaurant.webp", label: "Hotel Restaurant" },
-  { keywords: ["hotel", "reception", "resepsionis"], src: "/inspirations/hotel-reception.webp", label: "Hotel Reception" },
-  { keywords: ["hotel", "corridor", "koridor"], src: "/inspirations/hotel-corridor.webp", label: "Hotel Corridor" },
-  { keywords: ["kos", "boarding", "kost"], src: "/inspirations/boarding-hero.webp", label: "Kos-kosan" },
-  { keywords: ["kos", "boarding", "room", "kamar kos"], src: "/inspirations/boarding-room.webp", label: "Kamar Kos" },
-  { keywords: ["kos", "boarding", "pantry", "dapur kos"], src: "/inspirations/boarding-pantry.webp", label: "Pantry Kos" },
-  { keywords: ["studio", "apartment", "apartemen kecil"], src: "/inspirations/apartment-studio-layout.webp", label: "Studio Apartemen" },
-];
+const SYSTEM_PROMPT = `Kamu adalah VMatch AI — konsultan & perancang interior senior dari VMatch Interior. Kamu cerdas, berpengalaman puluhan proyek (rumah, apartemen, kos, hotel, kantor), dan bicara seperti partner brainstorming yang enak diajak diskusi, bukan bot template.
 
-function findRelevantImages(text: string): { src: string; label: string }[] {
-  const lower = text.toLowerCase();
-  const matches = IMAGE_CATALOG.filter((img) =>
-    img.keywords.some((kw) => lower.includes(kw))
-  );
-  // Return max 3 images
-  return matches.slice(0, 3).map(({ src, label }) => ({ src, label }));
+PERAN UTAMA
+- Teman brainstorming: gali kebutuhan, gaya hidup, dan selera user. Tawarkan ide konkret, beberapa alternatif, dan trade-off-nya.
+- Perencana budget: buat estimasi biaya yang realistis dalam Rupiah, lengkap dengan rincian per komponen (material, jasa, finishing) dan asumsi yang kamu pakai. Sesuaikan dengan konteks Indonesia.
+- Perencana ruang & material: rekomendasi layout, material, palet warna, pencahayaan, dan timeline pengerjaan.
+- Penyiap brief: bantu user merapikan kebutuhan supaya siap dibawa ke tim VMatch.
+
+CARA BERPIKIR
+- Jawab langsung dan substansial. JANGAN cuma balik bertanya. Kalau detail kurang, ambil asumsi wajar (sebutkan asumsinya), beri jawaban, lalu boleh tanya maksimal 1-2 pertanyaan lanjutan yang benar-benar penting.
+- Kasih angka kalau relevan (kisaran harga, dimensi, persentase budget). Hindari jawaban mengambang.
+- Adaptif: untuk pertanyaan ringan jawab ringkas; untuk perencanaan besar jawab terstruktur dan mendalam.
+- Bahasa Indonesia yang natural, hangat, dan profesional. Boleh sedikit santai, tapi tetap berisi.
+
+FORMAT (output kamu dirender sebagai Markdown yang rapi)
+- Gunakan **bold** untuk istilah/angka penting. Pastikan setiap ** selalu berpasangan (jangan ada ** menggantung).
+- Gunakan list bernomor untuk langkah/opsi, dan bullet (- ) untuk spesifikasi.
+- Untuk rincian biaya/RAB atau perbandingan, gunakan TABEL Markdown agar rapi, contoh:
+  | Komponen | Material | Estimasi |
+  | --- | --- | --- |
+  | Kitchen set | HPL | Rp18-25 jt |
+- Boleh pakai heading pendek (## Judul) untuk memisah bagian pada jawaban panjang.
+- Jangan pakai emoji. Jangan pakai garis horizontal pemisah (--- yang berdiri sendiri di luar tabel).
+
+VISUALISASI GAMBAR (PENTING)
+- Kamu BISA membuat gambar visualisasi interior untuk user lewat penanda khusus. Tapi pakai ini dengan CERDAS — bukan di setiap jawaban.
+- Buat gambar HANYA ketika visual benar-benar menambah nilai, misalnya: user minta "tunjukkan/gambarkan/lihat contohnya", user sedang membayangkan sebuah konsep/gaya, atau saat membandingkan tampilan desain.
+- JANGAN buat gambar untuk pertanyaan murni budget, logistik, jadwal, atau pertanyaan faktual/teks. Kalau ragu, jangan buat gambar.
+- Maksimal SATU gambar per jawaban.
+- Saat memutuskan membuat gambar, tulis jawaban teks kamu seperti biasa, lalu di BARIS PALING AKHIR tambahkan penanda dengan format PERSIS:
+[IMAGE: <deskripsi sangat detail dalam BAHASA INGGRIS> | <caption singkat Bahasa Indonesia>]
+- Deskripsi Inggris harus kaya detail supaya hasilnya bagus: jenis ruangan, gaya desain, material utama, palet warna, pencahayaan, suasana, dan sudut pandang kamera. Contoh isi: "modern minimalist kitchen set, matte white HPL cabinets with light oak accents, white quartz countertop, subway tile backsplash, warm under-cabinet LED lighting, small apartment, photorealistic eye-level render".
+- Penanda [IMAGE: ...] TIDAK akan terlihat user sebagai teks — sistem yang akan mengubahnya jadi gambar. Jadi jangan menyebut "lihat penanda di bawah".
+
+CONTOH KEPUTUSAN
+- "Berapa budget renovasi dapur 3x3?" -> jawab dengan rincian biaya, TANPA gambar.
+- "Aku mau dapur minimalis warna putih, kira-kira kayak apa ya?" -> jawab + SATU penanda [IMAGE: ...].`;
+
+type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
+
+function buildBody(model: string, messages: ChatMessage[]) {
+  return JSON.stringify({
+    model,
+    messages,
+    temperature: 0.7,
+    stream: true,
+  });
 }
 
-const SYSTEM_PROMPT = `Kamu adalah VMatch Helper — konsultan interior senior dari VMatch Interior.
+/**
+ * Mengubah stream SSE provider (format OpenAI: choices[].delta.content)
+ * menjadi stream sederhana `data: {"content": "..."}` yang dibaca frontend.
+ */
+function transformProviderStream(
+  upstream: ReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = "";
 
-ATURAN WAJIB:
-1. JANGAN PERNAH hanya bertanya balik tanpa memberikan jawaban. Selalu berikan informasi dulu, baru boleh tanya di akhir jika perlu.
-2. Langsung jawab dengan detail: estimasi harga, rekomendasi material, gaya desain, tips.
-3. Berikan jawaban lengkap berdasarkan asumsi wajar jika user tidak menyebutkan detail (asumsi ukuran standar, budget menengah).
-4. Hanya boleh tanya balik MAKSIMAL 1 pertanyaan di akhir jawaban, dan itu pun opsional.
+  return new ReadableStream({
+    async start(controller) {
+      const reader = upstream.getReader();
 
-FORMAT:
-- Jangan pakai heading (###), garis (---), atau emoji.
-- Gunakan **bold** untuk penekanan.
-- Gunakan numbered list untuk langkah/opsi.
-- Gunakan bullet (- item) untuk spesifikasi.
+      const flushLine = (line: string) => {
+        const trimmed = line.replace(/^data:\s?/, "").trim();
+        if (!trimmed) return;
+        if (trimmed === "[DONE]") {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          return;
+        }
+        try {
+          const json = JSON.parse(trimmed);
+          const delta: string = json.choices?.[0]?.delta?.content ?? "";
+          if (delta) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ content: delta })}\n\n`),
+            );
+          }
+        } catch {
+          // Abaikan baris yang bukan JSON valid.
+        }
+      };
 
-GAMBAR INSPIRASI:
-- Format: [IMG:/path|Label]
-- Tampilkan 1-2 gambar yang relevan.
-- Gambar tersedia:
-${IMAGE_CATALOG.map((img) => `${img.src} (${img.label}): ${img.keywords.join(", ")}`).join("\n")}
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-CONTOH JAWABAN IDEAL untuk "kitchen set minimalis":
-"Untuk kitchen set minimalis, berikut rekomendasinya:
+          buffer += decoder.decode(value, { stream: true });
+          const blocks = buffer.split("\n\n");
+          buffer = blocks.pop() ?? "";
 
-**Material:** HPL warna putih/kayu muda untuk kabinet, quartz untuk countertop.
-**Estimasi harga:** Rp18-30 juta (per meter lari Rp4-6 juta).
-**Layout:** I-shape atau L-shape untuk efisiensi.
+          for (const block of blocks) {
+            for (const line of block.split("\n")) {
+              flushLine(line);
+            }
+          }
+        }
 
-Tips:
-1. Gunakan handle hidden (push-to-open) untuk tampilan clean
-2. Pasang LED strip di bawah kabinet atas
-3. Pilih backsplash subway tile putih
+        if (buffer.trim()) {
+          for (const line of buffer.split("\n")) flushLine(line);
+        }
+      } catch (error) {
+        console.error("Stream transform error:", error);
+      } finally {
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+        reader.releaseLock();
+      }
+    },
+  });
+}
 
-[IMG:/inspirations/rumah-dapur.webp|Kitchen Set Minimalis]
+async function callGroq(messages: ChatMessage[]): Promise<Response> {
+  return fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+    },
+    body: buildBody("openai/gpt-oss-120b", messages),
+  });
+}
 
-Kalau mau lebih detail, kasih tahu ukuran dapurnya."
-
-GAYA: Bahasa Indonesia natural, hangat, informatif. Seperti konsultan yang langsung kasih solusi.
-`;
+async function callOpenRouter(messages: ChatMessage[]): Promise<Response> {
+  return fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      "HTTP-Referer": APP_URL,
+      "X-Title": "VMatch AI Advisor",
+    },
+    body: buildBody("openai/gpt-oss-120b:free", messages),
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -87,106 +153,67 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const ollamaMessages = [
+    const aiMessages: ChatMessage[] = [
       { role: "system", content: SYSTEM_PROMPT },
       ...messages,
     ];
 
-    const response = await fetch(`${OLLAMA_BASE_URL}/chat`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OLLAMA_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "qwen3-next:80b",
-        messages: ollamaMessages,
-        stream: true,
-      }),
-    });
+    // 1. Coba Groq (streaming). Jika gagal, fallback ke OpenRouter.
+    let providerResponse: Response | null = null;
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    if (GROQ_API_KEY) {
+      try {
+        const res = await callGroq(aiMessages);
+        if (res.ok && res.body) {
+          providerResponse = res;
+        } else {
+          console.warn(`Groq returned ${res.status}, falling back to OpenRouter.`);
+        }
+      } catch (error) {
+        console.warn("Groq request failed, falling back to OpenRouter.", error);
+      }
+    }
+
+    if (!providerResponse && OPENROUTER_API_KEY) {
+      try {
+        const res = await callOpenRouter(aiMessages);
+        if (res.ok && res.body) {
+          providerResponse = res;
+        } else {
+          const details = await res.text();
+          return new Response(
+            JSON.stringify({ error: `AI Provider Error: ${res.status}`, details }),
+            { status: 502, headers: { "Content-Type": "application/json" } },
+          );
+        }
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ error: "AI provider unreachable", details: String(error) }),
+          { status: 502, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    if (!providerResponse || !providerResponse.body) {
       return new Response(
-        JSON.stringify({ error: `Ollama error: ${response.status}`, details: errorText }),
-        { status: response.status, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "No AI provider available" }),
+        { status: 502, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    // Stream the response back
-    const encoder = new TextEncoder();
-    const readable = new ReadableStream({
-      async start(controller) {
-        const reader = response.body?.getReader();
-        if (!reader) {
-          controller.close();
-          return;
-        }
+    const stream = transformProviderStream(providerResponse.body);
 
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
-
-            for (const line of lines) {
-              if (!line.trim()) continue;
-              try {
-                const json = JSON.parse(line);
-                if (json.message?.content) {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ content: json.message.content })}\n\n`)
-                  );
-                }
-                if (json.done) {
-                  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                }
-              } catch {
-                // Skip malformed lines
-              }
-            }
-          }
-
-          // Process remaining buffer
-          if (buffer.trim()) {
-            try {
-              const json = JSON.parse(buffer);
-              if (json.message?.content) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ content: json.message.content })}\n\n`)
-                );
-              }
-            } catch {
-              // Skip
-            }
-          }
-
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        } catch (err) {
-          controller.error(err);
-        } finally {
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(readable, {
+    return new Response(stream, {
       headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
       },
     });
   } catch (error) {
     return new Response(
       JSON.stringify({ error: "Internal server error", details: String(error) }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
 }

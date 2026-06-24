@@ -13,7 +13,10 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createConsultation, getMyConsultations, updateConsultation } from "@/lib/api/consultations";
+import { getMyProjects } from "@/lib/api/projects";
+import type { Consultation as DBConsultation, Project } from "@/lib/supabase/types";
 
 type ConsultationStatus =
   | "Menunggu Konfirmasi"
@@ -28,7 +31,7 @@ type Consultation = {
   id: string;
   projectName: string;
   topic: string;
-  type: "Google Meet" | "WhatsApp Call" | "Chat WhatsApp";
+  type: "Google Meet" | "WhatsApp Call" | "Chat WhatsApp" | "Offline";
   date: string;
   time: string;
   note: string;
@@ -40,7 +43,7 @@ type Consultation = {
 type ConsultationForm = {
   projectName: string;
   topic: string;
-  type: "Google Meet" | "WhatsApp Call" | "Chat WhatsApp" | "";
+  type: "Google Meet" | "WhatsApp Call" | "Chat WhatsApp" | "Offline" | "";
   date: string;
   time: string;
   note: string;
@@ -54,9 +57,6 @@ const consultationTabs: ConsultationTab[] = [
 ];
 
 const projectOptions = [
-  "Kitchen Set Minimalis",
-  "Wardrobe Kamar Utama",
-  "Storage & Rak Multifungsi",
   "Belum terkait proyek tertentu",
 ];
 
@@ -75,6 +75,7 @@ const typeOptions: ConsultationForm["type"][] = [
   "Google Meet",
   "WhatsApp Call",
   "Chat WhatsApp",
+  "Offline",
 ];
 
 const timeOptions = ["09.00", "10.00", "13.00", "14.00", "15.00", "16.00"];
@@ -88,41 +89,57 @@ const initialForm: ConsultationForm = {
   note: "",
 };
 
-const initialConsultations: Consultation[] = [
-  {
-    id: "c-1",
-    projectName: "Kitchen Set Minimalis",
-    topic: "Progress pengerjaan",
-    type: "Google Meet",
-    date: "2026-06-20",
-    time: "10.00",
-    note: "Ingin membahas progress produksi dan timeline instalasi.",
-    status: "Terkonfirmasi",
-    meetUrl: "https://meet.google.com/vmatch-demo",
-  },
-  {
-    id: "c-2",
-    projectName: "Wardrobe Kamar Utama",
-    topic: "Diskusi material",
-    type: "Google Meet",
-    date: "2026-06-18",
-    time: "13.00",
-    note: "Membahas pilihan material dan estimasi budget.",
-    status: "Selesai",
-    resultSummary:
-      "Customer memilih arah material HPL dengan finishing matte. Tim VMatch akan menyesuaikan estimasi akhir.",
-  },
-];
+const initialConsultations: Consultation[] = [];
 
-export function MeetingView() {
+export function MeetingView({ userId }: { userId: string }) {
   const [consultations, setConsultations] =
-    useState<Consultation[]>(initialConsultations);
+    useState<Consultation[]>([]);
   const [activeTab, setActiveTab] = useState<ConsultationTab>("Semua");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ConsultationForm>(initialForm);
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
+  const [dynamicProjectOptions, setDynamicProjectOptions] = useState<string[]>(projectOptions);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+
+  // Fetch consultations and projects from DB
+  const loadData = useCallback(async () => {
+    try {
+      setIsDataLoading(true);
+      const [dbConsultations, dbProjects] = await Promise.all([
+        getMyConsultations(userId),
+        getMyProjects(userId),
+      ]);
+
+      // Map DB consultations to local type
+      const mapped: Consultation[] = dbConsultations.map((c: DBConsultation) => ({
+        id: c.id,
+        projectName: c.project_name || "Belum terkait proyek",
+        topic: c.topic || "",
+        type: (c.method as Consultation["type"]) || "Google Meet",
+        date: c.consultation_date || "",
+        time: c.consultation_time || "",
+        note: c.customer_note || "",
+        status: c.status as ConsultationStatus,
+        meetUrl: c.meeting_link || undefined,
+        resultSummary: c.result_note || undefined,
+      }));
+      setConsultations(mapped);
+
+      // Build project options dynamically
+      const projectNames = dbProjects.map((p: Project) => p.title);
+      setDynamicProjectOptions([...projectNames, "Belum terkait proyek tertentu"]);
+    } catch {
+      // silent fail, show empty state
+    } finally {
+      setIsDataLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   useEffect(() => {
     if (!notice) return;
@@ -212,7 +229,7 @@ export function MeetingView() {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (
       !form.projectName ||
       !form.topic ||
@@ -224,69 +241,73 @@ export function MeetingView() {
       return;
     }
 
-    if (editingId) {
-      setConsultations((current) =>
-        current.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                projectName: form.projectName,
-                topic: form.topic,
-                type: form.type as Consultation["type"],
-                date: form.date,
-                time: form.time,
-                note: form.note,
-                status: "Dijadwalkan Ulang",
-                meetUrl: undefined,
-              }
-            : item,
-        ),
-      );
+    try {
+      if (editingId) {
+        // Reschedule: update existing consultation
+        await updateConsultation(editingId, {
+          project_name: form.projectName,
+          topic: form.topic,
+          method: form.type as string,
+          consultation_date: form.date,
+          consultation_time: form.time,
+          customer_note: form.note,
+          status: "Dijadwalkan Ulang",
+          meeting_link: null,
+        });
 
-      setActiveTab("Aktif");
-      setNotice(
-        "Pengajuan reschedule berhasil dikirim. Tim VMatch akan mengonfirmasi ulang jadwal kamu.",
-      );
+        setActiveTab("Aktif");
+        setNotice("Pengajuan reschedule berhasil dikirim. Tim VMatch akan mengonfirmasi ulang jadwal kamu.");
+      } else {
+        // Create new consultation
+        await createConsultation({
+          customer_id: userId,
+          project_name: form.projectName,
+          topic: form.topic,
+          method: form.type as string,
+          consultation_date: form.date,
+          consultation_time: form.time,
+          customer_note: form.note,
+          status: "Menunggu Konfirmasi",
+          request_source: "Customer Request",
+        });
+
+        setActiveTab("Menunggu");
+        setNotice("Pengajuan konsultasi berhasil dikirim. Tim VMatch akan mengonfirmasi jadwal kamu.");
+      }
+
       closeModal();
-      return;
+      await loadData(); // Refresh from DB
+    } catch {
+      setFormError("Gagal mengirim. Silakan coba lagi.");
     }
-
-    const newConsultation: Consultation = {
-      id: `c-${Date.now()}`,
-      projectName: form.projectName,
-      topic: form.topic,
-      type: form.type as Consultation["type"],
-      date: form.date,
-      time: form.time,
-      note: form.note,
-      status: "Menunggu Konfirmasi",
-    };
-
-    setConsultations((current) => [newConsultation, ...current]);
-    setActiveTab("Menunggu");
-    setNotice(
-      "Pengajuan konsultasi berhasil dikirim. Tim VMatch akan mengonfirmasi jadwal kamu.",
-    );
-    closeModal();
   };
 
-  const handleCancelSchedule = (id: string) => {
-    setConsultations((current) =>
-      current.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status: "Dibatalkan",
-              meetUrl: undefined,
-              resultSummary: "Jadwal konsultasi dibatalkan oleh customer.",
-            }
-          : item,
-      ),
-    );
+  const handleCancelSchedule = async (id: string) => {
+    try {
+      await updateConsultation(id, {
+        status: "Dibatalkan",
+        meeting_link: null,
+        result_note: "Jadwal konsultasi dibatalkan oleh customer.",
+      });
 
-    setActiveTab("Selesai");
-    setNotice("Jadwal konsultasi berhasil dibatalkan.");
+      setActiveTab("Selesai");
+      setNotice("Jadwal konsultasi berhasil dibatalkan.");
+      await loadData();
+    } catch {
+      setNotice("Gagal membatalkan. Silakan coba lagi.");
+    }
   };
+
+  if (isDataLoading) {
+    return (
+      <div className="flex w-full items-center justify-center py-20">
+        <div className="text-center">
+          <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-[#725F54] border-t-transparent" />
+          <p className="mt-3 text-[13px] text-[#7B756E]">Memuat data konsultasi...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-6">
@@ -387,6 +408,7 @@ export function MeetingView() {
           form={form}
           editing={Boolean(editingId)}
           error={formError}
+          projectOptions={dynamicProjectOptions}
           onChange={updateForm}
           onClose={closeModal}
           onSubmit={handleSubmit}
@@ -504,6 +526,7 @@ function ConsultationModal({
   form,
   editing,
   error,
+  projectOptions: modalProjectOptions,
   onChange,
   onClose,
   onSubmit,
@@ -511,6 +534,7 @@ function ConsultationModal({
   form: ConsultationForm;
   editing: boolean;
   error: string;
+  projectOptions: string[];
   onChange: (key: keyof ConsultationForm, value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
@@ -557,7 +581,7 @@ function ConsultationModal({
               onChange={(value) => onChange("projectName", value)}
             >
               <option value="">Pilih proyek</option>
-              {projectOptions.map((item) => (
+              {modalProjectOptions.map((item: string) => (
                 <option key={item}>{item}</option>
               ))}
             </SelectInput>

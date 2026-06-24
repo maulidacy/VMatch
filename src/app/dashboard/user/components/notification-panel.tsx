@@ -9,7 +9,11 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/api/notifications";
+import { useAuth } from "@/lib/hooks/use-auth";
+import type { Notification as DBNotification } from "@/lib/supabase/types";
+import { toast } from "sonner";
 
 type NotificationType = "project" | "payment" | "consultation" | "system";
 
@@ -27,51 +31,52 @@ type NotificationItem = {
   targetTab?: string;
 };
 
-const mockNotifications: NotificationItem[] = [
-  {
-    id: "n-1",
-    title: "Invoice menunggu pembayaran",
-    message: "Pembayaran tahap 2 untuk Kitchen Set Minimalis sudah tersedia.",
-    type: "payment",
-    read: false,
-    time: "10 menit lalu",
-    href: "/dashboard/user/proyek-saya/project-1?tab=tagihan",
-    targetPage: "proyek",
-    targetTab: "tagihan",
-  },
-  {
-    id: "n-2",
-    title: "Progress proyek diperbarui",
-    message: "Tahap produksi kabinet sudah selesai dikerjakan oleh vendor.",
-    type: "project",
-    read: false,
-    time: "1 jam lalu",
-    href: "/dashboard/user/proyek-saya/project-1?tab=progress",
-    targetPage: "proyek",
-    targetTab: "progress",
-  },
-  {
-    id: "n-3",
-    title: "Konsultasi dikonfirmasi",
-    message: "Jadwal konsultasi material sudah tersedia.",
-    type: "consultation",
-    read: false,
-    time: "2 jam lalu",
-    href: "/dashboard/user/konsultasi",
-    targetPage: "konsultasi",
-  },
-  {
-    id: "n-4",
-    title: "Dokumen proyek tersedia",
-    message: "Ringkasan solusi awal proyek sudah bisa kamu lihat.",
-    type: "project",
-    read: true,
-    time: "Kemarin",
-    href: "/dashboard/user/proyek-saya/project-1?tab=dokumen",
-    targetPage: "proyek",
-    targetTab: "dokumen",
-  },
-];
+const mockNotifications: NotificationItem[] = [];
+
+function mapDbNotification(n: DBNotification): NotificationItem {
+  const categoryToType: Record<string, NotificationType> = {
+    "Proyek": "project",
+    "Pembayaran": "payment",
+    "Konsultasi": "consultation",
+    "RAB": "payment",
+    "Vendor": "system",
+    "Customer": "system",
+    "Promo": "system",
+    "Sistem": "system",
+  };
+
+  const categoryToPage: Record<string, NotificationPageTarget> = {
+    "Proyek": "proyek",
+    "Pembayaran": "proyek",
+    "Konsultasi": "konsultasi",
+    "RAB": "proyek",
+  };
+
+  return {
+    id: n.id,
+    title: n.title,
+    message: n.description || "",
+    type: categoryToType[n.category] || "system",
+    read: n.is_read,
+    time: formatTimeAgo(n.created_at),
+    href: "#",
+    targetPage: categoryToPage[n.category] || "proyek",
+  };
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "Baru saja";
+  if (diffMin < 60) return `${diffMin} menit lalu`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs} jam lalu`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays === 1) return "Kemarin";
+  return `${diffDays} hari lalu`;
+}
 
 const typeConfig: Record<
   NotificationType,
@@ -104,11 +109,25 @@ export function NotificationBell({
   onNavigate?: (page: NotificationPageTarget) => void;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const { user } = useAuth();
 
   const [open, setOpen] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-  const [notifications, setNotifications] =
-    useState<NotificationItem[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!user) return;
+    try {
+      const dbNotifs = await getNotifications(user.id);
+      setNotifications(dbNotifs.map(mapDbNotification));
+    } catch (error) {
+      toast.error("Gagal memuat notifikasi.");
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
 
   const unreadCount = useMemo(() => {
     return notifications.filter((item) => !item.read).length;
@@ -116,7 +135,6 @@ export function NotificationBell({
 
   const visibleNotifications = useMemo(() => {
     if (!showUnreadOnly) return notifications;
-
     return notifications.filter((item) => !item.read);
   }, [notifications, showUnreadOnly]);
 
@@ -138,26 +156,34 @@ export function NotificationBell({
     };
   }, [open]);
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
+    if (!user) return;
     setNotifications((current) =>
-      current.map((item) => ({
-        ...item,
-        read: true,
-      })),
+      current.map((item) => ({ ...item, read: true })),
     );
+    try {
+      await markAllNotificationsRead(user.id);
+    } catch (error) {
+      toast.error("Gagal menandai semua dibaca.");
+      loadNotifications(); // rollback
+    }
   };
 
-  const handleNotificationClick = (item: NotificationItem) => {
+  const handleNotificationClick = async (item: NotificationItem) => {
     setNotifications((current) =>
       current.map((notification) =>
         notification.id === item.id
-          ? {
-              ...notification,
-              read: true,
-            }
+          ? { ...notification, read: true }
           : notification,
       ),
     );
+
+    try {
+      await markNotificationRead(item.id);
+    } catch (error) {
+      toast.error("Gagal menandai notifikasi dibaca.");
+      loadNotifications(); // rollback
+    }
 
     setOpen(false);
 

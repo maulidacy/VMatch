@@ -18,7 +18,9 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getProjects } from "@/lib/api/projects";
+import type { Project as DBProject } from "@/lib/supabase/types";
 
 type ProgressStatus =
   | "Berjalan"
@@ -80,278 +82,29 @@ const statusOptions: ProgressStatus[] = [
   "Selesai",
 ];
 
-const initialLogs: ProgressLog[] = [
-  {
-    id: "progress-1",
-    projectTitle: "Kitchen Set Minimalis",
-    customerName: "Alya Putri",
-    vendorName: "Kayu Rapi Interior",
-    location: "Semarang",
-    projectType: "Kitchen Set",
-    status: "Berjalan",
-    progress: 45,
-    currentStage: "Produksi kabinet",
-    nextAction: "Vendor perlu upload foto progres produksi terbaru.",
-    updatedAt: "Hari ini, 10.30",
-    adminNote:
-      "Pastikan ukuran kabinet atas sesuai brief dan tidak menutup area ventilasi.",
-    vendorNote:
-      "Produksi kabinet bawah sudah mulai. Kabinet atas masuk proses pemotongan material.",
-    qcSummary:
-      "Belum masuk tahap QC akhir. Admin baru melakukan pengecekan awal berdasarkan foto produksi.",
-    photos: [
-      {
-        id: "photo-1",
-        title: "Produksi kabinet bawah",
-        description: "Rangka kabinet bawah sudah mulai dirakit.",
-        date: "Hari ini",
-      },
-      {
-        id: "photo-2",
-        title: "Material HPL",
-        description: "Material finishing sudah diterima vendor.",
-        date: "Kemarin",
-      },
-    ],
-    timeline: [
-      {
-        id: "tl-1",
-        title: "Produksi dimulai",
-        description: "Vendor mulai pemotongan material kabinet bawah.",
-        time: "Hari ini, 08.30",
-        type: "update",
-      },
-      {
-        id: "tl-2",
-        title: "Catatan admin",
-        description: "Admin meminta vendor memastikan posisi ventilasi.",
-        time: "Kemarin",
-        type: "qc",
-      },
-    ],
-    qcChecklist: [
-      {
-        id: "qc-1",
-        label: "Ukuran sesuai brief",
-        checked: true,
-      },
-      {
-        id: "qc-2",
-        label: "Material sesuai kesepakatan",
-        checked: true,
-      },
-      {
-        id: "qc-3",
-        label: "Finishing rapi",
-        checked: false,
-      },
-      {
-        id: "qc-4",
-        label: "Siap serah terima",
-        checked: false,
-      },
-    ],
-  },
-  {
-    id: "progress-2",
-    projectTitle: "Wardrobe Kamar Utama",
-    customerName: "Bima Santoso",
-    vendorName: "Mitra Interior Jogja",
-    location: "Yogyakarta",
-    projectType: "Wardrobe",
-    status: "Ada Kendala",
-    progress: 35,
-    currentStage: "Revisi layout dalam wardrobe",
-    nextAction: "Admin perlu review revisi layout dari vendor.",
-    updatedAt: "Kemarin",
-    adminNote:
-      "Customer meminta tambahan area gantung panjang. Vendor perlu menyesuaikan layout.",
-    vendorNote:
-      "Layout awal perlu penyesuaian karena area gantung tambahan mengurangi ruang rak.",
-    qcSummary:
-      "Belum masuk QC. Kendala saat ini ada pada revisi layout internal wardrobe.",
-    photos: [
-      {
-        id: "photo-1",
-        title: "Layout wardrobe",
-        description: "Vendor mengirim layout alternatif untuk bagian dalam.",
-        date: "Kemarin",
-      },
-    ],
-    timeline: [
-      {
-        id: "tl-1",
-        title: "Kendala layout",
-        description: "Ada perubahan kebutuhan customer pada area gantung.",
-        time: "Kemarin",
-        type: "issue",
-      },
-      {
-        id: "tl-2",
-        title: "Vendor kirim revisi",
-        description: "Vendor mengirim opsi layout baru untuk dicek admin.",
-        time: "Hari ini",
-        type: "update",
-      },
-    ],
-    qcChecklist: [
-      {
-        id: "qc-1",
-        label: "Layout sesuai kebutuhan customer",
-        checked: false,
-      },
-      {
-        id: "qc-2",
-        label: "Ukuran ruang sesuai hasil survey",
-        checked: true,
-      },
-      {
-        id: "qc-3",
-        label: "Material sesuai brief",
-        checked: true,
-      },
-      {
-        id: "qc-4",
-        label: "Siap produksi",
-        checked: false,
-      },
-    ],
-  },
-  {
-    id: "progress-3",
-    projectTitle: "Ruang Kerja Rumah",
-    customerName: "Nadia Rahma",
-    vendorName: "Studio Ruang Karya",
-    location: "Solo",
-    projectType: "Ruang Kerja",
-    status: "Butuh QC",
-    progress: 82,
-    currentStage: "Pemasangan dan finishing",
-    nextAction: "Admin perlu cek hasil pemasangan dari foto vendor.",
-    updatedAt: "Hari ini, 13.10",
-    adminNote:
-      "Cek kerapian bagian meja, ambalan, dan area storage sebelum serah terima.",
-    vendorNote:
-      "Pemasangan sudah selesai 80%. Finishing minor masih dilakukan.",
-    qcSummary:
-      "Butuh pengecekan kerapian finishing dan kesesuaian posisi storage kanan.",
-    photos: [
-      {
-        id: "photo-1",
-        title: "Pemasangan meja",
-        description: "Meja kerja custom sudah terpasang.",
-        date: "Hari ini",
-      },
-      {
-        id: "photo-2",
-        title: "Ambalan dinding",
-        description: "Ambalan sudah dipasang sesuai gambar kerja.",
-        date: "Hari ini",
-      },
-    ],
-    timeline: [
-      {
-        id: "tl-1",
-        title: "Pemasangan selesai sebagian",
-        description: "Meja dan ambalan utama sudah terpasang.",
-        time: "Hari ini, 13.10",
-        type: "update",
-      },
-      {
-        id: "tl-2",
-        title: "QC diperlukan",
-        description: "Admin perlu mengecek finishing dan storage tambahan.",
-        time: "Hari ini, 14.00",
-        type: "qc",
-      },
-    ],
-    qcChecklist: [
-      {
-        id: "qc-1",
-        label: "Pemasangan sesuai brief",
-        checked: true,
-      },
-      {
-        id: "qc-2",
-        label: "Finishing rapi",
-        checked: false,
-      },
-      {
-        id: "qc-3",
-        label: "Storage tambahan sesuai revisi",
-        checked: false,
-      },
-      {
-        id: "qc-4",
-        label: "Siap serah terima",
-        checked: false,
-      },
-    ],
-  },
-  {
-    id: "progress-4",
-    projectTitle: "Backdrop TV Ruang Keluarga",
-    customerName: "Raka Pratama",
-    vendorName: "Warm Living Interior",
-    location: "Semarang",
-    projectType: "Backdrop TV",
-    status: "Selesai",
-    progress: 100,
-    currentStage: "Selesai",
-    nextAction: "Dokumentasi akhir dan garansi.",
-    updatedAt: "3 hari lalu",
-    adminNote: "Dokumentasi akhir sudah lengkap. Masuk periode garansi.",
-    vendorNote: "Proyek sudah selesai dan diterima customer.",
-    qcSummary:
-      "QC akhir selesai. Hasil pemasangan sesuai brief dan diterima customer.",
-    photos: [
-      {
-        id: "photo-1",
-        title: "Hasil akhir",
-        description: "Backdrop TV sudah selesai dipasang.",
-        date: "3 hari lalu",
-      },
-    ],
-    timeline: [
-      {
-        id: "tl-1",
-        title: "QC akhir selesai",
-        description: "Admin menyetujui hasil akhir proyek.",
-        time: "3 hari lalu",
-        type: "done",
-      },
-      {
-        id: "tl-2",
-        title: "Customer menerima hasil",
-        description: "Customer menyetujui hasil pemasangan.",
-        time: "3 hari lalu",
-        type: "done",
-      },
-    ],
-    qcChecklist: [
-      {
-        id: "qc-1",
-        label: "Pemasangan sesuai brief",
-        checked: true,
-      },
-      {
-        id: "qc-2",
-        label: "Finishing rapi",
-        checked: true,
-      },
-      {
-        id: "qc-3",
-        label: "Dokumentasi akhir lengkap",
-        checked: true,
-      },
-      {
-        id: "qc-4",
-        label: "Siap serah terima",
-        checked: true,
-      },
-    ],
-  },
-];
+const initialLogs: ProgressLog[] = [];
+
+function mapDbToLocalLog(p: DBProject): ProgressLog {
+  return {
+    id: p.id,
+    projectTitle: p.title,
+    customerName: p.customer?.full_name || "Customer",
+    vendorName: p.vendor?.full_name || "-",
+    location: p.location || "-",
+    projectType: p.project_type || "-",
+    status: (p.status as ProgressStatus) || "Berjalan",
+    progress: p.progress,
+    currentStage: p.current_stage || "-",
+    nextAction: p.next_task || "-",
+    updatedAt: new Date(p.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+    adminNote: p.admin_note || "",
+    vendorNote: "",
+    qcSummary: "",
+    photos: [],
+    timeline: [],
+    qcChecklist: [],
+  };
+}
 
 export function ProgressQcView() {
   const [logs, setLogs] = useState<ProgressLog[]>(initialLogs);
@@ -360,6 +113,19 @@ export function ProgressQcView() {
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const [adminNoteDraft, setAdminNoteDraft] = useState("");
   const [isAdminNoteSaved, setIsAdminNoteSaved] = useState(false);
+
+  const loadLogs = useCallback(async () => {
+    try {
+      const data = await getProjects();
+      setLogs(data.map(mapDbToLocalLog));
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   const filteredLogs = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();

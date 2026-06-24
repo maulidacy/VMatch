@@ -15,8 +15,10 @@ import {
     X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { InspirationDetailView } from "./inspiration-detail-view";
+import { getInspirationItems } from "@/lib/api/inspirations";
+import type { InspirationItem as DBInspirationItem } from "@/lib/supabase/types";
 
 type CatalogPageTarget = "ajukan" | "ai-ide" | "konsultasi" | "catalog";
 
@@ -98,114 +100,27 @@ const styles = [
     "Tropical Modern",
 ];
 
-const designItems: DesignItem[] = [
-    {
-        id: "storage-rak",
-        name: "Storage & Rak",
-        projectType: "Storage & Rak / Furniture Built-in",
-        category: "Storage & Rak",
-        style: "Modern Minimalis",
-        propertyType: "Apartemen",
-        locationArea: "Jawa Tengah & DIY",
-        description: "Solusi penyimpanan rapi dan efisien.",
-        budget: "Rp24.500.000",
-        suitableFor: "Kamar, ruang keluarga, apartemen",
-        materials: "HPL, plywood, MDF",
-        packageType: "Standard",
-        image: "/figma/benefits-storage.webp",
-        notes:
-            "Customer tertarik dengan konsep Storage & Rak yang rapi, efisien, dan hemat ruang. Referensi ini digunakan sebagai preferensi awal. Solusi final tetap akan disesuaikan oleh tim VMatch berdasarkan ukuran, budget, material, dan kondisi ruangan.",
-    },
-    {
-        id: "kitchen-set",
-        name: "Kitchen Set",
-        projectType: "Kitchen Set",
-        category: "Kitchen Set",
-        style: "Modern Minimalis",
-        propertyType: "Rumah Tinggal",
-        locationArea: "Jabodetabek",
-        description: "Inspirasi dapur fungsional, bersih, dan elegan.",
-        budget: "Rp43.500.000",
-        suitableFor: "Dapur rumah, apartemen",
-        materials: "HPL, plywood, solid surface",
-        packageType: "Standard/Premium",
-        image: "/figma/benefits-kitchen.webp",
-        notes:
-            "Customer tertarik dengan konsep dapur fungsional, bersih, dan elegan. Referensi ini digunakan sebagai preferensi awal sebelum divalidasi oleh tim VMatch.",
-    },
-    {
-        id: "wardrobe",
-        name: "Lemari/Wardrobe",
-        projectType: "Wardrobe",
-        category: "Lemari/Wardrobe",
-        style: "Modern Kontemporer",
-        propertyType: "Rumah Tinggal",
-        locationArea: "Jawa Barat",
-        description:
-            "Penyimpanan pakaian yang rapi dan menyesuaikan kebutuhan ruang.",
-        budget: "Rp38.000.000",
-        suitableFor: "Kamar utama, kamar anak",
-        materials: "HPL, MDF, kaca, cermin",
-        packageType: "Standard",
-        image: "/figma/benefits-wardrobe.webp",
-        notes:
-            "Customer tertarik dengan konsep wardrobe custom yang rapi, hemat tempat, dan menyesuaikan kebutuhan ruang. Tim VMatch tetap akan memvalidasi ukuran, material, budget, dan kondisi ruangan.",
-    },
-    {
-        id: "living-room",
-        name: "Ruang Tamu",
-        projectType: "Ruang Tamu",
-        category: "Ruang Tamu",
-        style: "Japandi",
-        propertyType: "Villa",
-        locationArea: "Bali",
-        description:
-            "Ruang santai yang nyaman dengan suasana hangat dan elegan.",
-        budget: "Rp55.000.000",
-        suitableFor: "Rumah tinggal, apartemen",
-        materials: "Panel dinding, rak TV, lighting",
-        packageType: "Premium",
-        image: "/figma/benefits-living.webp",
-        notes:
-            "Customer tertarik dengan inspirasi ruang tamu yang nyaman, hangat, dan elegan. Referensi ini akan menjadi preferensi awal sebelum solusi final disusun oleh tim VMatch.",
-    },
-    {
-        id: "bedroom",
-        name: "Kamar Tidur",
-        projectType: "Kamar Tidur",
-        category: "Kamar Tidur",
-        style: "Scandinavian",
-        propertyType: "Hotel",
-        locationArea: "Jawa Timur",
-        description:
-            "Inspirasi kamar yang tenang, ringan, dan nyaman untuk istirahat.",
-        budget: "Rp41.000.000",
-        suitableFor: "Kamar utama, kamar anak, apartemen",
-        materials: "HPL, panel dinding, lighting, fabric accent",
-        packageType: "Standard",
-        image: "/figma/benefits-bedroom.webp",
-        notes:
-            "Customer tertarik dengan konsep kamar tidur yang clean, nyaman, dan memiliki storage yang rapi. Detail teknis tetap akan disesuaikan oleh tim VMatch.",
-    },
-    {
-        id: "work-area",
-        name: "Area Kerja",
-        projectType: "Ruang Kerja",
-        category: "Area Kerja",
-        style: "Luxury Modern",
-        propertyType: "Kantor",
-        locationArea: "Jabodetabek",
-        description:
-            "Area kerja compact yang rapi, fokus, dan tetap terlihat premium.",
-        budget: "Rp22.500.000",
-        suitableFor: "Home office, kamar, apartemen",
-        materials: "Plywood, HPL, panel dinding, lighting",
-        packageType: "Basic",
-        image: "/figma/benefits-workspace.webp",
-        notes:
-            "Customer tertarik dengan area kerja custom yang rapi, fokus, dan hemat ruang. Referensi ini menjadi preferensi awal, bukan solusi final.",
-    },
-];
+// designItems will be populated from database
+let designItems: DesignItem[] = [];
+
+function mapDbItemToDesign(item: DBInspirationItem): DesignItem {
+    return {
+        id: item.id,
+        name: item.title,
+        projectType: item.title,
+        category: (item.category?.name) || "Umum",
+        style: item.design_style || "Modern Minimalis",
+        propertyType: item.property_type || "Rumah Tinggal",
+        locationArea: item.location || "Jawa Tengah & DIY",
+        description: item.description || "",
+        budget: "-",
+        suitableFor: (item.tags || []).join(", "),
+        materials: item.material_package || "Standard",
+        packageType: (item.material_package as DesignItem["packageType"]) || "Standard",
+        image: item.image_url,
+        notes: `Customer tertarik dengan referensi ${item.title}. Preferensi ini akan divalidasi oleh tim VMatch berdasarkan kebutuhan aktual.`,
+    };
+}
 
 const materialPackages: MaterialPackage[] = [
     {
@@ -276,9 +191,31 @@ export function CatalogDesign({
     const [detailItem, setDetailItem] = useState<DesignItem | null>(null);
     const [pendingReference, setPendingReference] =
         useState<SelectedInspiration | null>(null);
+    const [loadedItems, setLoadedItems] = useState<DesignItem[]>([]);
+    const [isLoadingItems, setIsLoadingItems] = useState(true);
+
+    // Fetch inspiration items from database
+    const loadItems = useCallback(async () => {
+        try {
+            setIsLoadingItems(true);
+            const dbItems = await getInspirationItems();
+            const mapped = dbItems.map(mapDbItemToDesign);
+            setLoadedItems(mapped);
+            designItems = mapped; // Update module-level reference for backward compat
+        } catch {
+            // If DB fails, items remain empty
+        } finally {
+            setIsLoadingItems(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        loadItems();
+    }, [loadItems]);
 
     const filteredDesigns = useMemo(() => {
-        return designItems.filter((item) => {
+        return loadedItems.filter((item) => {
             const matchProperty =
                 activeProperty === "Semua Properti" ||
                 item.propertyType === activeProperty;
@@ -304,7 +241,7 @@ export function CatalogDesign({
 
             return matchProperty && matchLocation && matchStyle && matchSearch;
         });
-    }, [activeProperty, activeLocation, activeStyle, search]);
+    }, [loadedItems, activeProperty, activeLocation, activeStyle, search]);
 
     const openUseDesignPopup = (item: DesignItem) => {
         setPendingReference({
@@ -441,6 +378,8 @@ export function CatalogDesign({
                     activeStyle={activeStyle}
                     search={search}
                     filteredDesigns={filteredDesigns}
+                    isLoading={isLoadingItems}
+                    totalItems={loadedItems.length}
                     onSearchChange={setSearch}
                     onPropertyChange={setActiveProperty}
                     onLocationChange={setActiveLocation}
@@ -485,6 +424,8 @@ function DesignTab({
     activeStyle,
     search,
     filteredDesigns,
+    isLoading,
+    totalItems,
     onSearchChange,
     onPropertyChange,
     onLocationChange,
@@ -498,6 +439,8 @@ function DesignTab({
     activeStyle: string;
     search: string;
     filteredDesigns: DesignItem[];
+    isLoading: boolean;
+    totalItems: number;
     onSearchChange: (value: string) => void;
     onPropertyChange: (value: string) => void;
     onLocationChange: (value: string) => void;
@@ -570,26 +513,72 @@ function DesignTab({
                 </div>
             </section>
 
-            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {filteredDesigns.slice(0, 6).map((item, index) => (
-                    <DesignCard
-                        key={item.id}
-                        item={item}
-                        priority={index === 0}
-                        onOpenDetail={() => onOpenDetail(item)}
-                        onUseDesign={() => onUseDesign(item)}
-                    />
-                ))}
-            </section>
+            {isLoading ? (
+                <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    {Array.from({ length: 8 }).map((_, index) => (
+                        <DesignCardSkeleton key={index} />
+                    ))}
+                </section>
+            ) : filteredDesigns.length > 0 ? (
+                <>
+                    <p className="text-[12px] text-[#7B756E]">
+                        Menampilkan{" "}
+                        <span className="font-semibold text-[#31332C]">{filteredDesigns.length}</span>{" "}
+                        inspirasi
+                        {filteredDesigns.length !== totalItems ? ` dari ${totalItems} total` : ""}.
+                    </p>
 
-            {filteredDesigns.length === 0 && (
+                    <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                        {filteredDesigns.map((item, index) => (
+                            <DesignCard
+                                key={item.id}
+                                item={item}
+                                priority={index === 0}
+                                onOpenDetail={() => onOpenDetail(item)}
+                                onUseDesign={() => onUseDesign(item)}
+                            />
+                        ))}
+                    </section>
+                </>
+            ) : (
                 <section className="rounded-xl border border-dashed border-[#E4D8CD] bg-white py-14 text-center">
                     <p className="text-[14px] text-[#7B756E]">
-                        Belum ada inspirasi yang cocok dengan filter ini.
+                        {totalItems === 0
+                            ? "Belum ada inspirasi yang tersedia saat ini."
+                            : "Belum ada inspirasi yang cocok dengan filter ini."}
                     </p>
+                    {totalItems > 0 && (
+                        <button
+                            type="button"
+                            onClick={onResetFilter}
+                            className="mt-3 inline-flex h-10 items-center justify-center rounded-xl border border-[#E4D8CD] px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+                        >
+                            Reset Filter
+                        </button>
+                    )}
                 </section>
             )}
         </div>
+    );
+}
+
+function DesignCardSkeleton() {
+    return (
+        <article className="overflow-hidden rounded-xl border border-[#E8E2D9] bg-white">
+            <div className="aspect-[4/3] w-full animate-pulse bg-[#EFE8DF]" />
+            <div className="space-y-3 p-3 sm:p-4">
+                <div className="flex gap-1.5">
+                    <div className="h-5 w-20 animate-pulse rounded-full bg-[#F0EAE2]" />
+                    <div className="h-5 w-16 animate-pulse rounded-full bg-[#F0EAE2]" />
+                </div>
+                <div className="h-6 w-3/4 animate-pulse rounded bg-[#F0EAE2]" />
+                <div className="space-y-2">
+                    <div className="h-9 w-full animate-pulse rounded-xl bg-[#FCFBF9]" />
+                    <div className="h-9 w-full animate-pulse rounded-xl bg-[#FCFBF9]" />
+                </div>
+                <div className="h-10 w-full animate-pulse rounded-xl bg-[#F0EAE2]" />
+            </div>
+        </article>
     );
 }
 

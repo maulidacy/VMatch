@@ -13,32 +13,50 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import {
-  bonusInfos,
-  progressLogs,
-  vendorProjects,
-  vendorUpdates,
-} from "../mock-data";
-import type { VendorPageId } from "../types";
-import {
   VendorActionButton,
   VendorListRow,
   VendorProgressBar,
   VendorSectionCard,
   VendorStatusBadge,
 } from "./shared";
+import { useQuery } from "@/lib/hooks/use-query";
+import { getProjects, getProgressLogs, getVendorBonuses } from "@/lib/api/projects";
+import { getNotifications } from "@/lib/api/notifications";
+import type { VendorPageId } from "../types";
 
 export function DashboardView({
   onChangePage,
+  vendorId,
 }: {
   onChangePage: (page: VendorPageId) => void;
+  vendorId: string;
 }) {
+  const { data: dbProjects } = useQuery(() => getProjects(), [], { cacheKey: `vendor_projects_${vendorId}` });
+  const { data: allLogs } = useQuery(() => getProgressLogs(""), [], { enabled: false }); // Wait, actually I need to fetch vendor projects, then logs
+  const { data: rawBonuses } = useQuery(() => getVendorBonuses(vendorId), [vendorId], { cacheKey: `vendor_bonuses_${vendorId}` });
+  const dbBonuses = rawBonuses || [];
+
+  const vendorProjects = (dbProjects || []).filter((p) => p.vendor_id === vendorId).map(p => ({
+    id: p.id,
+    name: p.title,
+    status: p.status === "Berjalan" ? "Aktif" : p.status,
+    deadline: p.estimated_finish || "-",
+    nextTask: p.next_task || "-",
+    progress: p.progress,
+    type: p.project_type,
+    location: p.location || "-",
+    vmNotes: p.admin_note,
+  }));
+
   const activeProjects = vendorProjects.filter(
     (project) => project.status !== "Selesai",
   );
 
   const mainProject = activeProjects[0];
-  const latestLog = progressLogs[0];
-  const mainBonus = bonusInfos[0];
+  const { data: rawProjectLogs } = useQuery(() => getProgressLogs(mainProject?.id || ""), [mainProject?.id], { enabled: !!mainProject?.id });
+  const mainProjectLogs = rawProjectLogs || [];
+  const latestLog = mainProjectLogs[0];
+  const mainBonus = dbBonuses[0];
 
   return (
     <div className="w-full space-y-6">
@@ -92,8 +110,8 @@ export function DashboardView({
         <SimpleStatCard
           icon={FileText}
           label="Log Terakhir"
-          value={latestLog ? `${latestLog.progressPercent}%` : "0%"}
-          description={latestLog ? latestLog.projectName : "Belum ada log"}
+          value={latestLog ? `${latestLog.progress_percent}%` : "0%"}
+          description={latestLog ? mainProject.name : "Belum ada log"}
         />
 
         <SimpleStatCard
@@ -210,21 +228,21 @@ export function DashboardView({
                   <VendorStatusBadge status={latestLog.status} />
 
                   <span className="text-[12px] text-[#7B756E]">
-                    {latestLog.date}
+                    {latestLog.log_date}
                   </span>
                 </div>
 
                 <h3 className="mt-3 text-[14px] font-semibold text-[#31332C]">
-                  {latestLog.projectName}
+                  {mainProject.name}
                 </h3>
 
                 <p className="mt-2 line-clamp-3 text-[13px] leading-6 text-[#7B756E]">
-                  {latestLog.workSummary}
+                  {latestLog.work_summary}
                 </p>
 
                 <div className="mt-4">
                   <VendorProgressBar
-                    value={latestLog.progressPercent}
+                    value={latestLog.progress_percent}
                     label="Progress dilaporkan"
                   />
                 </div>
@@ -265,30 +283,7 @@ export function DashboardView({
 
           <VendorSectionCard title="Update Terbaru">
             <div className="space-y-3">
-              {vendorUpdates.slice(0, 3).map((item) => (
-                <div
-                  key={item.id}
-                  className="flex gap-3 border-b border-[#E8E2D9] pb-3 last:border-b-0 last:pb-0"
-                >
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FCFBF9] text-[#725F54]">
-                    <MessageCircle size={15} />
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="line-clamp-1 text-[13px] font-semibold text-[#31332C]">
-                      {item.title}
-                    </p>
-
-                    <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#7B756E]">
-                      {item.description}
-                    </p>
-
-                    <span className="mt-1 block text-[10px] text-[#A19B95]">
-                      {item.time}
-                    </span>
-                  </div>
-                </div>
-              ))}
+              <p className="text-[13px] text-[#7B756E]">Tidak ada update terbaru.</p>
             </div>
           </VendorSectionCard>
         </div>

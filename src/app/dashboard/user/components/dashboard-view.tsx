@@ -1,18 +1,26 @@
 "use client";
 
 import { CalendarDays, ChevronRight, FileText, FolderOpen, Plus } from "lucide-react";
-import { invoices, meetings, projects } from "../mock-data";
 import type { PageId } from "../types";
 import { QuickCard, StatusPill } from "./shared";
+import { useQuery } from "@/lib/hooks/use-query";
+import { getMyProjects, getCustomerInvoices } from "@/lib/api/projects";
+import { getMyConsultations } from "@/lib/api/consultations";
 
 export function DashboardView({
   onChangePage,
+  userId,
 }: {
   onChangePage: (page: PageId) => void;
+  userId: string;
 }) {
-  const activeProjects = projects.filter((p) => p.stage !== "done");
-  const pendingInvoices = invoices.filter((i) => i.status === "pending");
-  const nextMeeting = meetings.find((m) => m.status === "confirmed" || m.status === "requested");
+  const { data: projects = [] } = useQuery(() => getMyProjects(userId), [userId], { cacheKey: `user_projects_${userId}` });
+  const { data: invoices = [] } = useQuery(() => getCustomerInvoices(userId), [userId], { cacheKey: `user_invoices_${userId}` });
+  const { data: consultations = [] } = useQuery(() => getMyConsultations(userId), [userId], { cacheKey: `user_consultations_${userId}` });
+
+  const activeProjects = (projects || []).filter((p) => p.status !== "Selesai");
+  const pendingInvoices = (invoices || []).filter((i) => i.status === "pending");
+  const nextMeeting = (consultations || []).find((m) => m.status === "confirmed" || m.status === "requested");
   const mainProject = activeProjects[0];
 
   return (
@@ -47,7 +55,7 @@ export function DashboardView({
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <QuickCard icon={FolderOpen} label="Proyek Aktif" value={String(activeProjects.length)} onClick={() => onChangePage("proyek")} />
-        <QuickCard icon={CalendarDays} label="Konsultasi" value={String(meetings.length)} onClick={() => onChangePage("konsultasi")} />
+        <QuickCard icon={CalendarDays} label="Konsultasi" value={String((consultations || []).length)} onClick={() => onChangePage("konsultasi")} />
         <QuickCard icon={FileText} label="Invoice Pending" value={String(pendingInvoices.length)} onClick={() => onChangePage("proyek")} />
         <QuickCard icon={Plus} label="Proyek Baru" value="Ajukan" onClick={() => onChangePage("ajukan")} accent />
       </section>
@@ -108,7 +116,7 @@ export function DashboardView({
             title="Konsultasi terdekat"
             text={
               nextMeeting
-                ? `${nextMeeting.projectName || "Konsultasi Umum"} • ${nextMeeting.date}, ${nextMeeting.time}`
+                ? `${nextMeeting.project_name || "Konsultasi Umum"} • ${nextMeeting.consultation_date || ""}, ${nextMeeting.consultation_time || ""}`
                 : "Belum ada jadwal konsultasi aktif."
             }
           />
@@ -124,15 +132,15 @@ export function DashboardView({
               </p>
 
               <h2 className="mt-2 font-serif text-[28px] leading-tight text-[#3D3530]">
-                {mainProject.name}
+                {mainProject.title}
               </h2>
 
               <p className="mt-1 text-[13px] text-[#8B8179]">
-                {mainProject.type} • {mainProject.location}
+                {mainProject.project_type} • {mainProject.location}
               </p>
             </div>
 
-            <StatusPill status={mainProject.stageLabel} />
+            <StatusPill status={mainProject.current_stage || mainProject.status} />
           </div>
 
           <div className="mt-5">

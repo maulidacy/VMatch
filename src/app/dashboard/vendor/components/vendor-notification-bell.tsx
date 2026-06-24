@@ -11,7 +11,11 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/api/notifications";
+import { useAuth } from "@/lib/hooks/use-auth";
+import type { Notification as DBNotification } from "@/lib/supabase/types";
+import { toast } from "sonner";
 
 import type { VendorPageId } from "../types";
 
@@ -33,53 +37,40 @@ type VendorNotificationItem = {
   targetPage: VendorPageId;
 };
 
-const mockVendorNotifications: VendorNotificationItem[] = [
-  {
-    id: "vn-1",
-    title: "Brief baru tersedia",
-    message: "Brief Wardrobe Kamar Utama sudah bisa dibaca dan dikonfirmasi.",
-    type: "brief",
-    read: false,
-    time: "10 menit lalu",
-    targetPage: "brief",
-  },
-  {
-    id: "vn-2",
-    title: "Log progress belum dikirim",
-    message: "Update pekerjaan hari ini belum dikirim untuk proyek aktif.",
-    type: "progress",
-    read: false,
-    time: "1 jam lalu",
-    targetPage: "progress-log",
-  },
-  {
-    id: "vn-3",
-    title: "Tahap pembayaran diperbarui",
-    message: "Tahap Produksi sedang menunggu persetujuan dari VMatch.",
-    type: "payment",
-    read: false,
-    time: "2 jam lalu",
-    targetPage: "payment-bonus",
-  },
-  {
-    id: "vn-4",
-    title: "Progress masuk pengecekan",
-    message: "Tim VMatch akan mengecek hasil pekerjaan terbaru.",
-    type: "project",
-    read: true,
-    time: "Kemarin",
-    targetPage: "projects",
-  },
-  {
-    id: "vn-5",
-    title: "Bonus masih berpotensi aktif",
-    message: "Proyek masih memenuhi syarat bonus jika selesai sesuai timeline.",
-    type: "bonus",
-    read: true,
-    time: "2 hari lalu",
-    targetPage: "payment-bonus",
-  },
-];
+const mockVendorNotifications: VendorNotificationItem[] = [];
+
+function mapDbToVendorNotification(n: DBNotification): VendorNotificationItem {
+  const categoryToType: Record<string, VendorNotificationType> = {
+    "Proyek": "project",
+    "Pembayaran": "payment",
+    "Vendor": "brief",
+    "RAB": "payment",
+    "Sistem": "system",
+  };
+  const categoryToPage: Record<string, VendorPageId> = {
+    "Proyek": "projects",
+    "Pembayaran": "payment-bonus",
+    "Vendor": "brief",
+    "RAB": "brief",
+  };
+
+  const diffMs = Date.now() - new Date(n.created_at).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  let time = "Baru saja";
+  if (diffMin >= 1 && diffMin < 60) time = `${diffMin} menit lalu`;
+  else if (diffMin >= 60 && diffMin < 1440) time = `${Math.floor(diffMin / 60)} jam lalu`;
+  else if (diffMin >= 1440) time = `${Math.floor(diffMin / 1440)} hari lalu`;
+
+  return {
+    id: n.id,
+    title: n.title,
+    message: n.description || "",
+    type: categoryToType[n.category] || "system",
+    read: n.is_read,
+    time,
+    targetPage: categoryToPage[n.category] || "projects",
+  };
+}
 
 const typeConfig: Record<
   VendorNotificationType,
@@ -120,12 +111,25 @@ export function VendorNotificationBell({
   onNavigate?: (page: VendorPageId) => void;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const { user } = useAuth();
 
   const [open, setOpen] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-  const [notifications, setNotifications] = useState<VendorNotificationItem[]>(
-    mockVendorNotifications,
-  );
+  const [notifications, setNotifications] = useState<VendorNotificationItem[]>([]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!user) return;
+    try {
+      const dbNotifs = await getNotifications(user.id);
+      setNotifications(dbNotifs.map(mapDbToVendorNotification));
+    } catch (error) {
+      toast.error("Gagal memuat notifikasi.");
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
 
   const unreadCount = useMemo(() => {
     return notifications.filter((item) => !item.read).length;
@@ -155,26 +159,32 @@ export function VendorNotificationBell({
     };
   }, [open]);
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
+    if (!user) return;
     setNotifications((current) =>
-      current.map((item) => ({
-        ...item,
-        read: true,
-      })),
+      current.map((item) => ({ ...item, read: true })),
     );
+    try {
+      await markAllNotificationsRead(user.id);
+    } catch (error) {
+      toast.error("Gagal menandai semua dibaca.");
+      loadNotifications();
+    }
   };
 
-  const handleNotificationClick = (item: VendorNotificationItem) => {
+  const handleNotificationClick = async (item: VendorNotificationItem) => {
     setNotifications((current) =>
       current.map((notification) =>
-        notification.id === item.id
-          ? {
-              ...notification,
-              read: true,
-            }
-          : notification,
+        notification.id === item.id ? { ...notification, read: true } : notification,
       ),
     );
+
+    try {
+      await markNotificationRead(item.id);
+    } catch (error) {
+      toast.error("Gagal menandai notifikasi dibaca.");
+      loadNotifications();
+    }
 
     setOpen(false);
     onNavigate?.(item.targetPage);

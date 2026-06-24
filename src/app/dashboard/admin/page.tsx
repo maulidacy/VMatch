@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { BadgePercent, ChevronRight } from "lucide-react";
-
-import {
-  activePromoPreview,
-  adminActivities,
-  adminMenuGroups,
-  adminPriorityTasks,
-  adminSummaryCards,
-} from "./mock-data";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BadgePercent, ChevronRight, ClipboardCheck, ClipboardList, FolderKanban, WalletCards } from "lucide-react";
+import { useAuth } from "@/lib/hooks/use-auth";
+import { adminMenuGroups } from "./mock-data";
+import { getProjectRequests } from "@/lib/api/projects";
+import { getProjects } from "@/lib/api/projects";
+import { getInvoices } from "@/lib/api/projects";
+import { getActivePromo } from "@/lib/api/promos";
+import { getNotifications } from "@/lib/api/notifications";
+import type { Promo } from "@/lib/supabase/types";
 import type { AdminPageId } from "./types";
 import { AdminHeader } from "./components/admin-header";
 import { AdminSidebar } from "./components/admin-sidebar";
@@ -34,6 +34,7 @@ import {
 } from "./components/shared";
 
 export default function AdminDashboardPage() {
+  const { user, profile, isLoading } = useAuth();
   const [activePage, setActivePage] = useState<AdminPageId>("dashboard");
   const pageTitles: Partial<Record<AdminPageId, string>> = {
     dashboard: "Dashboard",
@@ -68,6 +69,19 @@ export default function AdminDashboardPage() {
     setActivePage(page);
     setSidebarOpen(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#FCFBF9]">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#725F54] border-t-transparent" />
+          <p className="mt-3 text-[13px] text-[#7B756E]">Memuat dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) return null;
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] text-[#31332C]">
@@ -156,11 +170,96 @@ export default function AdminDashboardPage() {
   );
 }
 
+function formatTimeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "Baru saja";
+  if (diffMin < 60) return `${diffMin} menit lalu`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs} jam lalu`;
+  return "Kemarin";
+}
+
 function DashboardOverview({
   onChangePage,
 }: {
   onChangePage: (page: AdminPageId) => void;
 }) {
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
+    newRequests: 0,
+    activeProjects: 0,
+    pendingQc: 0,
+    pendingPayments: 0,
+  });
+  const [activePromo, setActivePromo] = useState<Promo | null>(null);
+  const [recentActivities, setRecentActivities] = useState<{ id: string; title: string; description: string; time: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const [requests, projects, invoices, promo, notifs] = await Promise.all([
+        getProjectRequests(),
+        getProjects(),
+        getInvoices(),
+        getActivePromo(),
+        user ? getNotifications(user.id) : Promise.resolve([]),
+      ]);
+
+      setStats({
+        newRequests: requests.filter((r) => r.status === "Baru Masuk" || r.status === "Menunggu Review").length,
+        activeProjects: projects.filter((p) => p.status === "Berjalan" || p.status === "Butuh Review").length,
+        pendingQc: projects.filter((p) => p.status === "QC").length,
+        pendingPayments: invoices.filter((i) => i.status === "Menunggu Pembayaran" || i.status === "Terlambat").length,
+      });
+
+      setActivePromo(promo);
+
+      // Build recent activities from notifications
+      const acts = notifs.slice(0, 6).map((n) => ({
+        id: n.id,
+        title: n.title,
+        description: n.description || "",
+        time: formatTimeAgo(n.created_at),
+      }));
+      setRecentActivities(acts);
+    } catch {
+      // silent
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  const summaryCards = [
+    {
+      id: "s1", label: "Request Baru", value: String(stats.newRequests),
+      description: "Perlu direview admin", status: stats.newRequests > 0 ? "attention" : "normal",
+      icon: ClipboardList,
+    },
+    {
+      id: "s2", label: "Proyek Aktif", value: String(stats.activeProjects),
+      description: "Sedang berjalan", status: "normal",
+      icon: FolderKanban,
+    },
+    {
+      id: "s3", label: "Butuh QC", value: String(stats.pendingQc),
+      description: "Menunggu pengecekan", status: stats.pendingQc > 0 ? "attention" : "normal",
+      icon: ClipboardCheck,
+    },
+    {
+      id: "s4", label: "Pembayaran", value: String(stats.pendingPayments),
+      description: "Menunggu verifikasi", status: stats.pendingPayments > 0 ? "attention" : "normal",
+      icon: WalletCards,
+    },
+  ] as const;
+
   return (
     <div className="space-y-6">
       <section className="flex flex-col gap-4 pb-1 lg:flex-row lg:items-end lg:justify-between">
@@ -189,128 +288,122 @@ function DashboardOverview({
         </button>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {adminSummaryCards.map((card) => (
-          <div
-            key={card.id}
-            className="rounded-2xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.035)]"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <AdminIconBadge
-                icon={card.icon}
-                tone={card.status === "normal" ? "default" : card.status}
-              />
-
-              <p className="font-serif text-[32px] leading-none text-[#31332C]">
-                {card.value}
-              </p>
-            </div>
-
-            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-              {card.label}
-            </p>
-
-            <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-              {card.description}
-            </p>
-          </div>
-        ))}
-      </section>
-
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <AdminSectionCard
-          title="Butuh Perhatian"
-          description="Prioritas pekerjaan yang perlu segera ditindaklanjuti admin."
-        >
-          <div className="grid gap-3">
-            {adminPriorityTasks.map((task) => (
-              <button
-                key={task.id}
-                type="button"
-                className="flex w-full items-start justify-between gap-4 rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 text-left transition hover:border-[#D9C8BA] hover:bg-white"
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#725F54] border-t-transparent" />
+        </div>
+      ) : (
+        <>
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {summaryCards.map((card) => (
+              <div
+                key={card.id}
+                className="rounded-2xl border border-[#E8E2D9] bg-white p-4 shadow-[0_8px_24px_rgba(49,51,44,0.035)]"
               >
-                <div className="min-w-0">
-                  <p className="text-[14px] font-semibold text-[#31332C]">
-                    {task.title}
-                  </p>
-
-                  <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-                    {task.description}
-                  </p>
-
-                  <p className="mt-2 text-[11px] font-medium text-[#9A8F86]">
-                    {task.meta}
+                <div className="flex items-start justify-between gap-3">
+                  <AdminIconBadge
+                    icon={card.icon}
+                    tone={card.status === "normal" ? "default" : card.status}
+                  />
+                  <p className="font-serif text-[32px] leading-none text-[#31332C]">
+                    {card.value}
                   </p>
                 </div>
 
-                <AdminStatusBadge status={task.status} />
-              </button>
-            ))}
-          </div>
-        </AdminSectionCard>
-
-        <div className="space-y-5">
-          <AdminSectionCard
-            title="Promo Aktif"
-            description="Promo yang sedang tampil di landing page."
-            action={<AdminStatusBadge status={activePromoPreview.status} />}
-          >
-            <div className="rounded-2xl border border-[#D9C8BA] bg-[#FFFDF9] p-4">
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
-                <BadgePercent size={20} />
-              </div>
-
-              <h3 className="mt-4 text-[15px] font-semibold text-[#31332C]">
-                {activePromoPreview.title}
-              </h3>
-
-              <p className="mt-2 text-[12px] leading-5 text-[#7B756E]">
-                {activePromoPreview.description}
-              </p>
-
-              <p className="mt-3 rounded-xl border border-[#E8E2D9] bg-white px-3 py-2 text-[11px] font-medium text-[#725F54]">
-                {activePromoPreview.period}
-              </p>
-
-              <button
-                type="button"
-                onClick={() => onChangePage("promo")}
-                className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
-              >
-                Kelola Promo
-              </button>
-            </div>
-          </AdminSectionCard>
-        </div>
-      </section>
-
-      <AdminSectionCard
-        title="Aktivitas Terbaru"
-        description="Update operasional terbaru dari request, proyek, pembayaran, dan promo."
-      >
-        <div className="grid gap-3 md:grid-cols-2">
-          {adminActivities.map((activity) => (
-            <div
-              key={activity.id}
-              className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-[13px] font-semibold text-[#31332C]">
-                  {activity.title}
+                <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+                  {card.label}
                 </p>
 
-                <span className="shrink-0 text-[10px] font-medium text-[#9A8F86]">
-                  {activity.time}
-                </span>
+                <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                  {card.description}
+                </p>
               </div>
+            ))}
+          </section>
 
-              <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-                {activity.description}
-              </p>
+          <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <AdminSectionCard
+              title="Aktivitas Terbaru"
+              description="Update operasional terbaru dari request, proyek, pembayaran, dan promo."
+            >
+              {recentActivities.length > 0 ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {recentActivities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="rounded-2xl border border-[#E8E2D9] bg-[#FCFBF9] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-[13px] font-semibold text-[#31332C]">
+                          {activity.title}
+                        </p>
+                        <span className="shrink-0 text-[10px] font-medium text-[#9A8F86]">
+                          {activity.time}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
+                        {activity.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[13px] text-[#9A8F86]">Belum ada aktivitas terbaru.</p>
+              )}
+            </AdminSectionCard>
+
+            <div className="space-y-5">
+              <AdminSectionCard
+                title="Promo Aktif"
+                description="Promo yang sedang tampil di landing page."
+                action={activePromo ? <AdminStatusBadge status="Aktif" /> : <AdminStatusBadge status="Menunggu" />}
+              >
+                {activePromo ? (
+                  <div className="rounded-2xl border border-[#D9C8BA] bg-[#FFFDF9] p-4">
+                    <div className="grid h-11 w-11 place-items-center rounded-xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
+                      <BadgePercent size={20} />
+                    </div>
+
+                    <h3 className="mt-4 text-[15px] font-semibold text-[#31332C]">
+                      {activePromo.title}
+                    </h3>
+
+                    <p className="mt-2 text-[12px] leading-5 text-[#7B756E]">
+                      {activePromo.description}
+                    </p>
+
+                    {activePromo.start_date && activePromo.end_date && (
+                      <p className="mt-3 rounded-xl border border-[#E8E2D9] bg-white px-3 py-2 text-[11px] font-medium text-[#725F54]">
+                        {new Date(activePromo.start_date).toLocaleDateString("id-ID")} -{" "}
+                        {new Date(activePromo.end_date).toLocaleDateString("id-ID")}
+                      </p>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => onChangePage("promo")}
+                      className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                    >
+                      Kelola Promo
+                    </button>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-white p-4 text-center">
+                    <p className="text-[13px] text-[#9A8F86]">Tidak ada promo aktif saat ini.</p>
+                    <button
+                      type="button"
+                      onClick={() => onChangePage("promo")}
+                      className="mt-3 inline-flex h-9 items-center justify-center rounded-xl bg-[#725F54] px-4 text-[11px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                    >
+                      Buat Promo
+                    </button>
+                  </div>
+                )}
+              </AdminSectionCard>
             </div>
-          ))}
-        </div>
-      </AdminSectionCard>
+          </section>
+        </>
+      )}
     </div>
   );
 }

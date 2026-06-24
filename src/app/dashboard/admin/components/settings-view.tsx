@@ -7,6 +7,7 @@ import {
   Database,
   KeyRound,
   Lock,
+  LogOut,
   Mail,
   Save,
   ShieldCheck,
@@ -17,6 +18,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 import { AdminSectionCard } from "./shared";
 
@@ -61,6 +64,14 @@ const inputClass =
 
 export function SettingsView() {
   const [activeTab, setActiveTab] = useState<SettingTab>("Profil");
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   const [adminName, setAdminName] = useState("Admin VMatch");
   const [adminEmail, setAdminEmail] = useState("admin@vmatch.id");
@@ -102,6 +113,15 @@ export function SettingsView() {
         >
           <Save size={16} />
           Simpan Perubahan
+        </button>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-5 text-[13px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9] sm:w-fit"
+        >
+          <LogOut size={16} />
+          Keluar
         </button>
       </section>
 

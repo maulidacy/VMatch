@@ -4,65 +4,57 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
-
-type PromoData = {
-  id: string;
-  title: string;
-  description: string;
-  imageUrl: string;
-  ctaLabel: string;
-  ctaTarget: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  badge: string;
-  priceLabel: string;
-  priceNote: string;
-};
-
-const activePromo: PromoData | null = {
-  id: "promo-1",
-  title: "Interior Awal Bulan",
-  description:
-    "Ajukan proyek interior baru dan dapatkan potongan biaya konsultasi bersama tim VMatch.",
-  imageUrl: "/inspirations/rumah-ruang-tamu.webp",
-  ctaLabel: "Ajukan Proyek",
-  ctaTarget: "/dashboard/user",
-  startDate: "1 Juli 2026",
-  endDate: "15 Juli 2026",
-  isActive: true,
-  badge: "Promo VMatch",
-  priceLabel: "Diskon 30%",
-  priceNote: "Untuk biaya konsultasi awal",
-};
+import { getActivePromo } from "@/lib/api/promos";
+import type { Promo } from "@/lib/supabase/types";
 
 export function PromoPopup() {
   const [isOpen, setIsOpen] = useState(false);
+  const [promo, setPromo] = useState<Promo | null>(null);
 
   useEffect(() => {
-    if (!activePromo || !activePromo.isActive) return;
+    let mounted = true;
 
-    const timer = window.setTimeout(() => {
-      setIsOpen(true);
-    }, 500);
+    async function loadPromo() {
+      try {
+        const activePromo = await getActivePromo();
+        if (activePromo && mounted) {
+          setPromo(activePromo);
+          // Delay popup appearance
+          setTimeout(() => {
+            if (mounted) setIsOpen(true);
+          }, 500);
+        }
+      } catch {
+        // No promo available
+      }
+    }
 
-    return () => window.clearTimeout(timer);
+    loadPromo();
+    return () => { mounted = false; };
   }, []);
 
   const closePopup = () => {
     setIsOpen(false);
   };
 
-  if (!activePromo || !activePromo.isActive || !isOpen) {
+  if (!promo || !isOpen) {
     return null;
   }
+
+  const imageUrl = promo.image_url || "/inspirations/rumah-ruang-tamu.webp";
+  const startDate = promo.start_date
+    ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(promo.start_date))
+    : "";
+  const endDate = promo.end_date
+    ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(promo.end_date))
+    : "";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/45 px-4 pb-4 backdrop-blur-sm sm:items-center sm:p-6">
       <section className="relative h-[640px] max-h-[calc(100dvh-32px)] w-full max-w-[520px] overflow-hidden rounded-[10px] border border-white/40 bg-[#31332C] shadow-[0_28px_80px_rgba(0,0,0,0.32)]">
         <Image
-          src={activePromo.imageUrl}
-          alt={activePromo.title}
+          src={imageUrl}
+          alt={promo.title}
           fill
           loading="eager"
           fetchPriority="high"
@@ -83,7 +75,7 @@ export function PromoPopup() {
 
         <div className="absolute left-5 top-5 z-20 inline-flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#725F54] shadow-sm">
           <Sparkles size={13} />
-          {activePromo.badge}
+          Promo VMatch
         </div>
 
         <div className="absolute inset-x-5 bottom-5 z-20">
@@ -93,29 +85,24 @@ export function PromoPopup() {
             </p>
 
             <p className="mt-1 font-serif text-[34px] leading-none text-[#31332C]">
-              {activePromo.priceLabel}
-            </p>
-
-            <p className="mt-1 text-[12px] font-medium text-[#7B756E]">
-              {activePromo.priceNote}
+              {promo.title}
             </p>
           </div>
 
           <h2 className="mt-5 font-serif text-[36px] leading-tight text-white sm:text-[42px]">
-            {activePromo.title}
+            {promo.title}
           </h2>
 
           <p className="mt-3 max-w-[430px] text-[13px] leading-6 text-white/82">
-            {activePromo.description}
+            {promo.description}
           </p>
 
-          <div className="mt-5 flex items-center gap-2 rounded-[16px] border border-white/18 bg-white/12 px-4 py-3 text-[13px] text-white/86 backdrop-blur-md">
-            <CalendarDays size={16} className="shrink-0 text-white" />
-
-            <span>
-              {activePromo.startDate} - {activePromo.endDate}
-            </span>
-          </div>
+          {startDate && endDate && (
+            <div className="mt-5 flex items-center gap-2 rounded-[16px] border border-white/18 bg-white/12 px-4 py-3 text-[13px] text-white/86 backdrop-blur-md">
+              <CalendarDays size={16} className="shrink-0 text-white" />
+              <span>{startDate} - {endDate}</span>
+            </div>
+          )}
 
           <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
             <button
@@ -127,11 +114,11 @@ export function PromoPopup() {
             </button>
 
             <Link
-              href={activePromo.ctaTarget}
+              href={promo.cta_url || "/dashboard/user"}
               onClick={closePopup}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[13px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
             >
-              {activePromo.ctaLabel}
+              {promo.cta_label || "Ajukan Proyek"}
               <ArrowRight size={15} />
             </Link>
           </div>

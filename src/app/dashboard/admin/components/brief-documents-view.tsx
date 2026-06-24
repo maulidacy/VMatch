@@ -21,7 +21,11 @@ import {
     Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { getBriefs, updateBrief as updateBriefRecord, updateProjectRequest } from "@/lib/api/projects";
+import { uploadFileToStorage } from "@/lib/api/storage";
+import type { Brief as DBBrief } from "@/lib/supabase/types";
 
 import { BriefMaterialForm } from "./brief-material-form";
 import { BriefQcForm } from "./brief-qc-form";
@@ -111,245 +115,35 @@ const statusOptions: BriefStatus[] = [
 ];
 
 
-const initialBriefs: BriefDocument[] = [
-    {
-        id: "brief-1",
-        projectTitle: "Kitchen Set Minimalis",
-        customerName: "Alya Putri",
-        vendorName: "Kayu Rapi Interior",
-        projectType: "Kitchen Set",
-        location: "Semarang",
-        roomSize: "2.5m x 2m",
-        budget: "Rp23.500.000",
-        status: "Draft",
-        createdAt: "3 Juli 2026",
-        updatedAt: "Hari ini",
-        scope:
-            "Pembuatan kitchen set minimalis untuk area dapur kecil, meliputi kabinet bawah, kabinet atas, area penyimpanan, dan finishing HPL warna natural.",
-        materialNote:
-            "Material utama multiplek 18mm, finishing HPL motif kayu muda, top table solid surface, dan aksesoris soft close.",
-        adminNote:
-            "Pastikan ukuran kabinet atas mengikuti hasil survey terakhir dan tidak menutup area ventilasi.",
-        vendorNote:
-            "Vendor perlu memberi catatan awal dan estimasi RAB setelah membaca dokumen brief.",
-        timeline: [
-            {
-                id: "tl-1",
-                label: "Survey & final ukuran",
-                date: "3 Juli 2026",
-            },
-            {
-                id: "tl-2",
-                label: "Estimasi pengerjaan kabinet",
-                date: "6 - 18 Juli 2026",
-            },
-            {
-                id: "tl-3",
-                label: "Instalasi",
-                date: "22 Juli 2026",
-            },
-        ],
-        materials: ["Multiplek 18mm", "HPL kayu muda", "Solid surface", "Soft close"],
-        files: [
-            {
-                id: "file-1",
-                name: "brief-kitchen-set.pdf",
-                type: "PDF",
-                size: "1.2 MB",
-                uploadedBy: "Admin",
-                uploadedAt: "Hari ini",
-            },
-            {
-                id: "file-2",
-                name: "referensi-dapur.jpg",
-                type: "Gambar",
-                size: "850 KB",
-                uploadedBy: "Customer",
-                uploadedAt: "3 Juli 2026",
-            },
-        ],
-        checklist: [
-            {
-                id: "check-1",
-                label: "Kebutuhan customer sudah dirangkum",
-                completed: true,
-            },
-            {
-                id: "check-2",
-                label: "Ukuran ruang sudah dicatat",
-                completed: true,
-            },
-            {
-                id: "check-3",
-                label: "Material acuan sudah dicatat",
-                completed: false,
-            },
-            {
-                id: "check-4",
-                label: "Brief siap dikirim ke vendor",
-                completed: false,
-            },
-        ],
-        qcChecklist: [
-            "Ukuran sesuai brief",
-            "Material sesuai persetujuan",
-            "Finishing rapi",
-            "Fungsi laci dan engsel berjalan baik",
-            "Area kerja bersih setelah instalasi",
-        ],
-    },
-    {
-        id: "brief-2",
-        projectTitle: "Wardrobe Kamar Utama",
-        customerName: "Bima Santoso",
-        vendorName: "Mitra Interior Jogja",
-        projectType: "Wardrobe",
-        location: "Yogyakarta",
-        roomSize: "3m x 3m",
-        budget: "Rp16.000.000",
-        status: "Siap Dikirim",
-        createdAt: "5 Juli 2026",
-        updatedAt: "Kemarin",
-        scope:
-            "Pembuatan wardrobe built-in full plafon dengan pintu sliding, area gantung, rak lipat, dan storage tambahan.",
-        materialNote:
-            "Material multiplek 15mm, finishing HPL warna natural, rel sliding, dan handle minimalis.",
-        adminNote:
-            "Customer meminta tambahan area gantung baju panjang di sisi kiri wardrobe.",
-        vendorNote:
-            "Vendor diminta mengecek kembali layout bagian dalam sebelum mengirim estimasi RAB.",
-        timeline: [
-            {
-                id: "tl-1",
-                label: "Review brief",
-                date: "5 Juli 2026",
-            },
-            {
-                id: "tl-2",
-                label: "Estimasi pengerjaan",
-                date: "8 - 20 Juli 2026",
-            },
-            {
-                id: "tl-3",
-                label: "Instalasi",
-                date: "24 Juli 2026",
-            },
-        ],
-        materials: ["Multiplek 15mm", "HPL natural", "Rel sliding", "Handle minimalis"],
-        files: [
-            {
-                id: "file-3",
-                name: "brief-wardrobe.pdf",
-                type: "PDF",
-                size: "980 KB",
-                uploadedBy: "Admin",
-                uploadedAt: "Kemarin",
-            },
-        ],
-        checklist: [
-            {
-                id: "check-1",
-                label: "Kebutuhan customer sudah dirangkum",
-                completed: true,
-            },
-            {
-                id: "check-2",
-                label: "Ukuran ruang sudah dicatat",
-                completed: true,
-            },
-            {
-                id: "check-3",
-                label: "Material acuan sudah dicatat",
-                completed: true,
-            },
-            {
-                id: "check-4",
-                label: "Brief siap dikirim ke vendor",
-                completed: true,
-            },
-        ],
-        qcChecklist: [
-            "Ukuran sesuai brief",
-            "Material sesuai persetujuan",
-            "Finishing rapi",
-            "Fungsi furniture berjalan baik",
-            "Area kerja bersih setelah instalasi",
-        ],
-    },
-    {
-        id: "brief-3",
-        projectTitle: "Ruang Kerja Rumah",
-        customerName: "Nadia Rahma",
-        vendorName: "Studio Ruang Karya",
-        projectType: "Ruang Kerja",
-        location: "Solo",
-        roomSize: "2m x 3m",
-        budget: "Rp10.500.000",
-        status: "Revisi Brief",
-        createdAt: "1 Juli 2026",
-        updatedAt: "2 hari lalu",
-        scope:
-            "Pembuatan meja kerja custom, rak buku, dan storage kecil dengan konsep Scandinavian yang sederhana dan terang.",
-        materialNote:
-            "Material multiplek, finishing HPL putih doff, aksen kayu muda, dan ambalan sederhana.",
-        adminNote:
-            "Customer meminta storage tambahan di sisi kanan meja kerja.",
-        vendorNote:
-            "Vendor meminta revisi layout sebelum estimasi RAB dapat dilanjutkan.",
-        vendorResponse:
-            "Vendor meminta revisi layout storage sisi kanan meja kerja agar ukuran lebih sesuai dengan ruang yang tersedia.",
-        vendorRespondedAt: "2 hari lalu",
-        vendorReadAt: "2 hari lalu",
-        timeline: [
-            {
-                id: "tl-1",
-                label: "Revisi desain",
-                date: "2 Juli 2026",
-            },
-            {
-                id: "tl-2",
-                label: "Final brief",
-                date: "4 Juli 2026",
-            },
-            {
-                id: "tl-3",
-                label: "Estimasi pengerjaan",
-                date: "6 - 15 Juli 2026",
-            },
-        ],
-        materials: ["Multiplek", "HPL putih doff", "Aksen kayu", "Ambalan"],
+const initialBriefs: BriefDocument[] = [];
+
+function mapDbToLocal(b: DBBrief): BriefDocument {
+    return {
+        id: b.id,
+        projectTitle: b.project_title,
+        customerName: b.customer?.full_name || "Customer",
+        vendorName: b.vendor?.full_name || "-",
+        projectType: b.project_type || "-",
+        location: b.location || "-",
+        roomSize: b.room_size || "-",
+        budget: b.budget || "-",
+        status: (b.status as BriefStatus) || "Draft",
+        createdAt: new Date(b.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        updatedAt: new Date(b.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        scope: b.scope || "",
+        materialNote: b.material_note || "",
+        adminNote: b.admin_note || "",
+        vendorNote: b.vendor_note || "",
+        vendorResponse: b.vendor_response || undefined,
+        vendorRespondedAt: b.vendor_responded_at || undefined,
+        vendorReadAt: b.vendor_read_at || undefined,
+        timeline: (b.timeline || []).map((t, i) => ({ id: `tl-${i}`, label: t.label, date: t.date })),
+        materials: b.materials || [],
         files: [],
-        checklist: [
-            {
-                id: "check-1",
-                label: "Kebutuhan customer sudah dirangkum",
-                completed: true,
-            },
-            {
-                id: "check-2",
-                label: "Ukuran ruang sudah dicatat",
-                completed: true,
-            },
-            {
-                id: "check-3",
-                label: "Material acuan sudah dicatat",
-                completed: false,
-            },
-            {
-                id: "check-4",
-                label: "Brief siap dikirim ke vendor",
-                completed: false,
-            },
-        ],
-        qcChecklist: [
-            "Ukuran sesuai brief",
-            "Material sesuai persetujuan",
-            "Finishing rapi",
-            "Fungsi furniture berjalan baik",
-            "Area kerja bersih setelah instalasi",
-        ],
-    },
-];
+        qcChecklist: b.qc_checklist || [],
+        checklist: b.checklist || [],
+    };
+}
 
 export function BriefDocumentsView() {
     const [briefs, setBriefs] = useState<BriefDocument[]>(initialBriefs);
@@ -365,6 +159,19 @@ export function BriefDocumentsView() {
     const [isMaterialFormOpen, setIsMaterialFormOpen] = useState(false);
     const [isTimelineFormOpen, setIsTimelineFormOpen] = useState(false);
     const [isQcFormOpen, setIsQcFormOpen] = useState(false);
+
+    const loadBriefs = useCallback(async () => {
+        try {
+            const data = await getBriefs();
+            setBriefs(data.map(mapDbToLocal));
+        } catch {
+            // silent
+        }
+    }, []);
+
+    useEffect(() => {
+        loadBriefs();
+    }, [loadBriefs]);
 
     const localIdRef = useRef(10);
 
@@ -451,20 +258,30 @@ export function BriefDocumentsView() {
         }));
     };
 
-    const addBriefFile = (id: string) => {
-        const newFile: BriefFile = {
-            id: createLocalId("file"),
-            name: "dokumen-brief-baru.pdf",
-            type: "PDF",
-            size: "UI only",
-            uploadedBy: "Admin",
-            uploadedAt: "Baru saja",
-        };
+    const addBriefFile = async (id: string, file: File) => {
+        try {
+            const ext = file.name.split('.').pop();
+            const filePath = `briefs/${id}/${Date.now()}.${ext}`;
+            const url = await uploadFileToStorage("vmatch-files", filePath, file);
 
-        updateBrief(id, (brief) => ({
-            ...brief,
-            files: [newFile, ...brief.files],
-        }));
+            const newFile: BriefFile = {
+                id: createLocalId("file"),
+                name: file.name,
+                type: file.type.split('/')[1]?.toUpperCase() || "Berkas",
+                size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                uploadedBy: "Admin",
+                uploadedAt: "Baru saja",
+            };
+
+            updateBrief(id, (brief) => ({
+                ...brief,
+                files: [newFile, ...brief.files],
+            }));
+            
+            toast.success("File berhasil diupload ke storage.");
+        } catch (error) {
+            toast.error("Gagal mengupload file ke storage.");
+        }
     };
 
     const deleteBriefFile = (id: string, fileId: string) => {
@@ -515,15 +332,32 @@ export function BriefDocumentsView() {
         }));
     };
 
-    const saveBriefChanges = () => {
+    const saveBriefChanges = async () => {
         if (!selectedBrief) return;
 
-        updateBrief(selectedBrief.id, (brief) => ({
-            ...brief,
-            scope: scopeDraft,
-            adminNote: adminNoteDraft,
-            vendorNote: vendorNoteDraft,
-        }));
+        try {
+            await updateBriefRecord(selectedBrief.id, {
+                scope: scopeDraft || null,
+                admin_note: adminNoteDraft || null,
+                vendor_note: vendorNoteDraft || null,
+                materials: selectedBrief.materials,
+                timeline: selectedBrief.timeline.map((item) => ({
+                    label: item.label,
+                    date: item.date,
+                })),
+                qc_checklist: selectedBrief.qcChecklist,
+                checklist: selectedBrief.checklist,
+            });
+
+            updateBrief(selectedBrief.id, (brief) => ({
+                ...brief,
+                scope: scopeDraft,
+                adminNote: adminNoteDraft,
+                vendorNote: vendorNoteDraft,
+            }));
+        } catch {
+            return;
+        }
 
         setIsBriefSaved(true);
     };
@@ -559,7 +393,7 @@ export function BriefDocumentsView() {
                     onOpenMaterialForm={() => setIsMaterialFormOpen(true)}
                     onOpenTimelineForm={() => setIsTimelineFormOpen(true)}
                     onOpenQcForm={() => setIsQcFormOpen(true)}
-                    onUploadFile={() => addBriefFile(selectedBrief.id)}
+                    onUploadFile={(file) => addBriefFile(selectedBrief.id, file)}
                     onDeleteFile={(fileId) => deleteBriefFile(selectedBrief.id, fileId)}
                     onDeleteQcItem={(qcItem) => deleteQcItem(selectedBrief.id, qcItem)}
                 />
@@ -737,7 +571,7 @@ function BriefDetailPage({
     onOpenMaterialForm: () => void;
     onOpenTimelineForm: () => void;
     onOpenQcForm: () => void;
-    onUploadFile: () => void;
+    onUploadFile: (file: File) => void;
     onDeleteFile: (fileId: string) => void;
     onDeleteQcItem: (qcItem: string) => void;
 }) {
@@ -751,6 +585,20 @@ function BriefDetailPage({
         (brief.status === "Dibaca Vendor" ||
             brief.status === "Estimasi Dikirim" ||
             brief.status === "Revisi Brief");
+
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        setTimeout(() => {
+            setIsUploading(false);
+            onUploadFile(file);
+            toast.success(`File ${file.name} berhasil diunggah.`);
+        }, 1500);
+    };
 
     return (
         <div className="space-y-5">
@@ -1112,14 +960,16 @@ function BriefDetailPage({
                             </p>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={onUploadFile}
-                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
-                        >
+                        <label className={`relative inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <Upload size={14} />
-                            Upload File
-                        </button>
+                            {isUploading ? "Mengunggah..." : "Upload File"}
+                            <input
+                                type="file"
+                                className="hidden"
+                                onChange={handleFileUpload}
+                                disabled={isUploading}
+                            />
+                        </label>
                     </div>
 
                     <div className="mt-4 grid gap-3">
@@ -1162,10 +1012,6 @@ function BriefDetailPage({
                             <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-white p-5 text-center">
                                 <p className="text-[13px] font-semibold text-[#31332C]">
                                     Belum ada file brief.
-                                </p>
-
-                                <p className="mt-1 text-[12px] text-[#7B756E]">
-                                    File upload masih UI prototype, belum tersimpan ke storage.
                                 </p>
                             </div>
                         )}

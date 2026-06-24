@@ -17,7 +17,11 @@ import {
     Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { getProjectRequests, getProjects, updateProjectRequest } from "@/lib/api/projects";
+import { getVendors } from "@/lib/api/profiles";
+import type { ProjectRequest as DBRequest, Profile } from "@/lib/supabase/types";
+import { toast } from "sonner";
 
 import type { AdminPageId } from "../types";
 
@@ -113,113 +117,34 @@ const statusOptions: RequestStatus[] = [
     "Ditolak",
 ];
 
-const recommendedVendors: VendorRecommendation[] = [
-    {
-        id: "vendor-1",
-        name: "Andi Interior Partner",
-        area: "Semarang",
-        skills: ["Kitchen Set", "Wardrobe", "Storage"],
-        availability: "Tersedia",
-        activeProjects: 2,
-        performanceScore: 92,
-        responseTime: "± 1 hari",
-        notes: "Cocok untuk kitchen set dan pekerjaan custom furniture rumah.",
-    },
-    {
-        id: "vendor-2",
-        name: "Nusa Custom Interior",
-        area: "Semarang",
-        skills: ["Kitchen Set", "Backdrop TV"],
-        availability: "Sibuk",
-        activeProjects: 5,
-        performanceScore: 86,
-        responseTime: "± 2 hari",
-        notes: "Performa baik, tetapi sedang menangani beberapa proyek aktif.",
-    },
-    {
-        id: "vendor-3",
-        name: "Ruang Rapi Studio",
-        area: "Yogyakarta",
-        skills: ["Wardrobe", "Ruang Kerja", "Storage"],
-        availability: "Tersedia",
-        activeProjects: 1,
-        performanceScore: 89,
-        responseTime: "± 1 hari",
-        notes: "Cocok untuk wardrobe, ruang kerja, dan storage minimalis.",
-    },
-];
+const recommendedVendors: VendorRecommendation[] = [];
 
-const initialRequests: ProjectRequest[] = [
-    {
-        id: "request-1",
-        title: "Kitchen Set Modern Minimalis",
-        customerName: "Alya Putri",
-        customerEmail: "alya@email.com",
-        location: "Semarang",
-        budget: "Rp25.000.000 - Rp70.000.000",
-        projectType: "Kitchen Set",
-        roomSize: "Area dapur 3m x 2.5m",
-        designStyle: "Modern minimalis",
-        referenceSource: "Inspirasi Kitchen Set Modern Minimalis",
-        preferredMaterialPackage: "Standard / Premium",
-        targetTime: "Mulai pengerjaan bulan depan",
-        status: "Menunggu Vendor",
-        submittedAt: "Hari ini, 10.30 WIB",
-        description:
-            "Customer membutuhkan kitchen set yang bersih, fungsional, mudah dirawat, dan memiliki penyimpanan yang cukup untuk dapur kecil.",
-        adminNote:
-            "Request sudah cukup jelas. Cocok diteruskan ke vendor kitchen set area Semarang untuk estimasi awal.",
-        briefDocumentStatus: "Brief Siap",
-        briefDocumentUpdatedAt: "Hari ini, 11.00 WIB",
-    },
-    {
-        id: "request-2",
-        title: "Wardrobe Kamar Utama",
-        customerName: "Bima Santoso",
-        customerEmail: "bima@email.com",
-        location: "Yogyakarta",
-        budget: "Rp18.000.000 - Rp60.000.000",
-        projectType: "Wardrobe",
-        roomSize: "Lebar dinding ± 3 meter",
-        designStyle: "Warm modern",
-        referenceSource: "Referensi wardrobe built-in",
-        preferredMaterialPackage: "Standard",
-        targetTime: "2-3 minggu setelah RAB disetujui",
-        status: "Butuh Konsultasi",
-        submittedAt: "Kemarin, 14.00 WIB",
-        description:
-            "Customer ingin wardrobe built-in full plafon dengan area gantung, rak lipat, dan pintu sliding.",
-        adminNote:
-            "Perlu konsultasi untuk memastikan layout bagian dalam wardrobe dan preferensi pintu sliding.",
-        briefDocumentStatus: "Belum Dibuat",
-        briefDocumentUpdatedAt: "Belum ada dokumen brief",
-    },
-    {
-        id: "request-3",
-        title: "Ruang Kerja Compact",
-        customerName: "Nadia Rahma",
-        customerEmail: "nadia@email.com",
-        location: "Solo",
-        budget: "Rp12.000.000 - Rp40.000.000",
-        projectType: "Ruang Kerja",
-        roomSize: "2m x 3m",
-        designStyle: "Scandinavian",
-        referenceSource: "Inspirasi ruang kerja compact",
-        preferredMaterialPackage: "Basic / Standard",
-        targetTime: "Fleksibel",
-        status: "Estimasi Dikirim Vendor",
-        submittedAt: "2 hari lalu",
-        description:
-            "Customer membutuhkan meja kerja custom, rak buku, dan storage kecil agar ruang tetap rapi dan terang.",
-        adminNote:
-            "Estimasi vendor sudah masuk. Admin dapat lanjut review di RAB Builder.",
-        briefDocumentStatus: "Brief Dikirim",
-        briefDocumentUpdatedAt: "Kemarin, 09.20 WIB",
-        selectedVendorId: "vendor-3",
-        sentToVendorAt: "Kemarin, 09.20 WIB",
-        lastMessage: "Vendor mengirim estimasi RAB. Silakan review di RAB Builder.",
-    },
-];
+const initialRequests: ProjectRequest[] = [];
+
+function mapDbToLocalRequest(r: DBRequest): ProjectRequest {
+    return {
+        id: r.id,
+        title: r.project_name,
+        customerName: r.customer?.full_name || "Customer",
+        customerEmail: r.customer?.phone || "",
+        location: r.location,
+        budget: r.budget || "-",
+        projectType: r.project_type,
+        roomSize: r.room_size || "-",
+        designStyle: r.design_style || "-",
+        referenceSource: r.reference_name || r.inspiration_reference || "-",
+        preferredMaterialPackage: r.material_package || "-",
+        targetTime: r.start_target || "Fleksibel",
+        status: r.status as RequestStatus,
+        submittedAt: new Date(r.submitted_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        description: r.notes || r.ai_description || "-",
+        adminNote: r.admin_note || "",
+        briefDocumentStatus: r.brief_document_status as BriefDocumentStatus,
+        briefDocumentUpdatedAt: r.sent_to_vendor_at ? "Tersedia" : "Belum ada",
+        selectedVendorId: r.selected_vendor_id || undefined,
+        sentToVendorAt: r.sent_to_vendor_at || undefined,
+    };
+}
 
 function matchRequestTab(request: ProjectRequest, activeTab: RequestTab) {
     if (activeTab === "Semua") return true;
@@ -282,9 +207,53 @@ export function RequestProjectView({
 }: {
     onChangePage?: (page: AdminPageId) => void;
 }) {
-    const [requests, setRequests] = useState<ProjectRequest[]>(initialRequests);
+    const [requests, setRequests] = useState<ProjectRequest[]>([]);
     const [activeTab, setActiveTab] = useState<RequestTab>("Semua");
     const [keyword, setKeyword] = useState("");
+    const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+
+    const loadRequests = useCallback(async () => {
+        try {
+            setIsLoadingRequests(true);
+            const [dbRequests, dbVendors, dbProjects] = await Promise.all([
+                getProjectRequests(),
+                getVendors(),
+                getProjects(),
+            ]);
+            setRequests(dbRequests.map(mapDbToLocalRequest));
+            // Map vendors to recommendation format
+            const activeProjectCountByVendor = new Map<string, number>();
+            dbProjects.forEach((project) => {
+                if (!project.vendor_id || project.status === "Selesai") return;
+                activeProjectCountByVendor.set(
+                    project.vendor_id,
+                    (activeProjectCountByVendor.get(project.vendor_id) || 0) + 1,
+                );
+            });
+            const vendorRecs: VendorRecommendation[] = dbVendors.map((v: Profile) => ({
+                id: v.id,
+                name: v.full_name || "Vendor",
+                area: v.service_area || "-",
+                skills: v.skills?.split(",").map(s => s.trim()) || [],
+                availability: "Tersedia" as VendorAvailability,
+                activeProjects: activeProjectCountByVendor.get(v.id) || 0,
+                performanceScore: 85,
+                responseTime: "± 1-2 hari",
+                notes: v.notes || "Vendor partner VMatch.",
+            }));
+            // Update module-level for sub-components
+            recommendedVendors.length = 0;
+            recommendedVendors.push(...vendorRecs);
+        } catch {
+            // silent
+        } finally {
+            setIsLoadingRequests(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadRequests();
+    }, [loadRequests]);
     const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
         null,
     );
@@ -371,20 +340,37 @@ export function RequestProjectView({
         setFeedbackMessage("");
     };
 
-    const updateRequest = (
+    const updateRequest = async (
         id: string,
         updater: (request: ProjectRequest) => ProjectRequest,
     ) => {
-        setRequests((current) =>
-            current.map((request) => (request.id === id ? updater(request) : request)),
-        );
+        const currentRequest = requests.find(r => r.id === id);
+        if (!currentRequest) return;
+        const newData = updater(currentRequest);
+        
+        try {
+            await updateProjectRequest(id, {
+                status: newData.status,
+                admin_note: newData.adminNote || null,
+                brief_document_status: newData.briefDocumentStatus,
+                selected_vendor_id: newData.selectedVendorId || null,
+                sent_to_vendor_at: newData.sentToVendorAt ? new Date().toISOString() : null,
+            });
+            setRequests((current) =>
+                current.map((request) => (request.id === id ? newData : request)),
+            );
+        } catch {
+            toast.error("Gagal menyimpan perubahan ke database.");
+        }
     };
 
     const updateStatus = (id: string, status: RequestStatus) => {
         updateRequest(id, (request) => ({
             ...request,
             status,
-        }));
+        })).then(() => {
+            toast.success(`Status berhasil diubah menjadi ${status}`);
+        });
 
         if (status === "Butuh Konsultasi") setActiveTab("Konsultasi");
         if (status === "Menunggu Estimasi Vendor") setActiveTab("Vendor");
@@ -395,7 +381,12 @@ export function RequestProjectView({
         ) {
             setActiveTab("Estimasi");
         }
-        if (status === "Menjadi Proyek Aktif") setActiveTab("Aktif");
+        if (status === "Menjadi Proyek Aktif") {
+            setActiveTab("Aktif");
+            setFeedbackMessage(
+                "Request berhasil dijadikan proyek aktif. Klik tombol di bawah untuk melihat di halaman Proyek Aktif.",
+            );
+        }
         if (status === "Ditolak") setActiveTab("Ditolak");
     };
 
@@ -457,12 +448,13 @@ export function RequestProjectView({
             sentToVendorAt: "Baru saja",
             lastMessage:
                 "Brief berhasil dikirim ke vendor. Vendor dapat melihat brief di Vendor Panel dan mengirim estimasi RAB kepada admin.",
-        }));
-
-        setActiveTab("Vendor");
-        setFeedbackMessage(
-            "Brief berhasil dikirim ke vendor. Vendor dapat melihat brief di Vendor Panel.",
-        );
+        })).then(() => {
+            setActiveTab("Vendor");
+            setFeedbackMessage(
+                "Brief berhasil dikirim ke vendor. Vendor dapat melihat brief di Vendor Panel.",
+            );
+            toast.success("Brief berhasil dikirim ke vendor.");
+        });
     };
 
     if (selectedRequest) {
@@ -488,6 +480,7 @@ export function RequestProjectView({
                 onMarkBriefReady={() => markBriefReady(selectedRequest.id)}
                 onOpenConsultation={() => onChangePage?.("consultations")}
                 onOpenRabBuilder={() => onChangePage?.("rab-builder")}
+                onOpenActiveProjects={() => onChangePage?.("active-projects")}
             />
         );
     }
@@ -615,6 +608,7 @@ function RequestDetailPage({
     onMarkBriefReady,
     onOpenConsultation,
     onOpenRabBuilder,
+    onOpenActiveProjects,
 }: {
     request: ProjectRequest;
     selectedVendor: VendorRecommendation | null;
@@ -636,6 +630,7 @@ function RequestDetailPage({
     onMarkBriefReady: () => void;
     onOpenConsultation: () => void;
     onOpenRabBuilder: () => void;
+    onOpenActiveProjects: () => void;
 }) {
     const canOpenRab =
         request.status === "Estimasi Dikirim Vendor" ||
@@ -789,6 +784,7 @@ function RequestDetailPage({
                     onAvailabilityFilterChange={onAvailabilityFilterChange}
                     onSelectVendor={onSelectVendor}
                     onSendBrief={onSendBrief}
+                    onOpenActiveProjects={onOpenActiveProjects}
                 />
             </section>
 
@@ -916,6 +912,7 @@ function VendorMatchingSection({
     onAvailabilityFilterChange,
     onSelectVendor,
     onSendBrief,
+    onOpenActiveProjects,
 }: {
     request: ProjectRequest;
     vendors: VendorRecommendation[];
@@ -931,7 +928,9 @@ function VendorMatchingSection({
     onAvailabilityFilterChange: (value: string) => void;
     onSelectVendor: (vendorId: string) => void;
     onSendBrief: () => void;
+    onOpenActiveProjects: () => void;
 }) {
+    const isActiveProject = request.status === "Menjadi Proyek Aktif";
     return (
         <div className="border-t border-[#E8E2D9] bg-[#FCFBF9] p-5 sm:p-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -968,6 +967,21 @@ function VendorMatchingSection({
             {feedbackMessage && (
                 <div className="mt-4 rounded-2xl border border-[#DCEBDD] bg-[#F5FAF6] px-4 py-3 text-[12px] font-semibold leading-5 text-[#4F7A5F]">
                     {feedbackMessage}
+                </div>
+            )}
+
+            {isActiveProject && (
+                <div className="mt-4 rounded-2xl border border-[#DCEBDD] bg-[#F5FAF6] p-4">
+                    <p className="text-[12px] font-semibold text-[#4F7A5F]">
+                        Request ini sudah menjadi proyek aktif.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={onOpenActiveProjects}
+                        className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                    >
+                        Lihat di Proyek Aktif →
+                    </button>
                 </div>
             )}
 

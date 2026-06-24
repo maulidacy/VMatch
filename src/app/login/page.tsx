@@ -1,40 +1,95 @@
 "use client";
 
-import { ArrowLeft, Eye, EyeOff, Lock, User } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 const LOGIN_IMAGE = "/figma/hero-kitchen.webp";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    setIsLoading(true);
 
-    if (username === "admin" && password === "123") {
-      router.push("/dashboard/admin");
-      return;
+    const supabase = createClient();
+
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (authError) {
+        if (/email not confirmed/i.test(authError.message)) {
+          setError("Email belum dikonfirmasi. Cek inbox kamu untuk link konfirmasi.");
+        } else {
+          setError("Email atau password salah.");
+        }
+        return;
+      }
+
+      if (!data.user) {
+        setError("Gagal masuk. Silakan coba lagi.");
+        return;
+      }
+
+      // Ambil role dari profiles. Pakai maybeSingle agar tidak error saat baris belum ada.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      let role = profile?.role as string | undefined;
+
+      // Self-heal: jika profil belum ada (mis. user lama), buat dari metadata.
+      if (!role) {
+        const meta = (data.user.user_metadata ?? {}) as {
+          role?: string;
+          full_name?: string;
+        };
+        const fallbackRole =
+          meta.role === "admin" || meta.role === "vendor" ? meta.role : "user";
+
+        const { data: created } = await supabase
+          .from("profiles")
+          .insert({
+            id: data.user.id,
+            role: fallbackRole,
+            full_name: meta.full_name ?? null,
+          })
+          .select("role")
+          .maybeSingle();
+
+        role = (created?.role as string | undefined) ?? "user";
+      }
+
+      // Redirect based on role
+      if (role === "admin") {
+        router.push("/dashboard/admin");
+      } else if (role === "vendor") {
+        router.push("/dashboard/vendor");
+      } else {
+        router.push("/dashboard/user");
+      }
+
+      router.refresh();
+    } catch {
+      setError("Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    if (username === "user" && password === "123") {
-      router.push("/dashboard/user");
-      return;
-    }
-
-    if (username === "vendor" && password === "123") {
-      router.push("/dashboard/vendor");
-      return;
-    }
-
-    setError("Username atau password salah.");
   };
 
   return (
@@ -122,16 +177,34 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <InputField
-                  id="login-username"
-                  label="Username"
-                  icon={<User size={17} strokeWidth={1.75} />}
-                  value={username}
-                  onChange={setUsername}
-                  placeholder="admin atau user"
-                  autoComplete="username"
-                />
+                {/* Email */}
+                <div>
+                  <label
+                    htmlFor="login-email"
+                    className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b5b52]"
+                  >
+                    Email
+                  </label>
 
+                  <div className="relative">
+                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#797c73]">
+                      <Mail size={17} strokeWidth={1.75} />
+                    </span>
+
+                    <input
+                      id="login-email"
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      autoComplete="email"
+                      className="h-11 w-full border border-[#ded6ca] bg-[#fcfbf9] pl-11 pr-4 text-[14px] text-[#31332c] outline-none transition focus:border-[#31332c] focus:bg-white focus:ring-1 focus:ring-[#31332c]"
+                      placeholder="email@example.com"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
                 <div>
                   <label
                     htmlFor="login-password"
@@ -177,9 +250,10 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  className="h-11 w-full bg-[#31332c] text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:-translate-y-0.5 hover:bg-[#191a17] active:scale-[0.99]"
+                  disabled={isLoading}
+                  className="h-11 w-full bg-[#31332c] text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:-translate-y-0.5 hover:bg-[#191a17] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Masuk
+                  {isLoading ? "Masuk..." : "Masuk"}
                 </button>
               </form>
 
@@ -195,65 +269,28 @@ export default function LoginPage() {
             </div>
 
             {/* Demo credentials */}
-            <p className="mt-4 text-center text-[11px] text-[#797c73]">
-              Demo: <span className="font-medium text-[#31332c]">admin</span> /{" "}
-              <span className="font-medium text-[#31332c]">123</span>
-              <span className="mx-1.5 text-[#ded6ca]">·</span>
-              <span className="font-medium text-[#31332c]">user</span> /{" "}
-              <span className="font-medium text-[#31332c]">123</span>
-              <span className="mx-1.5 text-[#ded6ca]">·</span>
-              <span className="font-medium text-[#31332c]">vendor</span> /{" "}
-              <span className="font-medium text-[#31332c]">123</span>
-            </p>
+            <div className="mt-4 rounded-xl border border-[#ded6ca] bg-white px-4 py-3">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8b8179]">
+                Akun Demo
+              </p>
+              <div className="space-y-1 text-[11px] text-[#797c73]">
+                <p>
+                  <span className="font-semibold text-[#31332c]">Admin:</span>{" "}
+                  admin@vmatch.id / admin123
+                </p>
+                <p>
+                  <span className="font-semibold text-[#31332c]">Vendor:</span>{" "}
+                  vendor@vmatch.id / vendor123
+                </p>
+                <p>
+                  <span className="font-semibold text-[#31332c]">User:</span>{" "}
+                  user@vmatch.id / user123
+                </p>
+              </div>
+            </div>
           </div>
         </section>
       </div>
     </main>
-  );
-}
-
-function InputField({
-  id,
-  label,
-  icon,
-  value,
-  onChange,
-  placeholder,
-  autoComplete,
-}: {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  autoComplete: string;
-}) {
-  return (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b5b52]"
-      >
-        {label}
-      </label>
-
-      <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#797c73]">
-          {icon}
-        </span>
-
-        <input
-          id={id}
-          type="text"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          autoComplete={autoComplete}
-          className="h-11 w-full border border-[#ded6ca] bg-[#fcfbf9] pl-11 pr-4 text-[14px] text-[#31332c] outline-none transition focus:border-[#31332c] focus:bg-white focus:ring-1 focus:ring-[#31332c]"
-          placeholder={placeholder}
-          required
-        />
-      </div>
-    </div>
   );
 }

@@ -15,7 +15,9 @@ import {
     Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getCustomers } from "@/lib/api/profiles";
+import type { Profile as DBProfile } from "@/lib/supabase/types";
 
 import type { AdminPageId } from "../types";
 
@@ -67,150 +69,30 @@ const statusOptions: CustomerStatus[] = [
     "Nonaktif",
 ];
 
-const initialCustomers: CustomerItem[] = [
-    {
-        id: "customer-1",
-        name: "Alya Putri",
-        email: "alya@email.com",
-        phone: "0812-3456-7890",
-        city: "Semarang",
-        source: "Landing Page",
-        joinedAt: "28 Juni 2026",
-        lastContact: "Hari ini",
-        status: "Aktif",
-        totalRequests: 2,
-        activeProjects: 1,
-        completedProjects: 0,
-        totalValue: "Rp23.500.000",
-        preferredStyle: "Minimalis Modern",
-        budgetRange: "Rp18.000.000 - Rp25.000.000",
-        latestNeed:
-            "Customer ingin kitchen set minimalis untuk dapur kecil dengan penyimpanan yang efisien.",
-        adminNote:
-            "Customer responsif dan sudah punya referensi desain. Perlu dipandu pada pilihan material dan finishing.",
-        projects: [
-            {
-                id: "project-1",
-                title: "Kitchen Set Minimalis",
-                status: "Produksi kabinet",
-                progress: 45,
-                value: "Rp23.500.000",
-            },
-        ],
-    },
-    {
-        id: "customer-2",
-        name: "Bima Santoso",
-        email: "bima@email.com",
-        phone: "0821-2222-8899",
-        city: "Yogyakarta",
-        source: "Referral",
-        joinedAt: "30 Juni 2026",
-        lastContact: "Kemarin",
-        status: "Perlu Follow Up",
-        totalRequests: 1,
-        activeProjects: 1,
-        completedProjects: 0,
-        totalValue: "Rp16.000.000",
-        preferredStyle: "Japandi",
-        budgetRange: "Rp12.000.000 - Rp18.000.000",
-        latestNeed:
-            "Customer membutuhkan wardrobe built-in full plafon dengan pintu sliding dan area gantung tambahan.",
-        adminNote:
-            "Perlu follow up terkait revisi layout bagian dalam wardrobe dan konfirmasi pilihan rel sliding.",
-        projects: [
-            {
-                id: "project-1",
-                title: "Wardrobe Kamar Utama",
-                status: "Revisi layout",
-                progress: 35,
-                value: "Rp16.000.000",
-            },
-        ],
-    },
-    {
-        id: "customer-3",
-        name: "Nadia Rahma",
-        email: "nadia@email.com",
-        phone: "0857-1000-4421",
-        city: "Solo",
-        source: "Instagram",
-        joinedAt: "1 Juli 2026",
-        lastContact: "Hari ini",
-        status: "Aktif",
-        totalRequests: 1,
-        activeProjects: 1,
-        completedProjects: 0,
-        totalValue: "Rp10.500.000",
-        preferredStyle: "Scandinavian",
-        budgetRange: "Rp8.000.000 - Rp12.000.000",
-        latestNeed:
-            "Customer ingin ruang kerja sederhana, terang, dan tidak terlalu penuh.",
-        adminNote:
-            "Kebutuhan sudah cukup jelas. Cocok diarahkan ke vendor spesialis furniture ruang kerja.",
-        projects: [
-            {
-                id: "project-1",
-                title: "Ruang Kerja Rumah",
-                status: "QC finishing",
-                progress: 82,
-                value: "Rp10.500.000",
-            },
-        ],
-    },
-    {
-        id: "customer-4",
-        name: "Raka Pratama",
-        email: "raka@email.com",
-        phone: "0813-7788-9922",
-        city: "Semarang",
-        source: "Landing Page",
-        joinedAt: "15 Juni 2026",
-        lastContact: "3 hari lalu",
-        status: "Aktif",
-        totalRequests: 1,
-        activeProjects: 0,
-        completedProjects: 1,
-        totalValue: "Rp13.800.000",
-        preferredStyle: "Modern Warm",
-        budgetRange: "Rp10.000.000 - Rp15.000.000",
-        latestNeed:
-            "Customer ingin backdrop TV dengan kabinet bawah, panel dinding, dan warna coklat muda.",
-        adminNote:
-            "Proyek sudah selesai. Customer potensial untuk follow up layanan tambahan ruang keluarga.",
-        projects: [
-            {
-                id: "project-1",
-                title: "Backdrop TV Ruang Keluarga",
-                status: "Selesai",
-                progress: 100,
-                value: "Rp13.800.000",
-            },
-        ],
-    },
-    {
-        id: "customer-5",
-        name: "Customer Baru",
-        email: "customerbaru@email.com",
-        phone: "08xx-xxxx-xxxx",
-        city: "Semarang",
-        source: "Katalog Desain",
-        joinedAt: "Hari ini",
-        lastContact: "Hari ini",
-        status: "Baru",
+const initialCustomers: CustomerItem[] = [];
+
+function mapDbToLocalCustomer(p: DBProfile): CustomerItem {
+    return {
+        id: p.id,
+        name: p.full_name || "Customer",
+        email: "",
+        phone: p.phone || "-",
+        city: p.address || "-",
+        source: p.source || "-",
+        joinedAt: new Date(p.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        lastContact: new Date(p.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        status: (p.status as CustomerStatus) || "Baru",
         totalRequests: 0,
         activeProjects: 0,
         completedProjects: 0,
         totalValue: "Rp0",
-        preferredStyle: "Belum ditentukan",
-        budgetRange: "Belum ditentukan",
-        latestNeed:
-            "Customer baru melihat inspirasi desain dan belum mengajukan proyek.",
-        adminNote:
-            "Perlu follow up ringan untuk mengetahui kebutuhan awal customer.",
+        preferredStyle: p.preferences || "-",
+        budgetRange: p.budget_range || "-",
+        latestNeed: p.notes || "-",
+        adminNote: p.notes || "",
         projects: [],
-    },
-];
+    };
+}
 
 function formatRupiah(value: string) {
     const numberValue = Number(value.replace(/[^\d]/g, ""));
@@ -239,6 +121,19 @@ export function CustomerView({
     );
     const [adminNoteDraft, setAdminNoteDraft] = useState("");
     const [isNoteSaved, setIsNoteSaved] = useState(false);
+
+    const loadCustomers = useCallback(async () => {
+        try {
+            const data = await getCustomers();
+            setCustomers(data.map(mapDbToLocalCustomer));
+        } catch {
+            // silent
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCustomers();
+    }, [loadCustomers]);
 
     const filteredCustomers = useMemo(() => {
         const normalizedKeyword = keyword.trim().toLowerCase();

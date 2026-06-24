@@ -16,7 +16,9 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { getPromos } from "@/lib/api/promos";
+import type { Promo as DBPromo } from "@/lib/supabase/types";
 
 import { PromoCreateView } from "./promo-create-view";
 
@@ -63,50 +65,23 @@ const statusOptions: PromoStatus[] = [
   "Nonaktif",
 ];
 
-const initialPromos: PromoCampaign[] = [
-  {
-    id: "promo-1",
-    title: "Interior Awal Bulan",
-    description:
-      "Ajukan proyek interior baru dan dapatkan potongan biaya konsultasi bersama tim VMatch.",
-    imageUrl: "/inspirations/rumah-ruang-tamu.webp",
-    ctaLabel: "Ajukan Proyek",
-    ctaTarget: "/dashboard/user",
-    startDate: "1 Juli 2026",
-    endDate: "15 Juli 2026",
-    status: "Aktif",
-    createdBy: "Marketing Admin",
-    createdAt: "28 Juni 2026",
-  },
-  {
-    id: "promo-2",
-    title: "Gratis Konsultasi Ruang Kerja",
-    description:
-      "Promo konsultasi untuk customer yang ingin membuat ruang kerja minimalis di rumah.",
-    imageUrl: "/inspirations/apartment-living-area.webp",
-    ctaLabel: "Daftar Konsultasi",
-    ctaTarget: "/register",
-    startDate: "16 Juli 2026",
-    endDate: "31 Juli 2026",
-    status: "Dijadwalkan",
-    createdBy: "Marketing Admin",
-    createdAt: "30 Juni 2026",
-  },
-  {
-    id: "promo-3",
-    title: "Campaign Kitchen Set",
-    description:
-      "Campaign khusus pengajuan proyek kitchen set dengan estimasi awal lebih cepat.",
-    imageUrl: "/inspirations/rumah-ruang-tamu.webp",
-    ctaLabel: "Lihat Layanan",
-    ctaTarget: "/#services",
-    startDate: "10 Juni 2026",
-    endDate: "25 Juni 2026",
-    status: "Nonaktif",
-    createdBy: "Admin VMatch",
-    createdAt: "8 Juni 2026",
-  },
-];
+const initialPromos: PromoCampaign[] = [];
+
+function mapDbToLocalPromo(p: DBPromo): PromoCampaign {
+  return {
+    id: p.id,
+    title: p.title,
+    description: p.description || "",
+    imageUrl: p.image_url || "",
+    ctaLabel: p.cta_label || "",
+    ctaTarget: p.cta_url || "",
+    startDate: p.start_date || "-",
+    endDate: p.end_date || "-",
+    status: (p.status as PromoStatus) || "Draft",
+    createdBy: p.created_by || "Admin",
+    createdAt: new Date(p.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+  };
+}
 
 function createDraft(promo: PromoCampaign): PromoDraft {
   return {
@@ -129,6 +104,19 @@ export function PromoCampaignView() {
   const [promoDraft, setPromoDraft] = useState<PromoDraft | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isPromoSaved, setIsPromoSaved] = useState(false);
+
+  const loadPromos = useCallback(async () => {
+    try {
+      const data = await getPromos();
+      setPromos(data.map(mapDbToLocalPromo));
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPromos();
+  }, [loadPromos]);
 
   const filteredPromos = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();

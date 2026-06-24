@@ -13,7 +13,11 @@ import {
   XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getAllVendorBonuses, updateVendorBonus } from "@/lib/api/projects";
+import { toast } from "sonner";
+import { getAllProfiles } from "@/lib/api/profiles";
+import type { Profile, VendorBonus as DBVendorBonus } from "@/lib/supabase/types";
 
 type BonusStatus =
   | "Menunggu Review"
@@ -66,61 +70,6 @@ type VendorBonus = {
   payoutStatus: PayoutStatus;
   createdAt: string;
 };
-
-const vendorBonuses: VendorBonus[] = [
-  {
-    id: "bonus-1",
-    vendorId: "vendor-1",
-    vendorName: "Andi Interior Partner",
-    projectId: "project-1",
-    projectName: "Kitchen Set Modern Minimalis",
-    category: "Kitchen Set",
-    vendorServiceFee: 10000000,
-    recommendedBonus: 200000,
-    finalBonus: 200000,
-    bonusRate: 2,
-    status: "Menunggu Review",
-    qcPassed: true,
-    onTime: true,
-    documentationComplete: true,
-    workMatchesBrief: true,
-    workMatchesRAB: true,
-    hasMajorComplaint: false,
-    revisionCompleted: true,
-    vendorResponsive: true,
-    recommendation: "Layak Bonus",
-    adminNote:
-      "Vendor menyelesaikan pekerjaan tepat waktu, dokumentasi lengkap, dan hasil QC sesuai standar VMatch.",
-    payoutStatus: "Belum Masuk Payout",
-    createdAt: "2026-06-21",
-  },
-  {
-    id: "bonus-2",
-    vendorId: "vendor-2",
-    vendorName: "Nusa Custom Interior",
-    projectId: "project-2",
-    projectName: "Wardrobe Kamar Utama",
-    category: "Wardrobe",
-    vendorServiceFee: 8500000,
-    recommendedBonus: 0,
-    finalBonus: 0,
-    bonusRate: 0,
-    status: "Ditolak",
-    qcPassed: true,
-    onTime: false,
-    documentationComplete: true,
-    workMatchesBrief: true,
-    workMatchesRAB: true,
-    hasMajorComplaint: false,
-    revisionCompleted: true,
-    vendorResponsive: true,
-    recommendation: "Belum Layak Bonus",
-    adminNote:
-      "Pekerjaan selesai dan QC lolos, tetapi melewati timeline yang disepakati.",
-    payoutStatus: "Tidak Ada Bonus",
-    createdAt: "2026-06-19",
-  },
-];
 
 const bonusTabs: BonusTab[] = [
   "Semua",
@@ -182,13 +131,75 @@ function matchBonusTab(bonus: VendorBonus, tab: BonusTab) {
 }
 
 export function VendorBonusView() {
-  const [bonuses, setBonuses] = useState<VendorBonus[]>(vendorBonuses);
+  const [bonuses, setBonuses] = useState<VendorBonus[]>([]);
   const [activeTab, setActiveTab] = useState<BonusTab>("Semua");
   const [keyword, setKeyword] = useState("");
   const [selectedBonusId, setSelectedBonusId] = useState<string | null>(null);
   const [finalBonusDraft, setFinalBonusDraft] = useState("");
   const [adminNoteDraft, setAdminNoteDraft] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+
+  const loadBonuses = useCallback(async () => {
+    try {
+      const [bonusRows, profiles] = await Promise.all([getAllVendorBonuses(), getAllProfiles()]);
+      const profileMap = new Map(profiles.map((profile: Profile) => [profile.id, profile]));
+
+      setBonuses(
+        bonusRows.map((bonus: DBVendorBonus) => {
+          const requirements = bonus.requirements || [];
+          const profile = profileMap.get(bonus.vendor_id);
+          const vendorServiceFee = Number.parseInt(bonus.amount.replace(/[^\d]/g, ""), 10) || 0;
+          const recommendedBonus = getRecommendedBonus(vendorServiceFee);
+          const mapped: VendorBonus = {
+            id: bonus.id,
+            vendorId: bonus.vendor_id,
+            vendorName: profile?.full_name || "Vendor",
+            projectId: bonus.project_id,
+            projectName: `Project ${bonus.project_id.slice(0, 8)}`,
+            category: "Vendor Bonus",
+            vendorServiceFee,
+            recommendedBonus,
+            finalBonus: vendorServiceFee,
+            bonusRate: vendorServiceFee > 0 ? Math.round((vendorServiceFee / Math.max(vendorServiceFee, 1)) * 100) : 0,
+            status: (bonus.status as BonusStatus) || "Menunggu Review",
+            qcPassed: requirements.find((item) => item.label.toLowerCase().includes("qc"))?.completed ?? true,
+            onTime: requirements.find((item) => item.label.toLowerCase().includes("waktu"))?.completed ?? true,
+            documentationComplete:
+              requirements.find((item) => item.label.toLowerCase().includes("dokument"))?.completed ?? true,
+            workMatchesBrief:
+              requirements.find((item) => item.label.toLowerCase().includes("brief"))?.completed ?? true,
+            workMatchesRAB:
+              requirements.find((item) => item.label.toLowerCase().includes("rab"))?.completed ?? true,
+            hasMajorComplaint: false,
+            revisionCompleted: true,
+            vendorResponsive: true,
+            recommendation: "Perlu Review Admin",
+            adminNote: bonus.admin_note || "",
+            payoutStatus:
+              bonus.status === "Dibayarkan"
+                ? "Dibayarkan"
+                : bonus.status === "Masuk Payout"
+                  ? "Masuk Payout"
+                  : bonus.status === "Ditolak"
+                    ? "Tidak Ada Bonus"
+                    : "Belum Masuk Payout",
+            createdAt: bonus.created_at,
+          };
+
+          return {
+            ...mapped,
+            recommendation: getRecommendation(mapped),
+          };
+        }),
+      );
+    } catch {
+      setBonuses([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBonuses();
+  }, [loadBonuses]);
 
   const filteredBonuses = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -246,10 +257,25 @@ export function VendorBonusView() {
     setIsSaved(false);
   };
 
-  const updateBonus = (id: string, updater: (bonus: VendorBonus) => VendorBonus) => {
-    setBonuses((current) =>
-      current.map((bonus) => (bonus.id === id ? updater(bonus) : bonus)),
-    );
+  const updateBonus = async (id: string, updater: (bonus: VendorBonus) => VendorBonus) => {
+    const currentBonus = bonuses.find((b) => b.id === id);
+    if (!currentBonus) return;
+    const newData = updater(currentBonus);
+
+    try {
+      await updateVendorBonus(id, {
+        status: newData.status,
+        admin_note: newData.adminNote || null,
+        amount: formatCurrency(newData.finalBonus),
+      });
+
+      setBonuses((current) =>
+        current.map((bonus) => (bonus.id === id ? newData : bonus)),
+      );
+      toast.success("Perubahan bonus berhasil disimpan.");
+    } catch {
+      toast.error("Gagal menyimpan perubahan bonus ke database.");
+    }
   };
 
   const saveBonusReview = () => {

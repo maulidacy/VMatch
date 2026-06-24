@@ -17,7 +17,12 @@ import {
   XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  getConsultations,
+  updateConsultation as updateConsultationRecord,
+} from "@/lib/api/consultations";
+import type { Consultation as DBConsultation } from "@/lib/supabase/types";
 
 type ConsultationStatus =
   | "Menunggu Konfirmasi"
@@ -42,7 +47,7 @@ type ConsultationItem = {
   projectType: string;
   consultationDate: string;
   consultationTime: string;
-  method: "Google Meet" | "WhatsApp Call" | "Offline";
+  method: "Google Meet" | "WhatsApp Call" | "Chat WhatsApp" | "Offline";
   meetingLink: string;
   status: ConsultationStatus;
   requestSource: string;
@@ -54,7 +59,7 @@ type ConsultationItem = {
 type ConsultationDraft = {
   consultationDate: string;
   consultationTime: string;
-  method: ConsultationItem["method"];
+  method: "Google Meet" | "WhatsApp Call" | "Chat WhatsApp" | "Offline";
   meetingLink: string;
   customerNeed: string;
   adminNote: string;
@@ -80,88 +85,31 @@ const statusOptions: ConsultationStatus[] = [
 const methodOptions: ConsultationItem["method"][] = [
   "Google Meet",
   "WhatsApp Call",
+  "Chat WhatsApp",
   "Offline",
 ];
 
-const initialConsultations: ConsultationItem[] = [
-  {
-    id: "consult-1",
-    customerName: "Alya Putri",
-    customerEmail: "alya@email.com",
-    customerPhone: "0812-3456-7890",
-    projectTitle: "Kitchen Set Minimalis",
-    projectType: "Kitchen Set",
-    consultationDate: "12 Juli 2026",
-    consultationTime: "10.00 WIB",
-    method: "Google Meet",
-    meetingLink: "https://meet.google.com/vmatch-kitchen",
-    status: "Menunggu Konfirmasi",
-    requestSource: "Request Proyek",
-    adminNote:
-      "Perlu konfirmasi ukuran dapur, kebutuhan kabinet atas, dan preferensi finishing.",
-    customerNeed:
-      "Customer ingin kitchen set minimalis untuk dapur kecil dengan penyimpanan yang efisien.",
-    resultNote: "Belum ada hasil konsultasi.",
-  },
-  {
-    id: "consult-2",
-    customerName: "Bima Santoso",
-    customerEmail: "bima@email.com",
-    customerPhone: "0821-2222-8899",
-    projectTitle: "Wardrobe Kamar Utama",
-    projectType: "Wardrobe",
-    consultationDate: "13 Juli 2026",
-    consultationTime: "14.00 WIB",
-    method: "Google Meet",
-    meetingLink: "https://meet.google.com/vmatch-wardrobe",
-    status: "Terkonfirmasi",
-    requestSource: "Request Proyek",
-    adminNote:
-      "Bahas kebutuhan area gantung, rak lipat, pintu sliding, dan estimasi budget.",
-    customerNeed:
-      "Customer membutuhkan wardrobe built-in full plafon dengan area gantung dan rak tambahan.",
-    resultNote: "Konsultasi sudah dikonfirmasi dan menunggu jadwal meeting.",
-  },
-  {
-    id: "consult-3",
-    customerName: "Nadia Rahma",
-    customerEmail: "nadia@email.com",
-    customerPhone: "0857-1000-4421",
-    projectTitle: "Ruang Kerja Rumah",
-    projectType: "Ruang Kerja",
-    consultationDate: "10 Juli 2026",
-    consultationTime: "09.30 WIB",
-    method: "WhatsApp Call",
-    meetingLink: "wa.me/6285710004421",
-    status: "Selesai",
-    requestSource: "Request Proyek",
-    adminNote:
-      "Customer ingin ruang kerja sederhana, terang, dan tidak terlalu penuh.",
-    customerNeed:
-      "Customer membutuhkan meja kerja custom, rak buku, dan storage kecil.",
-    resultNote:
-      "Kebutuhan sudah jelas. Brief awal dapat disusun dan diteruskan ke vendor.",
-  },
-  {
-    id: "consult-4",
-    customerName: "Raka Pratama",
-    customerEmail: "raka@email.com",
-    customerPhone: "0813-7788-9922",
-    projectTitle: "Backdrop TV Ruang Keluarga",
-    projectType: "Backdrop TV",
-    consultationDate: "8 Juli 2026",
-    consultationTime: "15.30 WIB",
-    method: "Google Meet",
-    meetingLink: "https://meet.google.com/vmatch-backdrop",
-    status: "Dijadwalkan Ulang",
-    requestSource: "Request Proyek",
-    adminNote:
-      "Customer meminta jadwal ulang karena berhalangan pada jadwal sebelumnya.",
-    customerNeed:
-      "Customer ingin backdrop TV dengan kabinet bawah, panel dinding, dan desain modern warm.",
-    resultNote: "Menunggu jadwal ulang dari customer.",
-  },
-];
+const initialConsultations: ConsultationItem[] = [];
+
+function mapDbToLocal(c: DBConsultation): ConsultationItem {
+  return {
+    id: c.id,
+    customerName: c.customer?.full_name || "Customer",
+    customerEmail: c.customer?.phone || "",
+    customerPhone: c.customer?.phone || "",
+    projectTitle: c.project_name || "-",
+    projectType: c.topic || "-",
+    consultationDate: c.consultation_date || "-",
+    consultationTime: c.consultation_time || "-",
+    method: (c.method as ConsultationItem["method"]) || "Google Meet",
+    meetingLink: c.meeting_link || "",
+    status: (c.status as ConsultationStatus) || "Menunggu Konfirmasi",
+    requestSource: c.request_source || "-",
+    adminNote: c.admin_note || "",
+    customerNeed: c.customer_need || "",
+    resultNote: c.result_note || "",
+  };
+}
 
 function createDraft(item: ConsultationItem): ConsultationDraft {
   return {
@@ -185,6 +133,19 @@ export function ConsultationView() {
   >(null);
   const [formDraft, setFormDraft] = useState<ConsultationDraft | null>(null);
   const [isFormSaved, setIsFormSaved] = useState(false);
+
+  const loadConsultations = useCallback(async () => {
+    try {
+      const data = await getConsultations();
+      setConsultations(data.map(mapDbToLocal));
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    loadConsultations();
+  }, [loadConsultations]);
 
   const filteredConsultations = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -243,7 +204,13 @@ export function ConsultationView() {
     );
   };
 
-  const updateStatus = (id: string, status: ConsultationStatus) => {
+  const updateStatus = async (id: string, status: ConsultationStatus) => {
+    try {
+      await updateConsultationRecord(id, { status });
+    } catch {
+      return;
+    }
+
     updateConsultation(id, (item) => ({
       ...item,
       status,
@@ -257,13 +224,27 @@ export function ConsultationView() {
     if (status === "Dibatalkan") setActiveTab("Dibatalkan");
   };
 
-  const saveConsultationChanges = () => {
+  const saveConsultationChanges = async () => {
     if (!selectedConsultation || !formDraft) return;
 
-    updateConsultation(selectedConsultation.id, (item) => ({
-      ...item,
-      ...formDraft,
-    }));
+    try {
+      await updateConsultationRecord(selectedConsultation.id, {
+        consultation_date: formDraft.consultationDate || null,
+        consultation_time: formDraft.consultationTime || null,
+        method: formDraft.method,
+        meeting_link: formDraft.meetingLink || null,
+        customer_need: formDraft.customerNeed || null,
+        admin_note: formDraft.adminNote || null,
+        result_note: formDraft.resultNote || null,
+      });
+
+      updateConsultation(selectedConsultation.id, (item) => ({
+        ...item,
+        ...formDraft,
+      }));
+    } catch {
+      return;
+    }
 
     setIsFormSaved(true);
   };

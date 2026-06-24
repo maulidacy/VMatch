@@ -17,7 +17,9 @@ import {
   XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { getVendors } from "@/lib/api/profiles";
+import type { Profile as DBProfile } from "@/lib/supabase/types";
 
 import type { AdminPageId } from "../types";
 
@@ -69,119 +71,28 @@ const statusOptions: VendorStatus[] = [
   "Nonaktif",
 ];
 
-const initialVendors: VendorPartner[] = [
-  {
-    id: "vendor-1",
-    name: "Kayu Rapi Interior",
-    ownerName: "Andi Prasetyo",
-    email: "kayurapi@email.com",
-    phone: "0812-8888-2211",
-    city: "Semarang",
-    serviceArea: "Semarang, Ungaran, Kendal",
-    specialty: ["Kitchen Set", "Kabinet", "Backdrop TV"],
-    completedProjects: 18,
-    activeProjects: 2,
-    status: "Aktif",
-    joinedAt: "12 Mei 2026",
-    lastActivity: "Hari ini",
-    adminNote:
-      "Vendor cukup responsif dan hasil finishing rapi. Cocok untuk proyek kitchen set dan kabinet custom.",
-    vendorSummary:
-      "Vendor interior custom dengan fokus pengerjaan kabinet, kitchen set, dan furniture built-in.",
-    currentProjects: [
-      {
-        id: "project-1",
-        title: "Kitchen Set Minimalis",
-        customerName: "Alya Putri",
-        progress: 45,
-        status: "Produksi kabinet",
-      },
-      {
-        id: "project-2",
-        title: "Backdrop TV Modern",
-        customerName: "Raka Pratama",
-        progress: 70,
-        status: "Instalasi",
-      },
-    ],
-  },
-  {
-    id: "vendor-2",
-    name: "Mitra Interior Jogja",
-    ownerName: "Bayu Nugroho",
-    email: "mitrajogja@email.com",
-    phone: "0821-7777-9921",
-    city: "Yogyakarta",
-    serviceArea: "Yogyakarta, Sleman, Bantul",
-    specialty: ["Wardrobe", "Partisi", "Storage"],
-    completedProjects: 12,
-    activeProjects: 1,
-    status: "Perlu Evaluasi",
-    joinedAt: "20 Mei 2026",
-    lastActivity: "Kemarin",
-    adminNote:
-      "Perlu evaluasi karena beberapa revisi layout cukup lama ditanggapi. Masih bisa dipakai untuk proyek sederhana.",
-    vendorSummary:
-      "Vendor spesialis wardrobe dan storage custom untuk ruang kamar dan area penyimpanan.",
-    currentProjects: [
-      {
-        id: "project-1",
-        title: "Wardrobe Kamar Utama",
-        customerName: "Bima Santoso",
-        progress: 35,
-        status: "Revisi layout",
-      },
-    ],
-  },
-  {
-    id: "vendor-3",
-    name: "Studio Ruang Karya",
-    ownerName: "Dian Puspita",
-    email: "ruangkarya@email.com",
-    phone: "0857-3000-1100",
-    city: "Solo",
-    serviceArea: "Solo, Sukoharjo, Karanganyar",
-    specialty: ["Ruang Kerja", "Meja Custom", "Rak Buku"],
-    completedProjects: 21,
-    activeProjects: 1,
-    status: "Aktif",
-    joinedAt: "5 April 2026",
-    lastActivity: "Hari ini",
-    adminNote:
-      "Vendor sangat rapi untuk proyek ruang kerja dan furniture sederhana. Komunikasi cukup cepat.",
-    vendorSummary:
-      "Vendor interior custom dengan fokus furniture fungsional untuk rumah dan ruang kerja.",
-    currentProjects: [
-      {
-        id: "project-1",
-        title: "Ruang Kerja Rumah",
-        customerName: "Nadia Rahma",
-        progress: 82,
-        status: "QC finishing",
-      },
-    ],
-  },
-  {
-    id: "vendor-4",
-    name: "Vendor Baru Interior",
-    ownerName: "Fajar Ramadhan",
-    email: "vendorbaru@email.com",
-    phone: "0813-5555-1020",
-    city: "Semarang",
-    serviceArea: "Semarang",
-    specialty: ["Kitchen Set", "Wardrobe"],
+const initialVendors: VendorPartner[] = [];
+
+function mapDbToLocalVendor(p: DBProfile): VendorPartner {
+  return {
+    id: p.id,
+    name: p.full_name || "Vendor",
+    ownerName: p.full_name || "-",
+    email: "",
+    phone: p.phone || "-",
+    city: p.address || "-",
+    serviceArea: p.service_area || "-",
+    specialty: p.skills?.split(",").map(s => s.trim()) || [],
     completedProjects: 0,
     activeProjects: 0,
-    status: "Menunggu Review",
-    joinedAt: "Hari ini",
-    lastActivity: "Hari ini",
-    adminNote:
-      "Vendor baru perlu dicek portofolio, legalitas usaha, area layanan, dan kapasitas pengerjaan.",
-    vendorSummary:
-      "Vendor baru yang mengajukan kerja sama sebagai partner interior VMatch.",
+    status: (p.status as VendorStatus) || "Menunggu Review",
+    joinedAt: new Date(p.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+    lastActivity: new Date(p.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+    adminNote: p.notes || "",
+    vendorSummary: p.notes || "Vendor partner VMatch.",
     currentProjects: [],
-  },
-];
+  };
+}
 
 export function VendorPartnerView({
   onChangePage,
@@ -196,6 +107,19 @@ export function VendorPartnerView({
   const [serviceAreaDraft, setServiceAreaDraft] = useState("");
   const [adminNoteDraft, setAdminNoteDraft] = useState("");
   const [isVendorSaved, setIsVendorSaved] = useState(false);
+
+  const loadVendors = useCallback(async () => {
+    try {
+      const data = await getVendors();
+      setVendors(data.map(mapDbToLocalVendor));
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    loadVendors();
+  }, [loadVendors]);
 
   const filteredVendors = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();

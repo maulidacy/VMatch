@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ChevronDown,
     FileText,
@@ -8,11 +8,11 @@ import {
     ImagePlus,
     Send,
 } from "lucide-react";
+import { toast } from "sonner";
 
-import {
-    progressLogs as initialProgressLogs,
-    vendorProjects,
-} from "../mock-data";
+import { getMyProjects, getProgressLogs, createProgressLog } from "@/lib/api/projects";
+import { uploadFileToStorage } from "@/lib/api/storage";
+import type { Project as DBProject, ProgressLog as DBProgressLog } from "@/lib/supabase/types";
 import type { ProgressLog, ProgressLogStatus } from "../types";
 import {
     VendorEmptyState,
@@ -31,17 +31,75 @@ const statusOptions: ProgressLogStatus[] = [
     "Tidak Ada Pekerjaan Hari Ini",
 ];
 
-export function ProgressLogView() {
-    const [selectedProjectId, setSelectedProjectId] = useState(
-        vendorProjects[0]?.id ?? "",
-    );
-    const [logs, setLogs] = useState<ProgressLog[]>(initialProgressLogs);
+type SimpleProject = { id: string; name: string; progress: number; status: string; deadline: string };
+
+function mapDbLog(l: DBProgressLog): ProgressLog {
+    const date = l.log_date
+        ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(l.log_date))
+        : "Hari ini";
+    return {
+        id: l.id,
+        projectId: l.project_id,
+        projectName: "",
+        date,
+        status: l.status as ProgressLogStatus,
+        progressPercent: l.progress_percent,
+        workSummary: l.work_summary,
+        issue: l.issue || "Tidak ada kendala.",
+        nextPlan: l.next_plan || "-",
+        photoLabel: l.photo_label || "Foto progress",
+    };
+}
+
+export function ProgressLogView({ vendorId }: { vendorId: string }) {
+    const [vendorProjects, setVendorProjects] = useState<SimpleProject[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState("");
+    const [logs, setLogs] = useState<ProgressLog[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [status, setStatus] = useState<ProgressLogStatus>("Sesuai Jadwal");
     const [progressPercent, setProgressPercent] = useState("70");
+
+    const loadData = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const dbProjects = await getMyProjects(vendorId);
+            const simpleProjects: SimpleProject[] = dbProjects.map((p: DBProject) => ({
+                id: p.id, name: p.title, progress: p.progress, status: p.status, deadline: p.estimated_finish || "Belum ditentukan",
+            }));
+            setVendorProjects(simpleProjects);
+            if (simpleProjects.length > 0) {
+                setSelectedProjectId(simpleProjects[0].id);
+                // Load logs for first project
+                const dbLogs = await getProgressLogs(simpleProjects[0].id);
+                setLogs(dbLogs.map(mapDbLog));
+            }
+        } catch {
+            // silent
+        } finally {
+            setIsLoading(false);
+        }
+    }, [vendorId]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    // When project selection changes, reload logs
+    useEffect(() => {
+        if (!selectedProjectId) return;
+        async function loadLogs() {
+            try {
+                const dbLogs = await getProgressLogs(selectedProjectId);
+                setLogs(dbLogs.map(mapDbLog));
+            } catch { /* silent */ }
+        }
+        loadLogs();
+    }, [selectedProjectId]);
     const [workSummary, setWorkSummary] = useState("");
     const [issue, setIssue] = useState("");
     const [nextPlan, setNextPlan] = useState("");
     const [photoLabel, setPhotoLabel] = useState("Foto progress terbaru");
+    const [isUploading, setIsUploading] = useState(false);
 
     const selectedProject = vendorProjects.find(
         (project) => project.id === selectedProjectId,
@@ -53,27 +111,52 @@ export function ProgressLogView() {
 
     const latestLog = projectLogs[0];
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!selectedProject || !workSummary.trim()) return;
 
-        const newLog: ProgressLog = {
-            id: `log-${logs.length + 1}`,
-            projectId: selectedProject.id,
-            projectName: selectedProject.name,
-            date: "Hari ini",
-            status,
-            progressPercent: Number(progressPercent) || selectedProject.progress,
-            workSummary: workSummary.trim(),
-            issue: issue.trim() || "Tidak ada kendala.",
-            nextPlan: nextPlan.trim() || "Menunggu arahan berikutnya dari VMatch.",
-            photoLabel: photoLabel.trim() || "Foto progress terbaru",
-        };
+        try {
+            await createProgressLog({
+                project_id: selectedProject.id,
+                vendor_id: vendorId,
+                status,
+                progress_percent: Number(progressPercent) || selectedProject.progress,
+                work_summary: workSummary.trim(),
+                issue: issue.trim() || "Tidak ada kendala.",
+                next_plan: nextPlan.trim() || "Menunggu arahan berikutnya dari VMatch.",
+                photo_label: photoLabel.trim() || "Foto progress terbaru",
+            });
 
-        setLogs((current) => [newLog, ...current]);
-        setWorkSummary("");
-        setIssue("");
-        setNextPlan("");
-        setPhotoLabel("Foto progress terbaru");
+            // Reload logs from DB
+            const dbLogs = await getProgressLogs(selectedProjectId);
+            setLogs(dbLogs.map(mapDbLog));
+
+            setWorkSummary("");
+            setIssue("");
+            setNextPlan("");
+            setPhotoLabel("Foto progress terbaru");
+            toast.success("Log progress berhasil dikirim.");
+        } catch {
+            toast.error("Gagal mengirim log progress.");
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedProjectId) return;
+
+        setIsUploading(true);
+        try {
+            const ext = file.name.split('.').pop();
+            const filePath = `progress/${selectedProjectId}/${Date.now()}.${ext}`;
+            const url = await uploadFileToStorage("vmatch-files", filePath, file);
+            
+            setPhotoLabel(file.name);
+            toast.success(`File ${file.name} berhasil diunggah.`);
+        } catch (error) {
+            toast.error("Gagal mengunggah file ke storage.");
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     return (
@@ -229,12 +312,16 @@ export function ProgressLogView() {
                                 </div>
                             </div>
 
-                            <button
-                                type="button"
-                                className="h-9 rounded-xl border border-[#E4D8CD] bg-white px-3.5 text-[11px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
-                            >
-                                Pilih Berkas
-                            </button>
+                            <label className={`relative h-9 cursor-pointer rounded-xl border border-[#E4D8CD] bg-white px-3.5 text-[11px] font-semibold flex items-center text-[#725F54] transition hover:bg-[#FCFBF9] ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {isUploading ? "Mengunggah..." : "Pilih Berkas"}
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleFileUpload}
+                                    disabled={isUploading}
+                                />
+                            </label>
                         </div>
 
                         <div className="flex justify-end">

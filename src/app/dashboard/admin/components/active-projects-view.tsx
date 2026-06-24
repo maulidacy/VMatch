@@ -15,9 +15,11 @@ import {
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AdminPageId } from "../types";
+import { getProjects } from "@/lib/api/projects";
+import type { Project as DBProject } from "@/lib/supabase/types";
 
 type ProjectStatus =
   | "Berjalan"
@@ -54,89 +56,46 @@ const statusOptions: ProjectStatus[] = [
   "Selesai",
 ];
 
-const initialProjects: ActiveProject[] = [
-  {
-    id: "project-1",
-    title: "Kitchen Set Minimalis",
-    customerName: "Alya Putri",
-    vendorName: "Kayu Rapi Interior",
-    location: "Semarang",
-    budget: "Rp23.500.000",
-    projectType: "Kitchen Set",
-    startDate: "3 Juli 2026",
-    targetDate: "25 Juli 2026",
-    status: "Berjalan",
-    progress: 45,
-    currentStage: "Produksi kabinet",
-    nextTask: "Update foto progres produksi",
-    adminNote: "Pastikan ukuran kabinet atas sesuai hasil survey terakhir.",
-    description:
-      "Proyek kitchen set minimalis untuk area dapur kecil dengan kabinet bawah, kabinet atas, dan finishing HPL warna natural.",
-  },
-  {
-    id: "project-2",
-    title: "Wardrobe Kamar Utama",
-    customerName: "Bima Santoso",
-    vendorName: "Mitra Interior Jogja",
-    location: "Yogyakarta",
-    budget: "Rp16.000.000",
-    projectType: "Wardrobe",
-    startDate: "5 Juli 2026",
-    targetDate: "28 Juli 2026",
-    status: "Butuh Review",
-    progress: 30,
-    currentStage: "Review desain final",
-    nextTask: "Admin cek revisi desain dari vendor",
-    adminNote: "Customer meminta tambahan area gantung baju panjang.",
-    description:
-      "Wardrobe built-in full plafon dengan pintu sliding, area gantung, rak lipat, dan storage tambahan.",
-  },
-  {
-    id: "project-3",
-    title: "Ruang Kerja Rumah",
-    customerName: "Nadia Rahma",
-    vendorName: "Studio Ruang Karya",
-    location: "Solo",
-    budget: "Rp10.500.000",
-    projectType: "Ruang Kerja",
-    startDate: "1 Juli 2026",
-    targetDate: "18 Juli 2026",
-    status: "QC",
-    progress: 82,
-    currentStage: "Quality control",
-    nextTask: "Cek hasil pemasangan dan finishing",
-    adminNote: "Periksa area rak dan meja sebelum serah terima.",
-    description:
-      "Pembuatan ruang kerja sederhana dengan meja custom, rak buku, storage kecil, dan konsep Scandinavian.",
-  },
-  {
-    id: "project-4",
-    title: "Backdrop TV Ruang Keluarga",
-    customerName: "Raka Pratama",
-    vendorName: "Warm Living Interior",
-    location: "Semarang",
-    budget: "Rp13.800.000",
-    projectType: "Backdrop TV",
-    startDate: "15 Juni 2026",
-    targetDate: "10 Juli 2026",
-    status: "Selesai",
-    progress: 100,
-    currentStage: "Selesai",
-    nextTask: "Garansi dan dokumentasi akhir",
-    adminNote: "Dokumentasi akhir sudah diterima.",
-    description:
-      "Backdrop TV ruang keluarga dengan kabinet bawah, panel dinding, dan aksen warna coklat muda.",
-  },
-];
+const initialProjects: ActiveProject[] = [];
 
 export function ActiveProjectsView({
   onChangePage,
 }: {
   onChangePage?: (page: AdminPageId) => void;
 }) {
-  const [projects, setProjects] = useState<ActiveProject[]>(initialProjects);
+  const [projects, setProjects] = useState<ActiveProject[]>([]);
   const [activeTab, setActiveTab] = useState<ProjectTab>("Semua");
   const [keyword, setKeyword] = useState("");
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+
+  const loadProjects = useCallback(async () => {
+    try {
+      setIsLoadingProjects(true);
+      const dbProjects = await getProjects();
+      const mapped: ActiveProject[] = dbProjects.map((p: DBProject) => ({
+        id: p.id,
+        title: p.title,
+        customerName: p.customer?.full_name || "Customer",
+        vendorName: p.vendor?.full_name || "Belum dipilih",
+        location: p.location || "-",
+        budget: p.estimated_cost || p.final_cost || "-",
+        projectType: p.project_type,
+        startDate: p.start_date || "-",
+        targetDate: p.estimated_finish || "-",
+        status: p.status as ProjectStatus,
+        progress: p.progress,
+        currentStage: p.current_stage || "-",
+        nextTask: p.next_task || "-",
+        adminNote: p.admin_note || "",
+        description: p.description || "",
+      }));
+      setProjects(mapped);
+    } catch { /* silent */ } finally {
+      setIsLoadingProjects(false);
+    }
+  }, []);
+
+  useEffect(() => { loadProjects(); }, [loadProjects]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );

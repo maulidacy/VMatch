@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ClipboardList,
@@ -11,8 +11,10 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { vendorProjects } from "../mock-data";
 import type { VendorPageId, VendorProject } from "../types";
+import { getMyProjects } from "@/lib/api/projects";
+import { getFieldTeams } from "@/lib/api/projects";
+import type { Project as DBProject, FieldTeam } from "@/lib/supabase/types";
 import {
   VendorActionButton,
   VendorEmptyState,
@@ -30,16 +32,74 @@ const projectFilters: { id: ProjectFilter; label: string }[] = [
   { id: "done", label: "Selesai" },
 ];
 
+function mapDbToVendorProject(p: DBProject, fieldTeam: FieldTeam[]): VendorProject {
+  const statusMap: Record<string, VendorProject["status"]> = {
+    "Berjalan": "Sedang Dikerjakan",
+    "Butuh Review": "Butuh Update",
+    "QC": "Menunggu QC",
+    "Selesai": "Selesai",
+  };
+
+  return {
+    id: p.id,
+    name: p.title,
+    type: p.project_type,
+    location: p.location || "-",
+    status: statusMap[p.status] || "Menunggu Brief",
+    progress: p.progress,
+    deadline: p.estimated_finish || "Belum ditentukan",
+    startDate: p.start_date || "Menunggu jadwal",
+    customerBrief: p.description || "-",
+    vmNotes: p.admin_note || "Belum ada catatan dari VMatch.",
+    material: "-",
+    nextTask: p.next_task || "Menunggu update dari VMatch.",
+    bonusStatus: "Berpotensi Aktif",
+    fieldTeam: fieldTeam.map(f => ({
+      id: f.id,
+      name: f.name,
+      role: f.role || "-",
+      phone: f.phone || "-",
+    })),
+  };
+}
+
 export function ProjectView({
   onChangePage,
+  vendorId,
 }: {
   onChangePage: (page: VendorPageId) => void;
+  vendorId: string;
 }) {
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>("all");
-  const [selectedProjectId, setSelectedProjectId] = useState(
-    vendorProjects[0]?.id ?? "",
-  );
+  const [vendorProjects, setVendorProjects] = useState<VendorProject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+
+  const loadProjects = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const dbProjects = await getMyProjects(vendorId);
+      const projectsWithTeams = await Promise.all(
+        dbProjects.map(async (p) => {
+          const team = await getFieldTeams(p.id);
+          return mapDbToVendorProject(p, team);
+        })
+      );
+      setVendorProjects(projectsWithTeams);
+      if (projectsWithTeams.length > 0) {
+        setSelectedProjectId(projectsWithTeams[0].id);
+      }
+    } catch {
+      // silent
+    } finally {
+      setIsLoading(false);
+    }
+  }, [vendorId]);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
 
   const filteredProjects = useMemo(() => {
     return vendorProjects.filter((project) => {

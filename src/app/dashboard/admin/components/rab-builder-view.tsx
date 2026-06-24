@@ -15,9 +15,13 @@ import {
     Send,
     UserRound,
     Wallet,
+    X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { getRabs, updateRab as updateRabRecord } from "@/lib/api/projects";
+import type { Rab as DBRab } from "@/lib/supabase/types";
 
 import type { AdminPageId } from "../types";
 
@@ -41,6 +45,7 @@ type VendorEstimate = {
     vendorName: string;
     estimatedCost: string;
     estimatedDuration: string;
+    suggestedMaterial: string;
     vendorNote: string;
     sentAt: string;
 };
@@ -89,119 +94,33 @@ function formatRupiah(value: number) {
     return `Rp${new Intl.NumberFormat("id-ID").format(value)}`;
 }
 
-const initialRabs: RabData[] = [
-    {
-        id: "rab-1",
-        projectTitle: "Kitchen Set Modern Minimalis",
-        customerName: "Alya Putri",
-        projectType: "Kitchen Set",
-        location: "Semarang",
-        status: "Estimasi Dikirim Vendor",
-        createdAt: "Hari ini",
-        updatedAt: "Baru saja",
-        grandTotal: "Rp27.000.000",
-        vmatchServiceFee: "Rp3.500.000",
-        adminNote:
-            "Estimasi vendor perlu dicek ulang pada bagian ruang lingkup, durasi, dan catatan pekerjaan sebelum dikirim ke customer.",
-        customerNote:
-            "Estimasi awal akan difinalisasi setelah review admin dan validasi kebutuhan customer.",
-        vendorEstimate: {
-            vendorName: "Andi Interior Partner",
-            estimatedCost: "Rp23.500.000",
-            estimatedDuration: "14-21 hari kerja",
-            vendorNote:
-                "Estimasi sudah termasuk produksi dan instalasi. Perlu survey ulang untuk memastikan ukuran final dan titik instalasi listrik.",
-            sentAt: "Baru saja",
-        },
-    },
-    {
-        id: "rab-2",
-        projectTitle: "Wardrobe Kamar Utama",
-        customerName: "Bima Santoso",
-        projectType: "Wardrobe",
-        location: "Yogyakarta",
-        status: "Menunggu Estimasi Vendor",
-        createdAt: "Kemarin",
-        updatedAt: "Kemarin",
-        grandTotal: "Rp0",
-        vmatchServiceFee: "Rp0",
-        adminNote: "Brief sudah dikirim ke vendor dan sedang menunggu estimasi RAB.",
-        customerNote: "RAB belum tersedia karena admin masih menunggu estimasi vendor.",
-    },
-    {
-        id: "rab-3",
-        projectTitle: "Ruang Kerja Rumah",
-        customerName: "Nadia Rahma",
-        projectType: "Ruang Kerja",
-        location: "Solo",
-        status: "RAB Dikirim ke Customer",
-        createdAt: "2 Juli 2026",
-        updatedAt: "3 hari lalu",
-        grandTotal: "Rp12.000.000",
-        vmatchServiceFee: "Rp1.500.000",
-        adminNote:
-            "RAB sudah direview admin dan dikirim ke customer untuk persetujuan.",
-        customerNote:
-            "Estimasi final sudah termasuk meja kerja, ambalan, storage kecil, produksi, dan instalasi.",
-        vendorEstimate: {
-            vendorName: "Ruang Rapi Studio",
-            estimatedCost: "Rp10.500.000",
-            estimatedDuration: "10-14 hari kerja",
-            vendorNote:
-                "Pekerjaan relatif sederhana, namun perlu menyesuaikan titik stop kontak area meja.",
-            sentAt: "3 hari lalu",
-        },
-    },
-    {
-        id: "rab-4",
-        projectTitle: "Backdrop TV Ruang Keluarga",
-        customerName: "Raka Pratama",
-        projectType: "Backdrop TV",
-        location: "Semarang",
-        status: "Revisi Diminta Customer",
-        createdAt: "5 Juli 2026",
-        updatedAt: "Kemarin",
-        grandTotal: "Rp15.500.000",
-        vmatchServiceFee: "Rp1.700.000",
-        adminNote:
-            "Customer meminta revisi pada konsep lampu aksen dan ukuran kabinet bawah.",
-        customerNote:
-            "RAB akan direvisi sesuai permintaan customer sebelum dikirim ulang.",
-        revisionNote:
-            "Customer meminta opsi yang lebih hemat dan penyesuaian area kabinet bawah.",
-        vendorEstimate: {
-            vendorName: "Nusa Custom Interior",
-            estimatedCost: "Rp13.800.000",
-            estimatedDuration: "12-18 hari kerja",
-            vendorNote:
-                "Estimasi termasuk panel backdrop, kabinet bawah, lampu aksen, produksi, dan instalasi.",
-            sentAt: "Kemarin",
-        },
-    },
-    {
-        id: "rab-5",
-        projectTitle: "Storage Area Laundry",
-        customerName: "Dewi Lestari",
-        projectType: "Storage",
-        location: "Semarang",
-        status: "RAB Disetujui Customer",
-        createdAt: "6 Juli 2026",
-        updatedAt: "Hari ini",
-        grandTotal: "Rp13.000.000",
-        vmatchServiceFee: "Rp1.500.000",
-        adminNote: "RAB sudah disetujui customer. Admin dapat lanjut membuat invoice.",
-        customerNote:
-            "Customer menyetujui RAB final dan siap menerima invoice pembayaran awal.",
-        vendorEstimate: {
-            vendorName: "Andi Interior Partner",
-            estimatedCost: "Rp11.500.000",
-            estimatedDuration: "10-12 hari kerja",
-            vendorNote:
-                "Material disarankan memakai finishing yang lebih tahan lembap karena area laundry.",
-            sentAt: "2 hari lalu",
-        },
-    },
-];
+const initialRabs: RabData[] = [];
+
+function mapDbToLocalRab(r: DBRab): RabData {
+    return {
+        id: r.id,
+        projectTitle: r.project_title,
+        customerName: r.customer?.full_name || "Customer",
+        projectType: r.project_type || "-",
+        location: r.location || "-",
+        status: (r.status as RabStatus) || "Menunggu Estimasi Vendor",
+        createdAt: new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        updatedAt: new Date(r.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        grandTotal: r.grand_total,
+        vmatchServiceFee: r.vmatch_service_fee,
+        adminNote: r.admin_note || "",
+        customerNote: r.customer_note || "",
+        revisionNote: r.revision_note || undefined,
+        vendorEstimate: r.vendor_estimate ? {
+            vendorName: "-",
+            estimatedCost: r.vendor_estimate.estimated_cost,
+            estimatedDuration: r.vendor_estimate.estimated_duration,
+            suggestedMaterial: r.vendor_estimate.suggested_material || "-",
+            vendorNote: r.vendor_estimate.vendor_note || "",
+            sentAt: r.vendor_estimate.sent_at || "-",
+        } : undefined,
+    };
+}
 
 function matchRabTab(rab: RabData, tab: RabTab) {
     if (tab === "Semua") return true;
@@ -235,6 +154,19 @@ export function RabBuilderView({
     const [serviceFeeDraft, setServiceFeeDraft] = useState("");
     const [isSaved, setIsSaved] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState("");
+
+    const loadRabs = useCallback(async () => {
+        try {
+            const data = await getRabs();
+            setRabs(data.map(mapDbToLocalRab));
+        } catch (error) {
+            toast.error("Gagal memuat RAB dari server.");
+        }
+    }, []);
+
+    useEffect(() => {
+        loadRabs();
+    }, [loadRabs]);
 
     const filteredRabs = useMemo(() => {
         const normalizedKeyword = keyword.trim().toLowerCase();
@@ -302,7 +234,15 @@ export function RabBuilderView({
         if (status === "RAB Disetujui Customer") setActiveTab("Disetujui");
     };
 
-    const updateStatus = (id: string, status: RabStatus) => {
+    const updateStatus = async (id: string, status: RabStatus) => {
+        try {
+            await updateRabRecord(id, { status });
+        } catch (error) {
+            toast.error("Gagal mengupdate status RAB.");
+            loadRabs();
+            return;
+        }
+
         updateRab(id, (rab) => ({
             ...rab,
             status,
@@ -312,18 +252,31 @@ export function RabBuilderView({
         syncTabFromStatus(status);
     };
 
-    const saveNotes = () => {
+    const saveNotes = async () => {
         if (!selectedRab) return;
 
-        updateRab(selectedRab.id, (rab) => ({
-            ...rab,
-            grandTotal: finalRabDraft,
-            vmatchServiceFee: serviceFeeDraft,
-            adminNote: adminNoteDraft,
-            customerNote: customerNoteDraft,
-            revisionNote: revisionNoteDraft,
-            updatedAt: "Baru saja",
-        }));
+        try {
+            await updateRabRecord(selectedRab.id, {
+                grand_total: finalRabDraft,
+                vmatch_service_fee: serviceFeeDraft,
+                admin_note: adminNoteDraft || null,
+                customer_note: customerNoteDraft || null,
+                revision_note: revisionNoteDraft || null,
+            });
+            updateRab(selectedRab.id, (rab) => ({
+                ...rab,
+                grandTotal: finalRabDraft,
+                vmatchServiceFee: serviceFeeDraft,
+                adminNote: adminNoteDraft,
+                customerNote: customerNoteDraft,
+                revisionNote: revisionNoteDraft,
+                updatedAt: "Baru saja",
+            }));
+        } catch (error) {
+            toast.error("Gagal menyimpan RAB.");
+            loadRabs();
+            return;
+        }
 
         setIsSaved(true);
     };
@@ -337,32 +290,81 @@ export function RabBuilderView({
         );
     };
 
-    const sendRabToCustomer = () => {
+    const sendRabToCustomer = async () => {
         if (!selectedRab) return;
 
-        updateStatus(selectedRab.id, "RAB Dikirim ke Customer");
+        try {
+            await updateRabRecord(selectedRab.id, {
+                status: "RAB Dikirim ke Customer",
+                grand_total: finalRabDraft,
+                vmatch_service_fee: serviceFeeDraft,
+                admin_note: adminNoteDraft || null,
+                customer_note: customerNoteDraft || null,
+            });
+        } catch (error) {
+            toast.error("Gagal mengirim RAB ke customer.");
+            loadRabs();
+            return;
+        }
+
+        updateRab(selectedRab.id, (rab) => ({
+            ...rab,
+            status: "RAB Dikirim ke Customer",
+            grandTotal: finalRabDraft,
+            vmatchServiceFee: serviceFeeDraft,
+            adminNote: adminNoteDraft,
+            customerNote: customerNoteDraft,
+            updatedAt: "Baru saja",
+        }));
+        syncTabFromStatus("RAB Dikirim ke Customer");
         setFeedbackMessage("RAB final berhasil dikirim ke customer untuk persetujuan.");
     };
 
-    const approveRab = () => {
+    const approveRab = async () => {
         if (!selectedRab) return;
 
-        updateStatus(selectedRab.id, "RAB Disetujui Customer");
+        try {
+            await updateRabRecord(selectedRab.id, { status: "RAB Disetujui Customer" });
+        } catch (error) {
+            toast.error("Gagal menyetujui RAB.");
+            loadRabs();
+            return;
+        }
+
+        updateRab(selectedRab.id, (rab) => ({
+            ...rab,
+            status: "RAB Disetujui Customer",
+            updatedAt: "Baru saja",
+        }));
+        syncTabFromStatus("RAB Disetujui Customer");
         setFeedbackMessage(
             "RAB sudah disetujui customer. Admin dapat lanjut membuat invoice.",
         );
     };
 
-    const markCustomerRevision = () => {
+    const markCustomerRevision = async () => {
         if (!selectedRab) return;
+
+        const nextRevisionNote =
+            revisionNoteDraft.trim().length > 0
+                ? revisionNoteDraft
+                : "Customer meminta revisi RAB. Admin perlu menyesuaikan catatan sebelum dikirim ulang.";
+
+        try {
+            await updateRabRecord(selectedRab.id, {
+                status: "Revisi Diminta Customer",
+                revision_note: nextRevisionNote,
+            });
+        } catch (error) {
+            toast.error("Gagal menandai revisi RAB.");
+            loadRabs();
+            return;
+        }
 
         updateRab(selectedRab.id, (rab) => ({
             ...rab,
             status: "Revisi Diminta Customer",
-            revisionNote:
-                revisionNoteDraft.trim().length > 0
-                    ? revisionNoteDraft
-                    : "Customer meminta revisi RAB. Admin perlu menyesuaikan catatan sebelum dikirim ulang.",
+            revisionNote: nextRevisionNote,
             updatedAt: "Baru saja",
         }));
 
@@ -370,8 +372,23 @@ export function RabBuilderView({
         setFeedbackMessage("Status RAB diubah menjadi Revisi Diminta Customer.");
     };
 
-    const resendRevisedRab = () => {
+    const resendRevisedRab = async () => {
         if (!selectedRab) return;
+
+        try {
+            await updateRabRecord(selectedRab.id, {
+                status: "RAB Dikirim ke Customer",
+                grand_total: finalRabDraft,
+                vmatch_service_fee: serviceFeeDraft,
+                admin_note: adminNoteDraft || null,
+                customer_note: customerNoteDraft || null,
+                revision_note: revisionNoteDraft || null,
+            });
+        } catch (error) {
+            toast.error("Gagal mengirim ulang RAB.");
+            loadRabs();
+            return;
+        }
 
         updateRab(selectedRab.id, (rab) => ({
             ...rab,
@@ -993,6 +1010,9 @@ function VendorEstimateSection({
                     <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-1">
                         <MiniInfo label="Estimasi Biaya" value={estimate.estimatedCost} />
                         <MiniInfo label="Estimasi Durasi" value={estimate.estimatedDuration} />
+                        {estimate.suggestedMaterial && (
+                            <MiniInfo label="Saran Material" value={estimate.suggestedMaterial} />
+                        )}
                     </div>
                 </div>
             ) : (

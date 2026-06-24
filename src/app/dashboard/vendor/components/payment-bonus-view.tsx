@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ChevronDown,
     CircleDollarSign,
@@ -8,7 +8,8 @@ import {
     Wallet,
 } from "lucide-react";
 
-import { bonusInfos, paymentMilestones, vendorProjects } from "../mock-data";
+import { getMyProjects, getVendorPayouts, getVendorBonuses } from "@/lib/api/projects";
+import type { Project as DBProject, VendorPayout as DBPayout, VendorBonus as DBBonus } from "@/lib/supabase/types";
 import {
     VendorChecklistItem,
     VendorEmptyState,
@@ -87,10 +88,32 @@ function BonusReviewBadge({ status }: { status: string }) {
     );
 }
 
-export function PaymentBonusView() {
-    const [selectedProjectId, setSelectedProjectId] = useState(
-        vendorProjects[0]?.id ?? "",
-    );
+export function PaymentBonusView({ vendorId }: { vendorId: string }) {
+    const [vendorProjects, setVendorProjects] = useState<{ id: string; name: string; status: string; deadline: string }[]>([]);
+    const [paymentMilestones, setPaymentMilestones] = useState<DBPayout[]>([]);
+    const [bonusInfos, setBonusInfos] = useState<DBBonus[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+
+    const loadData = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const [dbProjects, dbPayouts, dbBonuses] = await Promise.all([
+                getMyProjects(vendorId),
+                getVendorPayouts(vendorId),
+                getVendorBonuses(vendorId),
+            ]);
+            const projects = dbProjects.map((p: DBProject) => ({ id: p.id, name: p.title, status: p.status, deadline: p.estimated_finish || "Belum ditentukan" }));
+            setVendorProjects(projects);
+            setPaymentMilestones(dbPayouts);
+            setBonusInfos(dbBonuses);
+            if (projects.length > 0) setSelectedProjectId(projects[0].id);
+        } catch { /* silent */ } finally {
+            setIsLoading(false);
+        }
+    }, [vendorId]);
+
+    useEffect(() => { loadData(); }, [loadData]);
 
     const selectedProject = vendorProjects.find(
         (project) => project.id === selectedProjectId,
@@ -98,13 +121,13 @@ export function PaymentBonusView() {
 
     const selectedPayments = useMemo(() => {
         return paymentMilestones.filter(
-            (payment) => payment.projectId === selectedProjectId,
+            (item) => item.project_id === selectedProjectId,
         );
-    }, [selectedProjectId]);
+    }, [paymentMilestones, selectedProjectId]);
 
-    const selectedBonus = bonusInfos.find(
-        (bonus) => bonus.projectId === selectedProjectId,
-    );
+    const selectedBonus = useMemo(() => {
+        return bonusInfos.find((item) => item.project_id === selectedProjectId) ?? null;
+    }, [bonusInfos, selectedProjectId]);
 
     const totalPayment = selectedPayments.length;
     const paidPayment = selectedPayments.filter(
@@ -199,7 +222,7 @@ export function PaymentBonusView() {
                                             </h3>
 
                                             <p className="mt-1 text-[12px] leading-5 text-[#7B756E]">
-                                                {payment.dueInfo}
+                                                {payment.due_info || ""}
                                             </p>
                                         </div>
 
@@ -259,7 +282,7 @@ export function PaymentBonusView() {
 
                                     <div className="mt-4 rounded-xl border border-[#E8E2D9] bg-white px-4 py-3">
                                         <p className="text-[13px] leading-6 text-[#6F6860]">
-                                            {getBonusReviewMessage(selectedBonus.status, selectedBonus.reason)}
+                                            {getBonusReviewMessage(selectedBonus.status, selectedBonus.reason || "")}
                                         </p>
                                     </div>
                                 </div>
@@ -319,8 +342,8 @@ export function PaymentBonusView() {
                                 key={payment.id}
                                 icon={CircleDollarSign}
                                 title={payment.title}
-                                description={payment.dueInfo}
-                                meta={payment.projectName}
+                                description={payment.due_info || ""}
+                                meta={selectedProject?.name || ""}
                                 status={payment.status}
                                 action={
                                     <span className="inline-flex h-8 items-center rounded-lg border border-[#E8E2D9] bg-[#FCFBF9] px-2.5 text-[11px] font-bold text-[#31332C]">

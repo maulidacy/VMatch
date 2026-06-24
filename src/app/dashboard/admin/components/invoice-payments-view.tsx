@@ -14,9 +14,13 @@ import {
   Send,
   UserRound,
   Wallet,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { getInvoices, updateInvoice as updateInvoiceRecord } from "@/lib/api/projects";
+import type { Invoice as DBInvoice } from "@/lib/supabase/types";
 
 type PaymentStatus =
   | "Draft"
@@ -82,189 +86,29 @@ const statusOptions: PaymentStatus[] = [
   "Refund",
 ];
 
-const initialInvoices: InvoicePayment[] = [
-  {
-    id: "inv-1",
-    invoiceNumber: "INV-VM-0726-001",
-    projectTitle: "Kitchen Set Minimalis",
-    customerName: "Alya Putri",
-    vendorName: "Kayu Rapi Interior",
-    status: "Menunggu Pembayaran",
-    totalAmount: "Rp23.500.000",
-    paidAmount: "Rp10.000.000",
-    remainingAmount: "Rp13.500.000",
-    paymentStage: "Termin 2 - Produksi",
-    dueDate: "15 Juli 2026",
-    issuedAt: "10 Juli 2026",
-    paymentMethod: "Transfer Bank",
-    adminNote:
-      "Customer sudah membayar DP. Invoice termin 2 dikirim setelah produksi kabinet dimulai.",
-    customerNote:
-      "Mohon lakukan pembayaran sesuai nominal dan batas waktu yang tertera.",
-    items: [
-      {
-        id: "item-1",
-        label: "DP proyek kitchen set",
-        amount: "Rp10.000.000",
-      },
-      {
-        id: "item-2",
-        label: "Termin produksi kabinet",
-        amount: "Rp13.500.000",
-      },
-    ],
-    timeline: [
-      {
-        id: "tl-1",
-        title: "Invoice dibuat",
-        description: "Admin membuat invoice termin 2.",
-        time: "10 Juli 2026",
-        type: "draft",
-      },
-      {
-        id: "tl-2",
-        title: "Invoice dikirim",
-        description: "Invoice dikirim ke customer untuk pembayaran termin 2.",
-        time: "10 Juli 2026",
-        type: "sent",
-      },
-    ],
-  },
-  {
-    id: "inv-2",
-    invoiceNumber: "INV-VM-0726-002",
-    projectTitle: "Wardrobe Kamar Utama",
-    customerName: "Bima Santoso",
-    vendorName: "Mitra Interior Jogja",
-    status: "Draft",
-    totalAmount: "Rp16.000.000",
-    paidAmount: "Rp0",
-    remainingAmount: "Rp16.000.000",
-    paymentStage: "DP Awal",
-    dueDate: "18 Juli 2026",
-    issuedAt: "Belum dikirim",
-    paymentMethod: "Transfer Bank",
-    adminNote:
-      "Invoice masih draft karena brief final belum disetujui customer.",
-    customerNote:
-      "Invoice akan dikirim setelah brief dan estimasi biaya disetujui.",
-    items: [
-      {
-        id: "item-1",
-        label: "DP awal proyek wardrobe",
-        amount: "Rp8.000.000",
-      },
-      {
-        id: "item-2",
-        label: "Sisa pembayaran estimasi",
-        amount: "Rp8.000.000",
-      },
-    ],
-    timeline: [
-      {
-        id: "tl-1",
-        title: "Draft invoice dibuat",
-        description: "Admin menyiapkan invoice awal untuk proyek wardrobe.",
-        time: "Hari ini",
-        type: "draft",
-      },
-    ],
-  },
-  {
-    id: "inv-3",
-    invoiceNumber: "INV-VM-0726-003",
-    projectTitle: "Ruang Kerja Rumah",
-    customerName: "Nadia Rahma",
-    vendorName: "Studio Ruang Karya",
-    status: "Terlambat",
-    totalAmount: "Rp10.500.000",
-    paidAmount: "Rp5.000.000",
-    remainingAmount: "Rp5.500.000",
-    paymentStage: "Pelunasan",
-    dueDate: "12 Juli 2026",
-    issuedAt: "8 Juli 2026",
-    paymentMethod: "Transfer Bank",
-    adminNote:
-      "Pembayaran pelunasan melewati batas waktu. Perlu follow up customer.",
-    customerNote:
-      "Mohon segera menyelesaikan pembayaran agar proses serah terima dapat dilanjutkan.",
-    items: [
-      {
-        id: "item-1",
-        label: "DP proyek ruang kerja",
-        amount: "Rp5.000.000",
-      },
-      {
-        id: "item-2",
-        label: "Pelunasan setelah pemasangan",
-        amount: "Rp5.500.000",
-      },
-    ],
-    timeline: [
-      {
-        id: "tl-1",
-        title: "Invoice dikirim",
-        description: "Invoice pelunasan dikirim ke customer.",
-        time: "8 Juli 2026",
-        type: "sent",
-      },
-      {
-        id: "tl-2",
-        title: "Pembayaran melewati jatuh tempo",
-        description: "Customer belum melakukan pelunasan.",
-        time: "12 Juli 2026",
-        type: "late",
-      },
-    ],
-  },
-  {
-    id: "inv-4",
-    invoiceNumber: "INV-VM-0626-009",
-    projectTitle: "Backdrop TV Ruang Keluarga",
-    customerName: "Raka Pratama",
-    vendorName: "Warm Living Interior",
-    status: "Terbayar",
-    totalAmount: "Rp13.800.000",
-    paidAmount: "Rp13.800.000",
-    remainingAmount: "Rp0",
-    paymentStage: "Lunas",
-    dueDate: "10 Juli 2026",
-    issuedAt: "25 Juni 2026",
-    paymentMethod: "Transfer Bank",
-    adminNote:
-      "Pembayaran sudah lunas. Proyek masuk periode garansi dan dokumentasi akhir.",
-    customerNote:
-      "Terima kasih, pembayaran telah diterima oleh VMatch.",
-    items: [
-      {
-        id: "item-1",
-        label: "DP backdrop TV",
-        amount: "Rp6.000.000",
-      },
-      {
-        id: "item-2",
-        label: "Pelunasan proyek",
-        amount: "Rp7.800.000",
-      },
-    ],
-    timeline: [
-      {
-        id: "tl-1",
-        title: "DP diterima",
-        description: "Customer membayar DP proyek.",
-        time: "25 Juni 2026",
-        type: "paid",
-      },
-      {
-        id: "tl-2",
-        title: "Pelunasan diterima",
-        description: "Customer menyelesaikan pembayaran proyek.",
-        time: "8 Juli 2026",
-        type: "paid",
-      },
-    ],
-  },
-];
+const initialInvoices: InvoicePayment[] = [];
+
+function mapDbToLocalInvoice(inv: DBInvoice): InvoicePayment {
+  return {
+    id: inv.id,
+    invoiceNumber: inv.invoice_number,
+    projectTitle: inv.project_title,
+    customerName: "-",
+    vendorName: "-",
+    status: (inv.status as PaymentStatus) || "Draft",
+    totalAmount: inv.total_amount,
+    paidAmount: inv.paid_amount || "Rp0",
+    remainingAmount: inv.remaining_amount || "Rp0",
+    paymentStage: inv.payment_stage || "-",
+    dueDate: inv.due_date || "-",
+    issuedAt: inv.issued_at ? new Date(inv.issued_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-",
+    paymentMethod: inv.payment_method || "Transfer Bank",
+    adminNote: inv.admin_note || "",
+    customerNote: inv.customer_note || "",
+    items: inv.items || [],
+    timeline: (inv.timeline || []) as InvoicePayment["timeline"],
+  };
+}
 
 function createDraft(invoice: InvoicePayment): InvoiceDraft {
   return {
@@ -284,6 +128,19 @@ export function InvoicePaymentsView() {
   );
   const [invoiceDraft, setInvoiceDraft] = useState<InvoiceDraft | null>(null);
   const [isInvoiceSaved, setIsInvoiceSaved] = useState(false);
+
+  const loadInvoices = useCallback(async () => {
+    try {
+      const data = await getInvoices();
+      setInvoices(data.map(mapDbToLocalInvoice));
+    } catch (error) {
+      toast.error("Gagal memuat invoice dari database.");
+    }
+  }, []);
+
+  useEffect(() => {
+    loadInvoices();
+  }, [loadInvoices]);
 
   const filteredInvoices = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -338,7 +195,15 @@ export function InvoicePaymentsView() {
     );
   };
 
-  const updateStatus = (id: string, status: PaymentStatus) => {
+  const updateStatus = async (id: string, status: PaymentStatus) => {
+    try {
+      await updateInvoiceRecord(id, { status });
+    } catch (error) {
+      toast.error("Gagal mengirim invoice.");
+      loadInvoices();
+      return;
+    }
+
     updateInvoice(id, (invoice) => {
       if (status === "Terbayar") {
         return {
@@ -364,16 +229,29 @@ export function InvoicePaymentsView() {
     if (status === "Refund") setActiveTab("Refund");
   };
 
-  const saveInvoiceChanges = () => {
+  const saveInvoiceChanges = async () => {
     if (!selectedInvoice || !invoiceDraft) return;
 
-    updateInvoice(selectedInvoice.id, (invoice) => ({
-      ...invoice,
-      dueDate: invoiceDraft.dueDate,
-      paymentMethod: invoiceDraft.paymentMethod,
-      adminNote: invoiceDraft.adminNote,
-      customerNote: invoiceDraft.customerNote,
-    }));
+    try {
+      await updateInvoiceRecord(selectedInvoice.id, {
+        due_date: invoiceDraft.dueDate || null,
+        payment_method: invoiceDraft.paymentMethod || null,
+        admin_note: invoiceDraft.adminNote || null,
+        customer_note: invoiceDraft.customerNote || null,
+      });
+
+      updateInvoice(selectedInvoice.id, (invoice) => ({
+        ...invoice,
+        dueDate: invoiceDraft.dueDate,
+        paymentMethod: invoiceDraft.paymentMethod,
+        adminNote: invoiceDraft.adminNote,
+        customerNote: invoiceDraft.customerNote,
+      }));
+    } catch (error) {
+      toast.error("Gagal menyimpan pengaturan invoice.");
+      loadInvoices();
+      return;
+    }
 
     setIsInvoiceSaved(true);
   };

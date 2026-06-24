@@ -19,17 +19,37 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import {
+  getMyProjects,
+  getProgressLogs,
+  getProjectInvoices,
+  getQcChecklist,
+  getWarrantyClaims,
+  updateInvoice,
+  createWarrantyClaim,
+} from "@/lib/api/projects";
+import { toast } from "sonner";
+import type {
+  Invoice as DBInvoice,
+  ProgressLog as DBProgressLog,
+  Project as DBProject,
+  QcChecklist as DBQcChecklist,
+  WarrantyClaim as DBWarrantyClaim,
+} from "@/lib/supabase/types";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
-type DetailTab = "ringkasan" | "progress" | "pembayaran" | "dokumen";
+type DetailTab = "ringkasan" | "rab" | "progress" | "pembayaran" | "dokumen";
 type ProjectFilter = "semua" | "aktif" | "menunggu" | "selesai";
 
 type PaymentStatus =
   | "Menunggu Pembayaran"
-  | "Terverifikasi"
+  | "Terbayar"
   | "Lunas"
+  | "Terlambat"
   | "Belum Tersedia";
+
+type RabReviewStatus = "Menunggu RAB" | "RAB Diterima" | "Sedang Direview" | "Disetujui" | "Minta Revisi";
 
 type RevisionStatus =
   | "Diajukan"
@@ -96,6 +116,7 @@ type WarrantyClaim = {
 
 const detailTabs: { id: DetailTab; label: string }[] = [
   { id: "ringkasan", label: "Ringkasan" },
+  { id: "rab", label: "RAB & Estimasi" },
   { id: "progress", label: "Progress" },
   { id: "pembayaran", label: "Pembayaran" },
   { id: "dokumen", label: "Dokumen" },
@@ -108,75 +129,9 @@ const projectFilterTabs: { id: ProjectFilter; label: string }[] = [
   { id: "selesai", label: "Selesai" },
 ];
 
-const projectList: ProjectItem[] = [
-  {
-    id: "p-1",
-    filter: "aktif",
-    name: "Wardrobe Kamar Utama",
-    type: "Wardrobe Custom",
-    status: "Produksi/Pengerjaan",
-    progress: 68,
-    location: "Semarang, Jawa Tengah",
-    roomSize: "3 x 4 meter",
-    designStyle: "Warm modern",
-    estimatedCost: "Rp18–60 juta",
-    estimatedDuration: "4–6 minggu",
-    vendorPartner: "Vendor Partner VMatch - Interior Semarang",
-    startDate: "18 Juni 2026",
-    estimatedFinish: "28 Juni 2026",
-    nextStep: "Menunggu persetujuan material sebelum tahap produksi final.",
-    solution:
-      "Solusi awal VMatch adalah wardrobe custom dengan kombinasi area gantungan, laci, rak lipat, dan storage barang kecil. Desain diarahkan ke warm modern dengan finishing matte neutral.",
-  },
-  {
-    id: "p-2",
-    filter: "menunggu",
-    name: "Kitchen Set Minimalis",
-    type: "Kitchen Set Custom",
-    status: "Menunggu Persetujuan Solusi",
-    progress: 25,
-    location: "Bandung, Jawa Barat",
-    roomSize: "3 x 4 meter",
-    designStyle: "Modern minimalis",
-    estimatedCost: "Rp25–70 juta",
-    estimatedDuration: "5–7 minggu",
-    vendorPartner: "Belum dipilih",
-    startDate: "Menunggu persetujuan",
-    estimatedFinish: "Menunggu jadwal final",
-    nextStep: "Customer perlu meninjau solusi awal dan estimasi biaya.",
-    solution:
-      "Solusi awal VMatch adalah kitchen set custom dengan layout dapur fungsional, storage maksimal, finishing modern minimalis, dan material yang mudah dibersihkan.",
-  },
-  {
-    id: "p-3",
-    filter: "selesai",
-    name: "Storage & Rak Multifungsi",
-    type: "Storage & Rak",
-    status: "Selesai",
-    progress: 100,
-    location: "Semarang, Jawa Tengah",
-    roomSize: "2.5 x 3 meter",
-    designStyle: "Modern minimalis",
-    estimatedCost: "Rp15–35 juta",
-    estimatedDuration: "3–4 minggu",
-    vendorPartner: "Vendor Partner VMatch - Interior Semarang",
-    startDate: "10 Mei 2026",
-    estimatedFinish: "30 Mei 2026",
-    nextStep: "Proyek selesai. Garansi aktif sesuai ketentuan VMatch.",
-    solution:
-      "Solusi VMatch adalah storage multifungsi dengan kombinasi rak terbuka dan kabinet tertutup agar ruangan tetap rapi, efisien, dan mudah digunakan.",
-  },
-];
+const projectList: ProjectItem[] = [];
 
-const initialRevisions: Revision[] = [
-  {
-    id: "rev-1",
-    type: "Perubahan material",
-    description: "Customer ingin membandingkan finishing matte dan semi-gloss.",
-    status: "Direview VMatch",
-    date: "19 Juni 2026",
-  },
-];
+const initialRevisions: Revision[] = [];
 
 const qcChecklist = [
   "Ukuran sesuai brief",
@@ -194,21 +149,78 @@ const warrantyCoverage = [
   "Komponen tidak sesuai hasil QC",
 ];
 
-export function ProyekView() {
-  const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(
-    null,
-  );
+function mapDbProjectToItem(p: DBProject): ProjectItem {
+  const filterMap: Record<string, ProjectFilter> = {
+    "Berjalan": "aktif",
+    "Butuh Review": "menunggu",
+    "QC": "aktif",
+    "Selesai": "selesai",
+  };
+
+  return {
+    id: p.id,
+    filter: filterMap[p.status] || "menunggu",
+    name: p.title,
+    type: p.project_type,
+    status: p.status === "Berjalan" ? "Produksi/Pengerjaan" : p.status,
+    progress: p.progress,
+    location: p.location || "-",
+    roomSize: p.room_size || "-",
+    designStyle: p.design_style || "-",
+    estimatedCost: p.estimated_cost || "-",
+    estimatedDuration: p.start_date && p.estimated_finish ? "Lihat detail" : "-",
+    vendorPartner: p.vendor?.full_name || "Belum dipilih",
+    startDate: p.start_date || "Menunggu jadwal",
+    estimatedFinish: p.estimated_finish || "Menunggu jadwal",
+    nextStep: p.next_task || "Menunggu update dari tim VMatch.",
+    solution: p.solution || p.description || "Solusi akan ditampilkan setelah brief disetujui.",
+  };
+}
+
+export function ProyekView({ userId }: { userId: string }) {
+  const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>("semua");
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadProjects = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const dbProjects = await getMyProjects(userId);
+      const mapped = dbProjects.map(mapDbProjectToItem);
+      setProjects(mapped);
+    } catch {
+      // Silent fail — show empty state
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
 
   const filteredProjects = useMemo(() => {
-    if (activeFilter === "semua") return projectList;
-    return projectList.filter((item) => item.filter === activeFilter);
-  }, [activeFilter]);
+    if (activeFilter === "semua") return projects;
+    return projects.filter((item) => item.filter === activeFilter);
+  }, [activeFilter, projects]);
+
+  if (isLoading) {
+    return (
+      <div className="flex w-full items-center justify-center py-20">
+        <div className="text-center">
+          <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-[#725F54] border-t-transparent" />
+          <p className="mt-3 text-[13px] text-[#7B756E]">Memuat proyek...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedProject) {
     return (
       <ProjectDetail
         projectData={selectedProject}
+        userId={userId}
         onBack={() => setSelectedProject(null)}
       />
     );
@@ -314,9 +326,11 @@ export function ProyekView() {
 
 function ProjectDetail({
   projectData,
+  userId,
   onBack,
 }: {
   projectData: ProjectItem;
+  userId: string;
   onBack: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("ringkasan");
@@ -335,12 +349,12 @@ function ProjectDetail({
     projectData.filter === "selesai",
   );
 
-  const [invoices, setInvoices] = useState<Invoice[]>(() =>
-    createInvoices(projectData),
-  );
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
 
   const [revisions, setRevisions] = useState<Revision[]>(initialRevisions);
   const [warrantyClaims, setWarrantyClaims] = useState<WarrantyClaim[]>([]);
+  const [progressLogs, setProgressLogs] = useState<DBProgressLog[]>([]);
+  const [qcChecklistData, setQcChecklistData] = useState<DBQcChecklist | null>(null);
 
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [revisionModalOpen, setRevisionModalOpen] = useState(false);
@@ -353,11 +367,54 @@ function ProjectDetail({
   const [qcConfirmModalOpen, setQcConfirmModalOpen] = useState(false);
   const [warrantyModalOpen, setWarrantyModalOpen] = useState(false);
 
+  // RAB review state
+  const [rabStatus, setRabStatus] = useState<RabReviewStatus>(
+    projectData.filter === "menunggu" ? "RAB Diterima" : 
+    projectData.filter === "selesai" ? "Disetujui" : "Menunggu RAB"
+  );
+  const [rabRevisionNote, setRabRevisionNote] = useState("");
+  const [rabRevisionOpen, setRabRevisionOpen] = useState(false);
+  const [rabApproveOpen, setRabApproveOpen] = useState(false);
+
   const warrantyActive = projectDone && qcStatus === "Disetujui";
 
+  useEffect(() => {
+    const loadProjectDetail = async () => {
+      try {
+        const [invoiceRows, progressRows, qcRow, warrantyRows] = await Promise.all([
+          getProjectInvoices(projectData.id),
+          getProgressLogs(projectData.id),
+          getQcChecklist(projectData.id),
+          getWarrantyClaims(projectData.id),
+        ]);
+
+        setInvoices(invoiceRows.map(mapDbInvoiceToLocalInvoice));
+        setProgressLogs(progressRows);
+        setQcChecklistData(qcRow);
+        setWarrantyClaims(warrantyRows.map(mapDbWarrantyToLocalWarranty));
+
+        if (qcRow?.status === "Disetujui" || qcRow?.customer_approved_at) {
+          setQcStatus("Disetujui");
+          setProjectDone(true);
+        } else if (qcRow?.status === "Perlu Catatan") {
+          setQcStatus("Perlu Catatan");
+        } else if (qcRow?.status) {
+          setQcStatus("Sedang Dicek");
+        }
+      } catch {
+        setInvoices([]);
+        setProgressLogs([]);
+        setQcChecklistData(null);
+        setWarrantyClaims([]);
+      }
+    };
+
+    loadProjectDetail();
+  }, [projectData.id]);
+
   const progressTimeline = useMemo(
-    () => createProgressTimeline(projectData, projectDone),
-    [projectData, projectDone],
+    () => createProgressTimeline(projectData, projectDone, progressLogs),
+    [projectData, projectDone, progressLogs],
   );
 
   const workSchedules = useMemo(
@@ -371,24 +428,32 @@ function ProjectDetail({
   );
 
   const documents = useMemo(
-    () => createDocuments(projectData, projectDone, warrantyActive),
-    [projectData, projectDone, warrantyActive],
+    () => createDocuments(projectData, projectDone, warrantyActive, invoices, progressLogs, qcChecklistData),
+    [projectData, projectDone, warrantyActive, invoices, progressLogs, qcChecklistData],
   );
 
-  const handlePaySuccess = (invoice: Invoice) => {
-    setInvoices((current) =>
-      current.map((item) =>
-        item.id === invoice.id
-          ? {
-            ...item,
-            status: item.title === "Pelunasan" ? "Lunas" : "Terverifikasi",
-            receiptNo: `VMR-2026-${Date.now().toString().slice(-4)}`,
-          }
-          : item,
-      ),
-    );
-
-    setPaymentInvoice(null);
+  const handlePaySuccess = async (invoice: Invoice) => {
+    try {
+      await updateInvoice(invoice.id, {
+        status: invoice.title === "Pelunasan" ? "Lunas" : "Terbayar",
+        paid_at: new Date().toISOString(),
+      });
+      setInvoices((current) =>
+        current.map((item) =>
+          item.id === invoice.id
+            ? {
+              ...item,
+              status: item.title === "Pelunasan" ? "Lunas" : "Terbayar",
+              receiptNo: `VMR-2026-${Date.now().toString().slice(-4)}`,
+            }
+            : item,
+        ),
+      );
+      setPaymentInvoice(null);
+      toast.success("Pembayaran berhasil dikonfirmasi.");
+    } catch {
+      toast.error("Gagal mengkonfirmasi pembayaran.");
+    }
   };
 
   const handleApproveQC = () => {
@@ -478,6 +543,15 @@ function ProjectDetail({
           warrantyActive={warrantyActive}
           onGoProgress={() => setActiveTab("progress")}
           onGoPayment={() => setActiveTab("pembayaran")}
+        />
+      )}
+
+      {activeTab === "rab" && (
+        <RabTab
+          projectData={projectData}
+          rabStatus={rabStatus}
+          onApprove={() => setRabApproveOpen(true)}
+          onRequestRevision={() => setRabRevisionOpen(true)}
         />
       )}
 
@@ -610,18 +684,60 @@ function ProjectDetail({
       {warrantyModalOpen && (
         <WarrantyClaimModal
           onClose={() => setWarrantyModalOpen(false)}
-          onSubmit={(claim) => {
-            setWarrantyClaims((current) => [
-              {
-                id: `claim-${Date.now()}`,
-                issueType: claim.issueType,
+          onSubmit={async (claim) => {
+            try {
+              const res = await createWarrantyClaim({
+                project_id: projectData.id,
+                customer_id: userId,
+                issue_type: claim.issueType,
                 description: claim.description,
-                incidentDate: claim.incidentDate,
-                status: "Klaim Diajukan",
-              },
-              ...current,
-            ]);
-            setWarrantyModalOpen(false);
+                incident_date: claim.incidentDate,
+                status: "Klaim Diajukan"
+              });
+              
+              setWarrantyClaims((current) => [
+                {
+                  id: res.id,
+                  issueType: claim.issueType,
+                  description: claim.description,
+                  incidentDate: claim.incidentDate,
+                  status: "Klaim Diajukan",
+                },
+                ...current,
+              ]);
+              setWarrantyModalOpen(false);
+              toast.success("Klaim garansi berhasil diajukan.");
+            } catch {
+              toast.error("Gagal mengajukan klaim garansi.");
+            }
+          }}
+        />
+      )}
+
+      {rabRevisionOpen && (
+        <SimpleTextModal
+          title="Minta Revisi RAB"
+          description="Tuliskan catatan revisi yang kamu inginkan. Tim VMatch akan menghubungi kamu untuk penyesuaian lebih lanjut."
+          placeholder="Contoh: budget terlalu tinggi, minta opsi material yang lebih hemat."
+          submitLabel="Kirim Permintaan Revisi"
+          onClose={() => setRabRevisionOpen(false)}
+          onSubmit={(text) => {
+            setRabRevisionNote(text || "Customer meminta revisi RAB.");
+            setRabStatus("Minta Revisi");
+            setRabRevisionOpen(false);
+          }}
+        />
+      )}
+
+      {rabApproveOpen && (
+        <ConfirmModal
+          title="Setujui RAB?"
+          description="Dengan menyetujui RAB ini, tim VMatch akan melanjutkan ke tahap produksi dan mengirimkan invoice pembayaran pertama."
+          confirmLabel="Setujui RAB"
+          onClose={() => setRabApproveOpen(false)}
+          onConfirm={() => {
+            setRabStatus("Disetujui");
+            setRabApproveOpen(false);
           }}
         />
       )}
@@ -718,7 +834,7 @@ function SummaryTab({
               <ActionButton
                 icon={MessageCircle}
                 label="Jadwalkan Konsultasi"
-                onClick={() => alert("Simulasi: buka halaman Konsultasi")}
+                onClick={() => toast.info("Buka halaman Konsultasi dari menu utama untuk membuat jadwal.")}
               />
             </div>
           </Card>
@@ -749,6 +865,113 @@ function SummaryTab({
           {projectData.solution}
         </p>
       </Card>
+    </div>
+  );
+}
+
+function RabTab({
+  projectData,
+  rabStatus,
+  onApprove,
+  onRequestRevision,
+}: {
+  projectData: ProjectItem;
+  rabStatus: RabReviewStatus;
+  onApprove: () => void;
+  onRequestRevision: () => void;
+}) {
+  const isWaiting = rabStatus === "Menunggu RAB";
+  const isReceived = rabStatus === "RAB Diterima" || rabStatus === "Sedang Direview";
+  const isApproved = rabStatus === "Disetujui";
+  const isRevision = rabStatus === "Minta Revisi";
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-[24px] border border-[#E8E2D9] bg-white p-5 sm:p-7">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
+              RAB & Estimasi Biaya
+            </p>
+            <h2 className="mt-2 font-serif text-[28px] leading-tight text-[#31332C]">
+              {isWaiting ? "Menunggu RAB dari VMatch" : isApproved ? "RAB Disetujui" : isRevision ? "Revisi Diminta" : "RAB Siap Ditinjau"}
+            </h2>
+            <p className="mt-2 max-w-[680px] text-[14px] leading-7 text-[#7B756E]">
+              {isWaiting
+                ? "Tim VMatch sedang menyiapkan estimasi biaya proyek berdasarkan kebutuhan dan survey awal. Kamu akan mendapat notifikasi ketika RAB siap."
+                : isApproved
+                ? "RAB sudah disetujui. Tim VMatch sedang memproses langkah berikutnya dan akan segera mengirimkan invoice pembayaran pertama."
+                : isRevision
+                ? "Permintaan revisi sudah dikirim ke tim VMatch. Kamu akan mendapat RAB yang sudah disesuaikan dalam waktu dekat."
+                : "Tinjau estimasi biaya dari tim VMatch. Kamu bisa menyetujui atau meminta revisi sebelum pengerjaan dimulai."}
+            </p>
+          </div>
+          <StatusPill
+            label={isApproved ? "Disetujui" : isRevision ? "Minta Revisi" : isWaiting ? "Menunggu" : "Siap Ditinjau"}
+          />
+        </div>
+      </div>
+
+      {!isWaiting && (
+        <div className="rounded-[24px] border border-[#E8E2D9] bg-white p-5 sm:p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7B756E]">
+            Detail Estimasi
+          </p>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <InfoCard icon={Wallet} label="Estimasi Biaya" value={projectData.estimatedCost} />
+            <InfoCard icon={Clock3} label="Estimasi Durasi" value={projectData.estimatedDuration} />
+            <InfoCard icon={CalendarDays} label="Target Selesai" value={projectData.estimatedFinish} />
+            <InfoCard icon={PackageCheck} label="Jenis Proyek" value={projectData.type} />
+          </div>
+
+          <div className="mt-5 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
+              Catatan dari VMatch
+            </p>
+            <p className="mt-2 text-[13px] leading-7 text-[#6F6860]">
+              Estimasi ini sudah mencakup biaya material, produksi, instalasi, dan biaya layanan VMatch. Nominal final akan dikonfirmasi setelah survey ulang jika diperlukan.
+            </p>
+          </div>
+
+          {!isApproved && !isRevision && (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={onApprove}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42]"
+              >
+                <CheckCircle2 size={16} />
+                Setujui RAB
+              </button>
+              <button
+                type="button"
+                onClick={onRequestRevision}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-5 text-[13px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+              >
+                <PencilLine size={16} />
+                Minta Revisi
+              </button>
+            </div>
+          )}
+
+          {isApproved && (
+            <div className="mt-5 rounded-xl border border-[#DCEBDD] bg-[#F5FAF6] px-4 py-3">
+              <p className="text-[13px] font-semibold text-[#4F7A5F]">
+                RAB sudah disetujui — Tim VMatch akan segera memproses invoice pembayaran pertama.
+              </p>
+            </div>
+          )}
+
+          {isRevision && (
+            <div className="mt-5 rounded-xl border border-[#E8D6BE] bg-[#FFF8ED] px-4 py-3">
+              <p className="text-[13px] font-semibold text-[#8A5A24]">
+                Permintaan revisi sudah dikirim. Tim VMatch akan menghubungi kamu untuk konfirmasi.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -852,7 +1075,7 @@ function ProgressTab({
                 <ActionButton
                   icon={MessageCircle}
                   label="Konsultasi Material"
-                  onClick={() => alert("Simulasi: konsultasi material")}
+                  onClick={() => toast.info("Buka halaman Konsultasi untuk mendiskusikan material.")}
                 />
               </div>
             </div>
@@ -1367,6 +1590,7 @@ function StatusPill({ label }: { label: string }) {
   const isSuccess =
     lower.includes("selesai") ||
     lower.includes("terverifikasi") ||
+    lower.includes("terbayar") ||
     lower.includes("lunas") ||
     lower.includes("disetujui") ||
     lower.includes("tersedia") ||
@@ -1679,7 +1903,7 @@ function ReceiptModal({
 
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
-              Pembayaran Terverifikasi
+              Pembayaran Terbayar
             </p>
 
             <h3 className="mt-2 font-serif text-[28px] leading-tight text-[#31332C]">
@@ -1946,7 +2170,7 @@ function createInvoices(projectData: ProjectItem): Invoice[] {
       amount: isWaiting ? "Rp0" : "Rp5.000.000",
       stage: "Pembayaran awal",
       method: "Virtual Account Midtrans",
-      status: isWaiting ? "Belum Tersedia" : "Terverifikasi",
+      status: isWaiting ? "Belum Tersedia" : "Terbayar",
       dueDate: "18 Juni 2026",
       receiptNo: isWaiting ? undefined : "VMR-2026-0001",
     },
@@ -1956,7 +2180,7 @@ function createInvoices(projectData: ProjectItem): Invoice[] {
       amount: "Rp8.000.000",
       stage: "Sebelum produksi final",
       method: "Virtual Account Midtrans",
-      status: isDone ? "Terverifikasi" : "Menunggu Pembayaran",
+      status: isDone ? "Terbayar" : "Menunggu Pembayaran",
       dueDate: "22 Juni 2026",
       receiptNo: isDone ? "VMR-2026-0002" : undefined,
     },
@@ -1973,7 +2197,50 @@ function createInvoices(projectData: ProjectItem): Invoice[] {
   ];
 }
 
-function createProgressTimeline(projectData: ProjectItem, projectDone: boolean) {
+function mapDbInvoiceToLocalInvoice(invoice: DBInvoice): Invoice {
+  return {
+    id: invoice.id,
+    title: invoice.project_title,
+    amount: invoice.total_amount,
+    stage: invoice.payment_stage || "Tahap pembayaran",
+    method: invoice.payment_method || "Virtual Account Midtrans",
+    status: (invoice.status as PaymentStatus) || "Belum Tersedia",
+    dueDate: invoice.due_date || "-",
+    receiptNo: invoice.paid_at ? invoice.invoice_number : undefined,
+  };
+}
+
+function mapDbWarrantyToLocalWarranty(claim: DBWarrantyClaim): WarrantyClaim {
+  return {
+    id: claim.id,
+    issueType: claim.issue_type,
+    description: claim.description,
+    incidentDate: claim.incident_date,
+    status: (claim.status as WarrantyClaim["status"]) || "Klaim Diajukan",
+  };
+}
+
+function createProgressTimeline(
+  projectData: ProjectItem,
+  projectDone: boolean,
+  logs: DBProgressLog[],
+) {
+  if (logs.length > 0) {
+    return logs
+      .slice()
+      .reverse()
+      .map((log) => ({
+        title: log.status,
+        status:
+          log.progress_percent >= 100
+            ? "Selesai"
+            : log.progress_percent > 0
+              ? "Berjalan"
+              : "Terjadwal",
+        desc: log.work_summary || log.next_plan || "Update progress proyek.",
+      }));
+  }
+
   if (projectDone || projectData.filter === "selesai") {
     return [
       {
@@ -2110,6 +2377,9 @@ function createDocuments(
   projectData: ProjectItem,
   projectDone: boolean,
   warrantyActive: boolean,
+  invoices: Invoice[],
+  progressLogs: DBProgressLog[],
+  qcChecklistData: DBQcChecklist | null,
 ): DocumentItem[] {
   return [
     {
@@ -2134,21 +2404,37 @@ function createDocuments(
       id: "doc-3",
       title: "Invoice Proyek",
       category: "Invoice",
-      status: projectData.filter === "menunggu" ? "Belum tersedia" : "Tersedia",
-      date: "20 Juni 2026",
+      status: invoices.length > 0 ? "Tersedia" : "Belum tersedia",
+      date: invoices[0]?.dueDate || "-",
       description: "Dokumen tagihan pembayaran proyek.",
     },
     {
       id: "doc-4",
+      title: "Log Progress Proyek",
+      category: "Progress",
+      status: progressLogs.length > 0 ? "Tersedia" : "Belum tersedia",
+      date: progressLogs[0]?.log_date || "-",
+      description: "Dokumen pembaruan pengerjaan dari vendor dan tim VMatch.",
+    },
+    {
+      id: "doc-5",
+      title: "Checklist QC",
+      category: "QC",
+      status: qcChecklistData ? "Tersedia" : "Belum tersedia",
+      date: qcChecklistData?.updated_at || "-",
+      description: "Checklist quality control proyek.",
+    },
+    {
+      id: "doc-6",
       title: "Dokumen Final",
       category: "Final Project",
       status: projectDone ? "Tersedia" : "Belum tersedia",
-      date: projectDone ? "28 Juni 2026" : "-",
+      date: projectDone ? "Selesai" : "-",
       description:
         "Dokumen final proyek setelah pekerjaan selesai dan disetujui customer.",
     },
     {
-      id: "doc-5",
+      id: "doc-7",
       title: "Dokumen Garansi",
       category: "Garansi",
       status: warrantyActive ? "Tersedia" : "Belum tersedia",

@@ -6,14 +6,17 @@ import {
   Building2,
   CheckCircle2,
   CreditCard,
+  LogOut,
   MapPin,
   Phone,
   Save,
   Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { updateProfile } from "@/lib/api/profiles";
 
-import { vendorProfile } from "../mock-data";
 import {
   VendorActionButton,
   VendorField,
@@ -23,15 +26,24 @@ import {
   vendorTextareaClass,
 } from "./shared";
 
-export function SettingsView() {
+export function SettingsView({ vendorId, profile: vendorProfile2 }: { vendorId: string; profile: import("@/lib/supabase/types").Profile }) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
+
   const [form, setForm] = useState({
-    name: vendorProfile.name,
-    email: vendorProfile.email,
-    phone: vendorProfile.phone,
-    serviceArea: vendorProfile.serviceArea,
-    skill: vendorProfile.skill,
-    bankName: vendorProfile.bankName,
-    bankAccount: vendorProfile.bankAccount,
+    name: vendorProfile2.full_name || "",
+    email: "",
+    phone: vendorProfile2.phone || "",
+    serviceArea: vendorProfile2.service_area || "",
+    skill: vendorProfile2.skills || "",
+    bankName: vendorProfile2.bank_name || "",
+    bankAccount: vendorProfile2.bank_account || "",
     notificationWhatsapp: true,
     notificationEmail: true,
     notificationProject: true,
@@ -48,8 +60,20 @@ export function SettingsView() {
     setSaved(false);
   };
 
-  const handleSave = () => {
-    setSaved(true);
+  const handleSave = async () => {
+    try {
+      await updateProfile(vendorId, {
+        full_name: form.name,
+        phone: form.phone,
+        service_area: form.serviceArea,
+        skills: form.skill,
+        bank_name: form.bankName,
+        bank_account: form.bankAccount,
+      });
+      setSaved(true);
+    } catch {
+      // silent
+    }
   };
 
   return (
@@ -75,6 +99,12 @@ export function SettingsView() {
           label={saved ? "Tersimpan" : "Simpan"}
           primary
           onClick={handleSave}
+        />
+
+        <VendorActionButton
+          icon={LogOut}
+          label="Keluar"
+          onClick={handleLogout}
         />
       </section>
 
