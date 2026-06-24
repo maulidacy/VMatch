@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { createVendorEstimate, getVendorBriefs, updateBrief } from "@/lib/api/projects";
+import { createVendorEstimate, getVendorBriefs, updateBrief, createRab } from "@/lib/api/projects";
 import type { Brief as DBBrief } from "@/lib/supabase/types";
 import type { VendorPageId, WorkBrief, WorkPlanStatus, AdminBriefFile } from "../types";
 import {
@@ -97,6 +97,9 @@ export function BriefWorkPlanView({
         id: b.id,
         projectId: b.project_id || "",
         projectName: b.project_title,
+        customerId: b.customer_id,
+        projectType: "-", // Will be updated by Admin
+        location: "-", // Will be updated by Admin
         scope: b.scope ? [b.scope] : [],
         materialApproved: (b.materials as string[]) || [],
         timeline: (b.timeline as { label: string; date: string }[]) || [],
@@ -251,7 +254,7 @@ export function BriefWorkPlanView({
     if (!selectedBrief || !isEstimateReady) return;
 
     try {
-      await createVendorEstimate({
+      const estimate = await createVendorEstimate({
         brief_id: selectedBrief.id,
         project_id: selectedBrief.projectId || null,
         vendor_id: vendorId,
@@ -262,6 +265,21 @@ export function BriefWorkPlanView({
         status: "Estimasi Dikirim",
         sent_at: new Date().toISOString(),
       });
+
+      if (estimate && selectedBrief.projectId) {
+        await createRab({
+          project_id: selectedBrief.projectId,
+          customer_id: selectedBrief.customerId,
+          vendor_id: vendorId,
+          estimate_id: estimate.id,
+          project_title: selectedBrief.projectName,
+          project_type: selectedBrief.projectType,
+          location: selectedBrief.location,
+          grand_total: currentEstimateDraft.estimatedCost,
+          vmatch_service_fee: "Rp0",
+          status: "Estimasi Dikirim Vendor"
+        });
+      }
 
       await updateBrief(selectedBrief.id, {
         status: "Estimasi Dikirim",

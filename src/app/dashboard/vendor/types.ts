@@ -96,6 +96,9 @@ export type WorkBrief = {
   id: string;
   projectId: string;
   projectName: string;
+  customerId: string;
+  projectType: string;
+  location: string;
   scope: string[];
   materialApproved: string[];
   timeline: {

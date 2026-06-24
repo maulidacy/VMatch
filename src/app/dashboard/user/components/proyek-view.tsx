@@ -30,6 +30,7 @@ import {
   getCustomerRabs,
   updateRab,
   upsertQcChecklist,
+  createVendorBonus,
 } from "@/lib/api/projects";
 import { toast } from "sonner";
 import type {
@@ -76,6 +77,7 @@ type ProjectItem = {
   estimatedCost: string;
   estimatedDuration: string;
   vendorPartner: string;
+  vendor_id?: string | null;
   startDate: string;
   estimatedFinish: string;
   nextStep: string;
@@ -174,6 +176,7 @@ function mapDbProjectToItem(p: DBProject): ProjectItem {
     estimatedCost: p.estimated_cost || "-",
     estimatedDuration: p.start_date && p.estimated_finish ? "Lihat detail" : "-",
     vendorPartner: p.vendor?.full_name || "Belum dipilih",
+    vendor_id: p.vendor_id || null,
     startDate: p.start_date || "Menunggu jadwal",
     estimatedFinish: p.estimated_finish || "Menunggu jadwal",
     nextStep: p.next_task || "Menunggu update dari tim VMatch.",
@@ -478,6 +481,19 @@ function ProjectDetail({
         status: "Disetujui",
         customer_approved_at: new Date().toISOString()
       });
+
+      if (projectData.vendor_id) {
+        await createVendorBonus({
+          vendor_id: projectData.vendor_id,
+          project_id: projectData.id,
+          reason: "Penyelesaian Proyek (Menunggu Review)",
+          status: "Berpotensi Aktif",
+          amount: "Rp0",
+          requirements: [
+            { label: "Lulus QC Checklist", completed: true }
+          ]
+        });
+      }
       setQcStatus("Disetujui");
       setProjectDone(true);
 

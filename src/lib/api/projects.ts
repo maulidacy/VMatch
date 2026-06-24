@@ -167,7 +167,7 @@ export async function updateVendorEstimate(id: string, payload: Partial<VendorEs
 export async function getRabs() {
   const { data, error } = await supabase()
     .from("rab")
-    .select("*, customer:profiles!customer_id(*)")
+    .select("*, customer:profiles!customer_id(*), vendor_estimate:vendor_estimates!estimate_id(*)")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as Rab[];
@@ -366,6 +366,16 @@ export async function updateVendorBonus(id: string, payload: Partial<VendorBonus
     .from("vendor_bonuses")
     .update(payload)
     .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VendorBonus;
+}
+
+export async function createVendorBonus(payload: Partial<VendorBonus>) {
+  const { data, error } = await supabase()
+    .from("vendor_bonuses")
+    .insert(payload)
     .select()
     .single();
   if (error) throw error;

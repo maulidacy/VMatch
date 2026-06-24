@@ -19,7 +19,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { getInvoices, updateInvoice as updateInvoiceRecord, createInvoice, getProjects } from "@/lib/api/projects";
+import { getInvoices, updateInvoice as updateInvoiceRecord, createInvoice, getProjects, createVendorPayout } from "@/lib/api/projects";
 import type { Invoice as DBInvoice, Project as DBProject } from "@/lib/supabase/types";
 
 type PaymentStatus =
@@ -39,6 +39,7 @@ type InvoiceItem = {
 
 type InvoicePayment = {
   id: string;
+  projectId: string;
   invoiceNumber: string;
   projectTitle: string;
   customerName: string;
@@ -91,6 +92,7 @@ const initialInvoices: InvoicePayment[] = [];
 function mapDbToLocalInvoice(inv: DBInvoice): InvoicePayment {
   return {
     id: inv.id,
+    projectId: inv.project_id || "",
     invoiceNumber: inv.invoice_number,
     projectTitle: inv.project_title,
     customerName: "-",
@@ -318,7 +320,31 @@ export function InvoicePaymentsView() {
       return;
     }
 
+    toast.success("Invoice berhasil disimpan.");
     setIsInvoiceSaved(true);
+  };
+
+  const handleCreatePayout = async () => {
+    if (!selectedInvoice || !selectedInvoice.projectId) return;
+    try {
+      const projects = await getProjects();
+      const project = projects.find(p => p.id === selectedInvoice.projectId);
+      if (!project || !project.vendor_id) {
+        toast.error("Tidak dapat menemukan vendor untuk proyek ini.");
+        return;
+      }
+      await createVendorPayout({
+        project_id: project.id,
+        vendor_id: project.vendor_id,
+        title: `Payout Termin ${selectedInvoice.paymentStage}`,
+        amount: selectedInvoice.paidAmount !== "Rp0" ? selectedInvoice.paidAmount : selectedInvoice.totalAmount,
+        status: "Masuk Payout",
+        due_info: "Dibayarkan segera"
+      });
+      toast.success("Payout berhasil diteruskan ke Vendor.");
+    } catch {
+      toast.error("Gagal meneruskan payout ke vendor.");
+    }
   };
 
   if (selectedInvoice && invoiceDraft) {
@@ -328,12 +354,10 @@ export function InvoicePaymentsView() {
         invoiceDraft={invoiceDraft}
         isInvoiceSaved={isInvoiceSaved}
         onBack={closeDetail}
-        onChangeDraft={(draft) => {
-          setInvoiceDraft(draft);
-          setIsInvoiceSaved(false);
-        }}
+        onChangeDraft={setInvoiceDraft}
         onSave={saveInvoiceChanges}
         onStatusChange={(status) => updateStatus(selectedInvoice.id, status)}
+        onCreatePayout={handleCreatePayout}
       />
     );
   }
@@ -593,6 +617,7 @@ function InvoiceDetailPage({
   onChangeDraft,
   onSave,
   onStatusChange,
+  onCreatePayout,
 }: {
   invoice: InvoicePayment;
   invoiceDraft: InvoiceDraft;
@@ -601,6 +626,7 @@ function InvoiceDetailPage({
   onChangeDraft: (draft: InvoiceDraft) => void;
   onSave: () => void;
   onStatusChange: (status: PaymentStatus) => void;
+  onCreatePayout: () => void;
 }) {
   const isInvoiceChanged =
     invoiceDraft.dueDate !== invoice.dueDate ||
@@ -880,6 +906,21 @@ function InvoiceDetailPage({
                 Simpan Perubahan
               </button>
             </div>
+
+            {invoice.status === "Terbayar" && (
+              <div className="mt-4 pt-4 border-t border-[#E8E2D9]">
+                <button
+                  type="button"
+                  onClick={onCreatePayout}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#DCEBDD] bg-[#F5FAF6] px-4 h-11 text-[13px] font-semibold text-[#4F7A5F] transition hover:bg-[#EBF5EE]"
+                >
+                  Teruskan Payout ke Vendor
+                </button>
+                <p className="mt-2 text-center text-[11px] text-[#7B756E]">
+                  Aksi ini akan membuat record Milestone Pembayaran untuk vendor proyek ini.
+                </p>
+              </div>
+            )}
           </DetailBlock>
         </div>
       </section>

@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { getMyProjects, getProgressLogs, createProgressLog } from "@/lib/api/projects";
+import { getMyProjects, getProgressLogs, createProgressLog, updateProject } from "@/lib/api/projects";
 import { uploadFileToStorage } from "@/lib/api/storage";
 import type { Project as DBProject, ProgressLog as DBProgressLog } from "@/lib/supabase/types";
 import type { ProgressLog, ProgressLogStatus } from "../types";
@@ -99,6 +99,7 @@ export function ProgressLogView({ vendorId }: { vendorId: string }) {
     const [issue, setIssue] = useState("");
     const [nextPlan, setNextPlan] = useState("");
     const [photoLabel, setPhotoLabel] = useState("Foto progress terbaru");
+    const [uploadedPhotoPath, setUploadedPhotoPath] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
 
     const selectedProject = vendorProjects.find(
@@ -115,16 +116,21 @@ export function ProgressLogView({ vendorId }: { vendorId: string }) {
         if (!selectedProject || !workSummary.trim()) return;
 
         try {
+            const finalProgress = Number(progressPercent) || selectedProject.progress;
+            
             await createProgressLog({
                 project_id: selectedProject.id,
                 vendor_id: vendorId,
                 status,
-                progress_percent: Number(progressPercent) || selectedProject.progress,
+                progress_percent: finalProgress,
                 work_summary: workSummary.trim(),
                 issue: issue.trim() || "Tidak ada kendala.",
                 next_plan: nextPlan.trim() || "Menunggu arahan berikutnya dari VMatch.",
                 photo_label: photoLabel.trim() || "Foto progress terbaru",
+                photo_path: uploadedPhotoPath,
             });
+
+            await updateProject(selectedProject.id, { progress: finalProgress });
 
             // Reload logs from DB
             const dbLogs = await getProgressLogs(selectedProjectId);
@@ -134,6 +140,8 @@ export function ProgressLogView({ vendorId }: { vendorId: string }) {
             setIssue("");
             setNextPlan("");
             setPhotoLabel("Foto progress terbaru");
+            setUploadedPhotoPath(null);
+            setProgressPercent(finalProgress.toString());
             toast.success("Log progress berhasil dikirim.");
         } catch {
             toast.error("Gagal mengirim log progress.");
@@ -150,6 +158,7 @@ export function ProgressLogView({ vendorId }: { vendorId: string }) {
             const filePath = `progress/${selectedProjectId}/${Date.now()}.${ext}`;
             const url = await uploadFileToStorage("vmatch-files", filePath, file);
             
+            setUploadedPhotoPath(filePath);
             setPhotoLabel(file.name);
             toast.success(`File ${file.name} berhasil diunggah.`);
         } catch (error) {

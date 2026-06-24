@@ -147,6 +147,9 @@ export const workBriefs: WorkBrief[] = [
     id: "brief-1",
     projectId: "vp-1",
     projectName: "Wardrobe Kamar Utama",
+    customerId: "-",
+    projectType: "-",
+    location: "-",
     scope: [
       "Membuat wardrobe custom sesuai ukuran ruangan.",
       "Menyediakan area gantungan baju, laci, rak lipat, dan storage barang kecil.",
@@ -197,6 +200,9 @@ export const workBriefs: WorkBrief[] = [
     id: "brief-2",
     projectId: "vp-2",
     projectName: "Kitchen Set Minimalis",
+    customerId: "-",
+    projectType: "-",
+    location: "-",
     scope: [
       "Membuat kitchen set custom dengan layout minimalis.",
       "Maksimalkan storage kabinet bawah dan atas.",
