@@ -36,6 +36,9 @@ export default function VendorDashboardPage() {
 
   if (!user || !profile) return null;
 
+  const userEmail = user.email || "";
+  const userName = profile.full_name || userEmail.split("@")[0] || "Vendor Partner";
+
   return (
     <div className="min-h-screen bg-[#FCFBF9] text-[#31332C]">
       <VendorSidebar
@@ -44,6 +47,8 @@ export default function VendorDashboardPage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onChangePage={handleChangePage}
+        userName={userName}
+        userEmail={userEmail}
       />
 
       <div className="min-h-screen lg:pl-[250px]">
@@ -66,7 +71,7 @@ export default function VendorDashboardPage() {
 
           {activePage === "payment-bonus" && <PaymentBonusView vendorId={user.id} />}
 
-          {activePage === "settings" && <SettingsView vendorId={user.id} profile={profile} />}
+          {activePage === "settings" && <SettingsView vendorId={user.id} profile={profile} userEmail={userEmail} />}
         </main>
       </div>
     </div>

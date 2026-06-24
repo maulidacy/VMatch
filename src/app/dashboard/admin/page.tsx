@@ -83,6 +83,9 @@ export default function AdminDashboardPage() {
 
   if (!user || !profile) return null;
 
+  const userEmail = user.email || "";
+  const userName = profile.full_name || userEmail.split("@")[0] || "Admin VMatch";
+
   return (
     <div className="min-h-screen bg-[#FCFBF9] text-[#31332C]">
       <AdminSidebar
@@ -91,6 +94,8 @@ export default function AdminDashboardPage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onChangePage={handleChangePage}
+        userName={userName}
+        userEmail={userEmail}
       />
 
       <div className="min-h-screen lg:pl-[250px]">
@@ -145,7 +150,7 @@ export default function AdminDashboardPage() {
           {activePage === "notifications" && (
             <NotificationView />
           )}
-          {activePage === "settings" && <SettingsView />}
+          {activePage === "settings" && <SettingsView userEmail={userEmail} userName={userName} />}
 
           {activePage !== "dashboard" &&
             activePage !== "promo" &&

@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { Bot, ImageOff, Loader2, MessageSquare, Plus, Send, Sparkles, Trash2, Wand2 } from "lucide-react";
+import { ArrowUp, Bot, ImageOff, Loader2, MessageSquare, Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, RefObject } from "react";
@@ -39,12 +39,6 @@ type ChatMessage = {
   generations?: ChatGeneration[];
 };
 
-const quickPrompts = [
-  "Rancang konsep ruang tamu 4x5",
-  "Estimasi budget renovasi dapur",
-  "Brainstorm gaya kamar tidur utama",
-  "Tunjukkan contoh kitchen set minimalis",
-];
 
 const IMAGE_MARKER_GLOBAL = /\[IMAGE:\s*[^\]]+\]/g;
 
@@ -558,18 +552,9 @@ export function AiChatView({ userId }: { userId: string }) {
           <section className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
             <div className="w-full max-w-[820px]">
               <div className="mx-auto max-w-[620px] text-center">
-                <div className="mx-auto mb-5 grid h-12 w-12 place-items-center rounded-2xl border border-[#E8E2D9] bg-white text-[#6B5B52] shadow-[0_10px_26px_rgba(49,51,44,0.05)]">
-                  <Bot size={22} />
-                </div>
-
                 <h1 className="font-serif text-[30px] leading-tight text-[#2F2925] sm:text-[40px] lg:text-[44px]">
-                  Ada yang bisa dibantu?
+                  Halo, adakah yang bisa dibantu?
                 </h1>
-
-                <p className="mx-auto mt-3 max-w-[540px] text-[13px] leading-6 text-[#7A7067] sm:text-[14px]">
-                  Ajak saya brainstorming desain, rencanakan estimasi budget, atau minta dibuatkan
-                  visualisasi konsep ruanganmu sebelum konsultasi bersama tim VMatch.
-                </p>
               </div>
 
               <div className="mx-auto mt-7 w-full max-w-[810px]">
@@ -583,13 +568,6 @@ export function AiChatView({ userId }: { userId: string }) {
                   variant="large"
                 />
               </div>
-
-              <QuickPromptList
-                prompts={quickPrompts}
-                isLoading={isLoading}
-                onSelect={sendMessage}
-                className="mx-auto mt-5 max-w-[680px] justify-center"
-              />
             </div>
           </section>
         ) : (
@@ -606,9 +584,6 @@ export function AiChatView({ userId }: { userId: string }) {
                       <h1 className="truncate text-[14px] font-semibold text-[#3D3530]">
                         {activeSession?.title || "VMatch AI"}
                       </h1>
-                      <p className="truncate text-[11px] text-[#8B8179] sm:text-[12px]">
-                        Konsultan interior cerdas — brainstorming, budget &amp; visualisasi
-                      </p>
                     </div>
 
                     <span className="hidden shrink-0 items-center gap-1.5 rounded-full bg-[#F5F0EA] px-3 py-1 text-[11px] font-medium text-[#6B5B52] sm:inline-flex">
@@ -634,14 +609,6 @@ export function AiChatView({ userId }: { userId: string }) {
 
             <section className="shrink-0 border-t border-[#E8E2D9] bg-[#F8F6F2]/95 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
               <div className="mx-auto w-full max-w-[760px]">
-                <QuickPromptList
-                  prompts={quickPrompts}
-                  isLoading={isLoading}
-                  onSelect={sendMessage}
-                  className="mb-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                  compact
-                />
-
                 <ChatInputBox
                   input={input}
                   setInput={setInput}
@@ -656,36 +623,6 @@ export function AiChatView({ userId }: { userId: string }) {
           </>
         )}
       </div>
-    </div>
-  );
-}
-
-function QuickPromptList({
-  prompts,
-  isLoading,
-  onSelect,
-  className = "",
-  compact = false,
-}: {
-  prompts: string[];
-  isLoading: boolean;
-  onSelect: (prompt: string) => void;
-  className?: string;
-  compact?: boolean;
-}) {
-  return (
-    <div className={`flex gap-2.5 ${compact ? "flex-nowrap" : "flex-wrap"} ${className}`}>
-      {prompts.map((prompt) => (
-        <button
-          key={prompt}
-          type="button"
-          onClick={() => onSelect(prompt)}
-          disabled={isLoading}
-          className="shrink-0 rounded-full border border-[#E8E2D9] bg-white px-4 py-2 text-[12px] font-medium text-[#6B5B52] shadow-[0_6px_18px_rgba(49,51,44,0.025)] transition hover:border-[#6B5B52] hover:bg-[#FCFBF9] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[13px]"
-        >
-          {prompt}
-        </button>
-      ))}
     </div>
   );
 }
@@ -744,7 +681,7 @@ function ChatInputBox({
           }`}
           aria-label="Kirim pesan"
         >
-          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={16} />}
         </button>
       </div>
     </div>
@@ -753,18 +690,24 @@ function ChatInputBox({
 
 function ThinkingIndicator() {
   return (
-    <div className="flex items-center gap-2.5 text-[13px] text-[#8B8179] sm:text-[14px]">
-      <div className="flex items-end gap-1">
-        {[0, 1, 2].map((i) => (
-          <motion.span
-            key={i}
-            className="h-1.5 w-1.5 rounded-full bg-[#B69B86]"
-            animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
-          />
-        ))}
-      </div>
-      <span>VMatch AI sedang berpikir...</span>
+    <div className="flex items-center text-[13px] font-medium sm:text-[14px]">
+      <motion.span
+        initial={{ backgroundPosition: "-200% center" }}
+        animate={{ backgroundPosition: "200% center" }}
+        transition={{
+          repeat: Infinity,
+          duration: 3.5,
+          ease: "linear",
+        }}
+        style={{
+          background: "linear-gradient(110deg, #A8A199 0%, #3D3530 50%, #A8A199 100%)",
+          backgroundSize: "200% auto",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+        }}
+      >
+        Thinking
+      </motion.span>
     </div>
   );
 }

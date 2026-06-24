@@ -11,12 +11,16 @@ export function AdminSidebar({
   isOpen,
   onClose,
   onChangePage,
+  userName,
+  userEmail,
 }: {
   menuGroups: AdminMenuGroup[];
   activePage: AdminPageId;
   isOpen: boolean;
   onClose: () => void;
   onChangePage: (page: AdminPageId) => void;
+  userName: string;
+  userEmail: string;
 }) {
   return (
     <>
@@ -103,11 +107,11 @@ export function AdminSidebar({
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-white">
-                Admin VMatch
+                {userName}
               </p>
 
               <p className="truncate text-[11px] text-white/60">
-                admin@vmatch.com
+                {userEmail}
               </p>
             </div>
           </div>

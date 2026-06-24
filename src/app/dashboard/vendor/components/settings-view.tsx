@@ -26,7 +26,7 @@ import {
   vendorTextareaClass,
 } from "./shared";
 
-export function SettingsView({ vendorId, profile: vendorProfile2 }: { vendorId: string; profile: import("@/lib/supabase/types").Profile }) {
+export function SettingsView({ vendorId, profile: vendorProfile2, userEmail }: { vendorId: string; profile: import("@/lib/supabase/types").Profile; userEmail: string }) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -38,7 +38,7 @@ export function SettingsView({ vendorId, profile: vendorProfile2 }: { vendorId: 
 
   const [form, setForm] = useState({
     name: vendorProfile2.full_name || "",
-    email: "",
+    email: userEmail || "",
     phone: vendorProfile2.phone || "",
     serviceArea: vendorProfile2.service_area || "",
     skill: vendorProfile2.skills || "",
@@ -139,10 +139,9 @@ export function SettingsView({ vendorId, profile: vendorProfile2 }: { vendorId: 
                 <input
                   type="email"
                   value={form.email}
-                  onChange={(event) =>
-                    handleChange("email", event.target.value)
-                  }
-                  className={vendorFieldClass}
+                  readOnly
+                  disabled
+                  className={`${vendorFieldClass} cursor-not-allowed bg-[#F0EBE4] text-[#8B8179]`}
                   placeholder="vendor@email.com"
                 />
               </VendorField>

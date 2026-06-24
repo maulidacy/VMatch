@@ -11,12 +11,16 @@ export function UserSidebar({
   isOpen,
   onClose,
   onChangePage,
+  userName,
+  userEmail,
 }: {
   menuItems: MenuItem[];
   activePage: PageId;
   isOpen: boolean;
   onClose: () => void;
   onChangePage: (page: PageId) => void;
+  userName: string;
+  userEmail: string;
 }) {
   return (
     <>
@@ -99,11 +103,11 @@ export function UserSidebar({
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-white">
-                Customer
+                {userName}
               </p>
 
               <p className="truncate text-[11px] text-white/60">
-                customer@email.com
+                {userEmail}
               </p>
             </div>
           </div>

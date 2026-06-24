@@ -62,7 +62,7 @@ const settingTabs: SettingTabItem[] = [
 const inputClass =
   "h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 text-[13px] font-medium text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10";
 
-export function SettingsView() {
+export function SettingsView({ userEmail, userName }: { userEmail: string; userName: string }) {
   const [activeTab, setActiveTab] = useState<SettingTab>("Profil");
   const router = useRouter();
 
@@ -73,8 +73,8 @@ export function SettingsView() {
     router.refresh();
   };
 
-  const [adminName, setAdminName] = useState("Admin VMatch");
-  const [adminEmail, setAdminEmail] = useState("admin@vmatch.id");
+  const [adminName, setAdminName] = useState(userName || "Admin VMatch");
+  const [adminEmail, setAdminEmail] = useState(userEmail || "admin@vmatch.id");
   const [adminRole, setAdminRole] = useState("Super Admin");
   const [adminPhone, setAdminPhone] = useState("0812-0000-0000");
   const [profileNote, setProfileNote] = useState(

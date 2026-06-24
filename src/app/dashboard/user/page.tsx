@@ -62,6 +62,9 @@ export default function UserDashboardPage() {
     return null; // Middleware will redirect to login
   }
 
+  const userEmail = user.email || "";
+  const userName = profile.full_name || userEmail.split("@")[0] || "Customer";
+
   return (
     <main className="min-h-[100dvh] bg-[#F8F6F2] text-[#2C2C2C]">
       <UserSidebar
@@ -70,6 +73,8 @@ export default function UserDashboardPage() {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onChangePage={changePage}
+        userName={userName}
+        userEmail={userEmail}
       />
 
       <section
@@ -106,7 +111,7 @@ export default function UserDashboardPage() {
                 }}
               />
             )}
-            {activePage === "pengaturan" && <SettingsView userId={user.id} profile={profile} />}
+            {activePage === "pengaturan" && <SettingsView userId={user.id} profile={profile} userEmail={userEmail} />}
           </div>
         )}
       </section>

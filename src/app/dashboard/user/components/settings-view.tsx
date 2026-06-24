@@ -9,7 +9,7 @@ import type { Profile } from "@/lib/supabase/types";
 
 import { fieldClass, FormField, SectionCard } from "./shared";
 
-export function SettingsView({ userId, profile }: { userId: string; profile: Profile }) {
+export function SettingsView({ userId, profile, userEmail }: { userId: string; profile: Profile; userEmail: string }) {
     const router = useRouter();
     const [fullName, setFullName] = useState(profile.full_name || "");
     const [phone, setPhone] = useState(profile.phone || "");
@@ -111,8 +111,8 @@ export function SettingsView({ userId, profile }: { userId: string; profile: Pro
                     <FormField label="Email">
                         <input
                             className={`${fieldClass} cursor-not-allowed bg-[#F0EBE4] text-[#8B8179]`}
-                            value={profile.id ? "" : ""}
-                            defaultValue={profile.full_name ? `${profile.full_name.toLowerCase().replace(/\s/g, "")}@email.com` : ""}
+                            value={userEmail || ""}
+                            readOnly
                             disabled
                         />
                     </FormField>

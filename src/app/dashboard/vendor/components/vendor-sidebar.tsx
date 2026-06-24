@@ -11,12 +11,16 @@ export function VendorSidebar({
   isOpen,
   onClose,
   onChangePage,
+  userName,
+  userEmail,
 }: {
   menuItems: VendorMenuItem[];
   activePage: VendorPageId;
   isOpen: boolean;
   onClose: () => void;
   onChangePage: (page: VendorPageId) => void;
+  userName: string;
+  userEmail: string;
 }) {
   return (
     <>
@@ -99,11 +103,11 @@ export function VendorSidebar({
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-white">
-                Vendor Partner
+                {userName}
               </p>
 
               <p className="truncate text-[11px] text-white/60">
-                vendor@email.com
+                {userEmail}
               </p>
             </div>
           </div>
