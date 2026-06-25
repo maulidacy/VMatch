@@ -192,7 +192,7 @@ export function AiChatView({ userId }: { userId: string }) {
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: isLoading ? "auto" : "smooth" });
   }, [messages, isLoading]);
 
   useEffect(() => {
@@ -774,7 +774,7 @@ function ChatInputBox({
         }`}
       />
 
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="mt-3 flex items-center justify-end gap-3">
         <div className="flex items-center gap-1.5 rounded-full bg-[#FAF6F1] p-1 shadow-inner">
           <button
             type="button"
@@ -827,6 +827,25 @@ function ChatInputBox({
   );
 }
 
+function AsciiSpinner() {
+  const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+  const [frameIndex, setFrameIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFrameIndex((prev) => (prev + 1) % frames.length);
+    }, 80);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Warna disesuaikan dengan tema (#8B8179 atau #6B5B52)
+  return (
+    <span className="mr-2 inline-block w-4 text-center font-mono text-[14px] font-bold text-[#6B5B52]">
+      {frames[frameIndex]}
+    </span>
+  );
+}
+
 function ThinkingIndicator() {
   const texts = [
     "Memahami konteks...",
@@ -846,9 +865,10 @@ function ThinkingIndicator() {
 
   return (
     <div className="flex items-center text-[13px] font-extrabold tracking-wide sm:text-[14px]">
+      <AsciiSpinner />
       <motion.span
-        initial={{ backgroundPosition: "-200% center" }}
-        animate={{ backgroundPosition: "200% center" }}
+        initial={{ backgroundPosition: "200% center" }}
+        animate={{ backgroundPosition: "-200% center" }}
         transition={{
           repeat: Infinity,
           duration: 4.5,

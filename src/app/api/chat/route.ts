@@ -155,11 +155,11 @@ export async function POST(req: NextRequest) {
 
     let modeInstruction = "";
     if (mode === "reasoning") {
-      modeInstruction = "INSTRUKSI MODE (REASONING): Sebelum menjawab, lakukan penalaran logis secara mendalam (Chain of Thought). Pecah masalah menjadi langkah-langkah terstruktur, pertimbangkan pro dan kontra dari beberapa alternatif, dan tarik kesimpulan berdasarkan logika tersebut. Berikan penjelasan rasional di balik setiap saran yang kamu berikan.";
+      modeInstruction = "INSTRUKSI MODE (REASONING): Sebelum menjawab, lakukan penalaran logis secara mendalam (Chain of Thought). WAJIB bagi jawabanmu ke dalam beberapa blok HEADING pendek (misalnya: ### 1. Analisis, ### 2. Pertimbangan, ### 3. Solusi/Rekomendasi). Pecah masalah menjadi langkah-langkah terstruktur, pertimbangkan pro dan kontra dari beberapa alternatif, dan berikan penjelasan rasional di balik setiap saran.";
     } else if (mode === "instant") {
       modeInstruction = "INSTRUKSI MODE (INSTANT): Jawab secepat mungkin, sangat ringkas, padat, dan langsung pada intinya tanpa basa-basi.";
     } else if (mode === "image") {
-      modeInstruction = "INSTRUKSI MODE (IMAGE GENERATION): User meminta visualisasi/gambar secara spesifik. KAMU WAJIB MENGHASILKAN PENANDA [IMAGE: deskripsi bahasa inggris | caption] PADA AKHIR JAWABAN. Teks pengantarnya jawab sesingkat mungkin.";
+      modeInstruction = "INSTRUKSI KHUSUS MODE GAMBAR: Abaikan aturan 'JANGAN buat gambar untuk pertanyaan murni budget' di atas. Untuk mode ini, KAMU WAJIB SELALU MENGHASILKAN PENANDA [IMAGE: deskripsi bahasa inggris | caption] PADA AKHIR JAWABAN apa pun yang ditanyakan user. Teks pengantarnya jawab sesingkat mungkin.";
     }
 
     const finalSystemPrompt = modeInstruction 
