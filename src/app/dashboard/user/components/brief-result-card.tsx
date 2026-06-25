@@ -114,7 +114,7 @@ export function BriefResultCard({
     };
 
     const handleReset = () => {
-        setDraft(mockBriefResult);
+        setDraft(data);
     };
 
     const handleSave = () => {

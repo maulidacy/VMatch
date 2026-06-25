@@ -68,6 +68,7 @@ export function ActiveProjectsView({
   const [activeTab, setActiveTab] = useState<ProjectTab>("Semua");
   const [keyword, setKeyword] = useState("");
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -151,6 +152,7 @@ export function ActiveProjectsView({
   };
 
   const updateStatus = async (id: string, status: ProjectStatus) => {
+    if (submitting) return;
     const project = projects.find((p) => p.id === id);
     if (!project) return;
     
@@ -158,6 +160,7 @@ export function ActiveProjectsView({
     const newStage = status === "Selesai" ? "Selesai" : project.currentStage;
 
     try {
+      setSubmitting(true);
       await updateProjectRecord(id, {
         status,
         progress: newProgress,
@@ -179,6 +182,8 @@ export function ActiveProjectsView({
       toast.success(`Status berhasil diubah menjadi ${status}`);
     } catch {
       toast.error("Gagal mengubah status proyek.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -200,19 +205,24 @@ export function ActiveProjectsView({
         project={selectedProject}
         adminNoteDraft={adminNoteDraft}
         isNoteSaved={isNoteSaved}
+        submitting={submitting}
         onBack={closeDetail}
         onChangeNote={(value) => {
           setAdminNoteDraft(value);
           setIsNoteSaved(false);
         }}
         onSaveNote={async () => {
+          if (submitting) return;
           try {
+            setSubmitting(true);
             await updateProjectRecord(selectedProject.id, { admin_note: adminNoteDraft });
             updateLocalProject(selectedProject.id, "adminNote", adminNoteDraft);
             setIsNoteSaved(true);
             toast.success("Catatan admin berhasil disimpan.");
           } catch {
             toast.error("Gagal menyimpan catatan admin.");
+          } finally {
+            setSubmitting(false);
           }
         }}
         onUpdateStatus={(status) => updateStatus(selectedProject.id, status)}
@@ -327,6 +337,7 @@ function ProjectDetailPage({
   project,
   adminNoteDraft,
   isNoteSaved,
+  submitting = false,
   onBack,
   onChangeNote,
   onSaveNote,
@@ -336,6 +347,7 @@ function ProjectDetailPage({
   project: ActiveProject;
   adminNoteDraft: string;
   isNoteSaved: boolean;
+  submitting?: boolean;
   onBack: () => void;
   onChangeNote: (value: string) => void;
   onSaveNote: () => void;
@@ -383,10 +395,11 @@ function ProjectDetailPage({
             <div className="relative mt-3">
               <select
                 value={project.status}
+                disabled={submitting}
                 onChange={(event) =>
                   onUpdateStatus(event.target.value as ProjectStatus)
                 }
-                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10 disabled:opacity-50"
               >
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
@@ -526,15 +539,15 @@ function ProjectDetailPage({
               <button
                 type="button"
                 onClick={onSaveNote}
-                disabled={!isAdminNoteChanged}
+                disabled={submitting || !isAdminNoteChanged}
                 className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
-                  isAdminNoteChanged
+                  isAdminNoteChanged && !submitting
                     ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
                     : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
                 }`}
               >
                 <Save size={14} />
-                Simpan Catatan
+                {submitting ? "Menyimpan..." : "Simpan Catatan"}
               </button>
             </div>
           </div>

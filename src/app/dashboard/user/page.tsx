@@ -98,7 +98,7 @@ export default function UserDashboardPage() {
           <AiChatView userId={user.id} />
         ) : (
           <div className="w-full px-5 py-6 sm:px-6">
-            {activePage === "ajukan" && <NewProjectForm userId={user.id} />}
+            {activePage === "ajukan" && <NewProjectForm userId={user.id} onSubmitSuccess={() => changePage("proyek")} />}
             {activePage === "proyek" && <ProyekView userId={user.id} />}
             {activePage === "konsultasi" && <MeetingView userId={user.id} />}
             {activePage === "inspirasi" && (

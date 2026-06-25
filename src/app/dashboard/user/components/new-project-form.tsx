@@ -15,11 +15,11 @@ import { fieldClass, FormField, SectionCard, textareaClass } from "./shared";
 import { toast } from "sonner";
 import {
     BriefResultCard,
-    ReadinessScoreCard,
     ReviewSubmitCard,
     type BriefResultData,
 } from "./brief-result-card";
 import { createProjectRequest } from "@/lib/api/projects";
+import { uploadFileToStorage } from "@/lib/api/storage";
 
 type SelectedInspiration = {
     source: "design" | "material";
@@ -111,7 +111,7 @@ const defaultManualForm: ManualFormState = {
     finishTarget: "Fleksibel",
 };
 
-export function NewProjectForm({ userId }: { userId: string }) {
+export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; onSubmitSuccess?: () => void }) {
     const [storedInspiration] = useState<SelectedInspiration | null>(() =>
         getStoredInspiration(),
     );
@@ -262,7 +262,20 @@ export function NewProjectForm({ userId }: { userId: string }) {
     };
 
     const handleSaveDraft = async () => {
+        setIsGenerating(true);
         try {
+            let uploadedFileUrls: string[] = [];
+            if (uploadedFiles.length > 0) {
+                uploadedFileUrls = await Promise.all(
+                    uploadedFiles.map(async (file) => {
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+                        const filePath = `${userId}/requests/${fileName}`;
+                        return await uploadFileToStorage("vmatch-files", filePath, file);
+                    })
+                );
+            }
+
             await createProjectRequest({
                 customer_id: userId,
                 project_name: mode === "ai" ? (briefResult?.summary?.slice(0, 50) || "Proyek Baru") : manualForm.projectName,
@@ -281,27 +294,57 @@ export function NewProjectForm({ userId }: { userId: string }) {
                 ai_brief_summary: mode === "ai" ? (briefResult?.summary || null) : null,
                 inspiration_reference: selectedInspiration?.referenceName || null,
                 status: "Baru Masuk",
+                // @ts-ignore
+                uploaded_files: uploadedFileUrls.length > 0 ? uploadedFileUrls : null
             });
             toast.success("Draft berhasil disimpan ke database.");
+            if (onSubmitSuccess) {
+                setTimeout(() => {
+                    onSubmitSuccess();
+                }, 1500);
+            }
         } catch {
             toast.error("Gagal menyimpan draft. Silakan coba lagi.");
+        } finally {
+            setIsGenerating(false);
         }
     };
 
     const handleSubmitRequest = async () => {
-        if (mode === "ai" && generatedBrief && !isBriefSelected) {
-            toast.error("Pilih Gunakan Brief Ini dulu sebelum mengirim request.");
-            return;
+        if (mode === "ai") {
+            if (!generatedBrief || !isBriefSelected) {
+                toast.error("Silakan buat dan setujui brief AI terlebih dahulu.");
+                return;
+            }
+        } else {
+            if (!manualForm.projectName.trim()) {
+                toast.error("Nama proyek wajib diisi.");
+                return;
+            }
+            if (!manualForm.location.trim()) {
+                toast.error("Lokasi proyek wajib diisi.");
+                return;
+            }
+            if (!manualForm.roomSize.trim()) {
+                toast.error("Ukuran ruangan wajib diisi.");
+                return;
+            }
         }
 
-        if (readinessScore < 60) {
-            toast.error(
-                "Data masih kurang lengkap. Lengkapi brief terlebih dahulu sebelum kirim request.",
-            );
-            return;
-        }
-
+        setIsGenerating(true);
         try {
+            let uploadedFileUrls: string[] = [];
+            if (uploadedFiles.length > 0) {
+                uploadedFileUrls = await Promise.all(
+                    uploadedFiles.map(async (file) => {
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+                        const filePath = `${userId}/requests/${fileName}`;
+                        return await uploadFileToStorage("vmatch-files", filePath, file);
+                    })
+                );
+            }
+
             await createProjectRequest({
                 customer_id: userId,
                 project_name: mode === "ai" ? (briefResult?.summary?.slice(0, 50) || "Proyek Baru") : manualForm.projectName,
@@ -321,14 +364,23 @@ export function NewProjectForm({ userId }: { userId: string }) {
                 ai_brief_recommendations: mode === "ai" ? (briefResult?.recommendations?.join("\n") || null) : null,
                 inspiration_reference: selectedInspiration?.referenceName || null,
                 status: "Baru Masuk",
+                // @ts-ignore
+                uploaded_files: uploadedFileUrls.length > 0 ? uploadedFileUrls : null
             });
 
             setRequestStatus("submitted");
             toast.success(
                 "Request proyek berhasil dikirim dan sedang menunggu review tim VMatch.",
             );
+            if (onSubmitSuccess) {
+                setTimeout(() => {
+                    onSubmitSuccess();
+                }, 1500);
+            }
         } catch {
             toast.error("Gagal mengirim request. Silakan coba lagi.");
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -426,9 +478,7 @@ export function NewProjectForm({ userId }: { userId: string }) {
                 />
             )}
 
-            <section className="grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
-                <ReadinessScoreCard score={readinessScore} />
-
+            <section className="w-full">
                 <ReviewSubmitCard
                     hasGeneratedBrief={Boolean(generatedBrief || selectedInspiration)}
                     isBriefSelected={Boolean(isBriefSelected || selectedInspiration)}

@@ -144,7 +144,7 @@ async function callOpenRouter(messages: ChatMessage[]): Promise<Response> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json();
+    const { messages, mode } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Messages array required" }), {
@@ -153,8 +153,21 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    let modeInstruction = "";
+    if (mode === "reasoning") {
+      modeInstruction = "INSTRUKSI MODE (REASONING): Sebelum menjawab, lakukan penalaran logis secara mendalam (Chain of Thought). Pecah masalah menjadi langkah-langkah terstruktur, pertimbangkan pro dan kontra dari beberapa alternatif, dan tarik kesimpulan berdasarkan logika tersebut. Berikan penjelasan rasional di balik setiap saran yang kamu berikan.";
+    } else if (mode === "instant") {
+      modeInstruction = "INSTRUKSI MODE (INSTANT): Jawab secepat mungkin, sangat ringkas, padat, dan langsung pada intinya tanpa basa-basi.";
+    } else if (mode === "image") {
+      modeInstruction = "INSTRUKSI MODE (IMAGE GENERATION): User meminta visualisasi/gambar secara spesifik. KAMU WAJIB MENGHASILKAN PENANDA [IMAGE: deskripsi bahasa inggris | caption] PADA AKHIR JAWABAN. Teks pengantarnya jawab sesingkat mungkin.";
+    }
+
+    const finalSystemPrompt = modeInstruction 
+      ? `${SYSTEM_PROMPT}\n\n${modeInstruction}`
+      : SYSTEM_PROMPT;
+
     const aiMessages: ChatMessage[] = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: finalSystemPrompt },
       ...messages,
     ];
 

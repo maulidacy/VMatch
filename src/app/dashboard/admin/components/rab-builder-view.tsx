@@ -154,6 +154,7 @@ export function RabBuilderView({
     const [serviceFeeDraft, setServiceFeeDraft] = useState("");
     const [isSaved, setIsSaved] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState("");
+    const [submitting, setSubmitting] = useState(false);
 
     const loadRabs = useCallback(async () => {
         try {
@@ -293,27 +294,29 @@ export function RabBuilderView({
     };
 
     const updateStatus = async (id: string, status: RabStatus) => {
+        if (submitting) return;
         try {
+            setSubmitting(true);
             await updateRabRecord(id, { status });
+            updateRab(id, (rab) => ({
+                ...rab,
+                status,
+                updatedAt: "Baru saja",
+            }));
+            syncTabFromStatus(status);
         } catch (error) {
             toast.error("Gagal mengupdate status RAB.");
             loadRabs();
-            return;
+        } finally {
+            setSubmitting(false);
         }
-
-        updateRab(id, (rab) => ({
-            ...rab,
-            status,
-            updatedAt: "Baru saja",
-        }));
-
-        syncTabFromStatus(status);
     };
 
     const saveNotes = async () => {
-        if (!selectedRab) return;
+        if (!selectedRab || submitting) return;
 
         try {
+            setSubmitting(true);
             await updateRabRecord(selectedRab.id, {
                 grand_total: finalRabDraft,
                 vmatch_service_fee: serviceFeeDraft,
@@ -330,18 +333,18 @@ export function RabBuilderView({
                 revisionNote: revisionNoteDraft,
                 updatedAt: "Baru saja",
             }));
+            setIsSaved(true);
+            toast.success("RAB berhasil disimpan.");
         } catch (error) {
             toast.error("Gagal menyimpan RAB.");
             loadRabs();
-            return;
+        } finally {
+            setSubmitting(false);
         }
-
-        setIsSaved(true);
     };
 
     const reviewVendorEstimate = () => {
-        if (!selectedRab) return;
-
+        if (!selectedRab || submitting) return;
         updateStatus(selectedRab.id, "RAB Direview Admin");
         setFeedbackMessage(
             "Estimasi vendor masuk ke tahap review admin. Harga belum dikirim ke customer.",
@@ -349,9 +352,10 @@ export function RabBuilderView({
     };
 
     const sendRabToCustomer = async () => {
-        if (!selectedRab) return;
+        if (!selectedRab || submitting) return;
 
         try {
+            setSubmitting(true);
             await updateRabRecord(selectedRab.id, {
                 status: "RAB Dikirim ke Customer",
                 grand_total: finalRabDraft,
@@ -359,49 +363,52 @@ export function RabBuilderView({
                 admin_note: adminNoteDraft || null,
                 customer_note: customerNoteDraft || null,
             });
+            updateRab(selectedRab.id, (rab) => ({
+                ...rab,
+                status: "RAB Dikirim ke Customer",
+                grandTotal: finalRabDraft,
+                vmatchServiceFee: serviceFeeDraft,
+                adminNote: adminNoteDraft,
+                customerNote: customerNoteDraft,
+                updatedAt: "Baru saja",
+            }));
+            syncTabFromStatus("RAB Dikirim ke Customer");
+            setFeedbackMessage("RAB final berhasil dikirim ke customer untuk persetujuan.");
+            toast.success("RAB berhasil dikirim ke customer.");
         } catch (error) {
             toast.error("Gagal mengirim RAB ke customer.");
             loadRabs();
-            return;
+        } finally {
+            setSubmitting(false);
         }
-
-        updateRab(selectedRab.id, (rab) => ({
-            ...rab,
-            status: "RAB Dikirim ke Customer",
-            grandTotal: finalRabDraft,
-            vmatchServiceFee: serviceFeeDraft,
-            adminNote: adminNoteDraft,
-            customerNote: customerNoteDraft,
-            updatedAt: "Baru saja",
-        }));
-        syncTabFromStatus("RAB Dikirim ke Customer");
-        setFeedbackMessage("RAB final berhasil dikirim ke customer untuk persetujuan.");
     };
 
     const approveRab = async () => {
-        if (!selectedRab) return;
+        if (!selectedRab || submitting) return;
 
         try {
+            setSubmitting(true);
             await updateRabRecord(selectedRab.id, { status: "RAB Disetujui Customer" });
+            updateRab(selectedRab.id, (rab) => ({
+                ...rab,
+                status: "RAB Disetujui Customer",
+                updatedAt: "Baru saja",
+            }));
+            syncTabFromStatus("RAB Disetujui Customer");
+            setFeedbackMessage(
+                "RAB sudah disetujui customer. Admin dapat lanjut membuat invoice.",
+            );
+            toast.success("RAB disetujui.");
         } catch (error) {
             toast.error("Gagal menyetujui RAB.");
             loadRabs();
-            return;
+        } finally {
+            setSubmitting(false);
         }
-
-        updateRab(selectedRab.id, (rab) => ({
-            ...rab,
-            status: "RAB Disetujui Customer",
-            updatedAt: "Baru saja",
-        }));
-        syncTabFromStatus("RAB Disetujui Customer");
-        setFeedbackMessage(
-            "RAB sudah disetujui customer. Admin dapat lanjut membuat invoice.",
-        );
     };
 
     const markCustomerRevision = async () => {
-        if (!selectedRab) return;
+        if (!selectedRab || submitting) return;
 
         const nextRevisionNote =
             revisionNoteDraft.trim().length > 0
@@ -409,31 +416,33 @@ export function RabBuilderView({
                 : "Customer meminta revisi RAB. Admin perlu menyesuaikan catatan sebelum dikirim ulang.";
 
         try {
+            setSubmitting(true);
             await updateRabRecord(selectedRab.id, {
                 status: "Revisi Diminta Customer",
                 revision_note: nextRevisionNote,
             });
+            updateRab(selectedRab.id, (rab) => ({
+                ...rab,
+                status: "Revisi Diminta Customer",
+                revisionNote: nextRevisionNote,
+                updatedAt: "Baru saja",
+            }));
+            setActiveTab("Revisi");
+            setFeedbackMessage("Status RAB diubah menjadi Revisi Diminta Customer.");
+            toast.success("Permintaan revisi berhasil ditandai.");
         } catch (error) {
             toast.error("Gagal menandai revisi RAB.");
             loadRabs();
-            return;
+        } finally {
+            setSubmitting(false);
         }
-
-        updateRab(selectedRab.id, (rab) => ({
-            ...rab,
-            status: "Revisi Diminta Customer",
-            revisionNote: nextRevisionNote,
-            updatedAt: "Baru saja",
-        }));
-
-        setActiveTab("Revisi");
-        setFeedbackMessage("Status RAB diubah menjadi Revisi Diminta Customer.");
     };
 
     const resendRevisedRab = async () => {
-        if (!selectedRab) return;
+        if (!selectedRab || submitting) return;
 
         try {
+            setSubmitting(true);
             await updateRabRecord(selectedRab.id, {
                 status: "RAB Dikirim ke Customer",
                 grand_total: finalRabDraft,
@@ -442,25 +451,27 @@ export function RabBuilderView({
                 customer_note: customerNoteDraft || null,
                 revision_note: revisionNoteDraft || null,
             });
-        } catch (error) {
+
+            updateRab(selectedRab.id, (rab) => ({
+                ...rab,
+                status: "RAB Dikirim ke Customer",
+                grandTotal: finalRabDraft,
+                vmatchServiceFee: serviceFeeDraft,
+                adminNote: adminNoteDraft,
+                customerNote: customerNoteDraft,
+                revisionNote: revisionNoteDraft,
+                updatedAt: "Baru saja",
+            }));
+
+            setActiveTab("Dikirim Customer");
+            setFeedbackMessage("Revisi RAB berhasil dikirim ulang ke customer.");
+            toast.success("RAB berhasil dikirim ulang.");
+        } catch {
             toast.error("Gagal mengirim ulang RAB.");
             loadRabs();
-            return;
+        } finally {
+            setSubmitting(false);
         }
-
-        updateRab(selectedRab.id, (rab) => ({
-            ...rab,
-            status: "RAB Dikirim ke Customer",
-            grandTotal: finalRabDraft,
-            vmatchServiceFee: serviceFeeDraft,
-            adminNote: adminNoteDraft,
-            customerNote: customerNoteDraft,
-            revisionNote: revisionNoteDraft,
-            updatedAt: "Baru saja",
-        }));
-
-        setActiveTab("Dikirim Customer");
-        setFeedbackMessage("Revisi RAB berhasil dikirim ulang ke customer.");
     };
 
     if (selectedRab) {
@@ -480,6 +491,7 @@ export function RabBuilderView({
                 serviceFeeDraft={serviceFeeDraft}
                 isSaved={isSaved}
                 feedbackMessage={feedbackMessage}
+                submitting={submitting}
                 canReview={canReview}
                 canSendCustomer={canSendCustomer}
                 canMarkCustomerDecision={canMarkCustomerDecision}
@@ -746,6 +758,7 @@ function RabDetailPage({
     serviceFeeDraft,
     isSaved,
     feedbackMessage,
+    submitting = false,
     canReview,
     canSendCustomer,
     canMarkCustomerDecision,
@@ -774,6 +787,7 @@ function RabDetailPage({
     serviceFeeDraft: string;
     isSaved: boolean;
     feedbackMessage: string;
+    submitting?: boolean;
     canReview: boolean;
     canSendCustomer: boolean;
     canMarkCustomerDecision: boolean;
@@ -982,14 +996,14 @@ function RabDetailPage({
                             <button
                                 type="button"
                                 onClick={onSave}
-                                disabled={!isChanged}
-                                className={`inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition sm:w-auto ${isChanged
+                                disabled={submitting || !isChanged}
+                                className={`inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition sm:w-auto ${isChanged && !submitting
                                         ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
                                         : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
                                     }`}
                             >
                                 <Save size={14} />
-                                {isSaved ? "Tersimpan" : "Simpan Catatan"}
+                                {submitting ? "Menyimpan..." : (isSaved ? "Tersimpan" : "Simpan Catatan")}
                             </button>
                         </div>
                     </section>
@@ -997,6 +1011,7 @@ function RabDetailPage({
             </section>
 
             <ActionPanel
+                submitting={submitting}
                 canReview={canReview}
                 canSendCustomer={canSendCustomer}
                 canMarkCustomerDecision={canMarkCustomerDecision}
@@ -1014,6 +1029,7 @@ function RabDetailPage({
 }
 
 function ActionPanel({
+    submitting = false,
     canReview,
     canSendCustomer,
     canMarkCustomerDecision,
@@ -1026,6 +1042,7 @@ function ActionPanel({
     onApproveRab,
     onCreateInvoice,
 }: {
+    submitting?: boolean;
     canReview: boolean;
     canSendCustomer: boolean;
     canMarkCustomerDecision: boolean;
@@ -1044,19 +1061,21 @@ function ActionPanel({
                 <button
                     type="button"
                     onClick={onApproveRab}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                    disabled={submitting}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-50"
                 >
                     <CheckCircle2 size={15} />
-                    Tandai Disetujui
+                    {submitting ? "Memproses..." : "Tandai Disetujui"}
                 </button>
 
                 <button
                     type="button"
                     onClick={onMarkCustomerRevision}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                    disabled={submitting}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white disabled:opacity-50"
                 >
                     <MessageSquareWarning size={15} />
-                    Minta Revisi
+                    {submitting ? "Memproses..." : "Minta Revisi"}
                 </button>
 
                 <button
@@ -1077,10 +1096,11 @@ function ActionPanel({
                 <button
                     type="button"
                     onClick={onResendRevisedRab}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                    disabled={submitting}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-50"
                 >
                     <RefreshCw size={15} />
-                    Revisi & Kirim Ulang RAB
+                    {submitting ? "Mengirim..." : "Revisi & Kirim Ulang RAB"}
                 </button>
 
                 <button
@@ -1100,40 +1120,40 @@ function ActionPanel({
             <button
                 type="button"
                 onClick={onReviewVendorEstimate}
-                disabled={!canReview}
-                className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${canReview
+                disabled={submitting || !canReview}
+                className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${canReview && !submitting
                         ? "border-[#725F54] bg-[#725F54] text-white hover:bg-[#5A4A42]"
                         : "cursor-not-allowed border-[#E8E2D9] bg-white text-[#B8AEA5]"
                     }`}
             >
                 <ClipboardCheck size={15} />
-                Review Estimasi
+                {submitting && canReview ? "Memproses..." : "Review Estimasi"}
             </button>
 
             <button
                 type="button"
                 onClick={onSendRabToCustomer}
-                disabled={!canSendCustomer}
-                className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${canSendCustomer
+                disabled={submitting || !canSendCustomer}
+                className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${canSendCustomer && !submitting
                         ? "border-[#725F54] bg-[#725F54] text-white hover:bg-[#5A4A42]"
                         : "cursor-not-allowed border-[#E8E2D9] bg-white text-[#B8AEA5]"
                     }`}
             >
                 <Send size={15} />
-                Kirim Customer
+                {submitting && canSendCustomer ? "Mengirim..." : "Kirim Customer"}
             </button>
 
             <button
                 type="button"
                 onClick={onCreateInvoice}
-                disabled={!canCreateInvoice}
-                className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${canCreateInvoice
+                disabled={submitting || !canCreateInvoice}
+                className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${canCreateInvoice && !submitting
                         ? "border-[#725F54] bg-[#725F54] text-white hover:bg-[#5A4A42]"
                         : "cursor-not-allowed border-[#E8E2D9] bg-white text-[#B8AEA5]"
                     }`}
             >
                 <ArrowRight size={15} />
-                Buat Invoice
+                {submitting && canCreateInvoice ? "Memproses..." : "Buat Invoice"}
             </button>
         </div>
     );

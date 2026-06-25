@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { ArrowUp, Bot, ImageOff, Loader2, MessageSquare, Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
+import { ArrowUp, Bot, ImageOff, Loader2, MessageSquare, Plus, Sparkles, Trash2, Wand2, Maximize2, X, Download, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, RefObject } from "react";
@@ -17,6 +17,27 @@ import {
 import { uploadFileToStorage } from "@/lib/api/storage";
 import type { ChatMessage as DBChatMessage, ChatSession } from "@/lib/supabase/types";
 import { Markdown } from "./chat-markdown";
+
+// Puter.js global type (loaded via script tag, free image generation)
+// txt2img resolves to an HTMLImageElement; .src is already a data URL.
+declare global {
+  interface Window {
+    puter?: {
+      ai: {
+        txt2img: (options: {
+          prompt: string;
+          provider?: string;
+          model?: string;
+          testMode?: boolean;
+        }) => Promise<HTMLImageElement>;
+      };
+      auth: {
+        isSignedIn: () => boolean;
+        signIn: () => Promise<void>;
+      };
+    };
+  }
+}
 
 type ChatImage = {
   src: string;
@@ -104,13 +125,25 @@ export function AiChatView({ userId }: { userId: string }) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [chatMode, setChatMode] = useState<"instant" | "reasoning" | "image">("instant");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageIdRef = useRef(0);
+  // Track activeSessionId synchronously to avoid stale-closure bugs in async flows.
+  const activeSessionIdRef = useRef<string | null>(null);
+  const puterReadyRef = useRef(false);
+  const [greeting, setGreeting] = useState("Halo");
   // Saat true, effect pemuat pesan tidak boleh menimpa pesan optimistik
   // yang sedang dikirim (mencegah jawaban AI terhapus saat sesi baru dibuat).
   const suppressLoadRef = useRef(false);
+
+  // Keep ref in sync with state for synchronous reads in async callbacks.
+  const setActiveSessionIdSynced = (id: string | null) => {
+    activeSessionIdRef.current = id;
+    setActiveSessionId(id);
+  };
 
   const hasMessages = messages.length > 0;
 
@@ -138,20 +171,17 @@ export function AiChatView({ userId }: { userId: string }) {
     };
   };
 
-  const loadSessions = async () => {
+  const loadSessions = async (keepActiveId?: string) => {
     try {
       setIsLoadingHistory(true);
       const rows = await getChatSessions(userId);
       setSessions(rows);
 
-      if (rows.length > 0) {
-        const nextSessionId =
-          activeSessionId && rows.some((item) => item.id === activeSessionId)
-            ? activeSessionId
-            : rows[0].id;
-        setActiveSessionId(nextSessionId);
+      const idToKeep = keepActiveId ?? activeSessionIdRef.current;
+      if (idToKeep && rows.some((item) => item.id === idToKeep)) {
+        // Session still exists — keep it active without resetting messages
       } else {
-        setActiveSessionId(null);
+        setActiveSessionIdSynced(null);
         setMessages([]);
       }
     } catch {
@@ -194,11 +224,44 @@ export function AiChatView({ userId }: { userId: string }) {
     loadMessages();
   }, [activeSessionId]);
 
+  // Load Puter.js script once on mount for free image generation.
+  useEffect(() => {
+    if (typeof window === "undefined" || window.puter) {
+      puterReadyRef.current = !!window.puter;
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://js.puter.com/v2/";
+    script.async = true;
+    script.onload = () => { puterReadyRef.current = true; };
+    document.head.appendChild(script);
+    return () => {
+      // Don't remove — puter may be used across re-renders.
+    };
+  }, []);
+
   useEffect(() => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "auto";
     textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 116)}px`;
   }, [input]);
+
+  useEffect(() => {
+    const formatter = new Intl.DateTimeFormat("id-ID", {
+      timeZone: "Asia/Jakarta",
+      hour: "numeric",
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(new Date());
+    const hourPart = parts.find((p) => p.type === "hour");
+    if (hourPart) {
+      const h = parseInt(hourPart.value, 10);
+      if (h >= 4 && h < 11) setGreeting("Selamat Pagi");
+      else if (h >= 11 && h < 15) setGreeting("Selamat Siang");
+      else if (h >= 15 && h < 18) setGreeting("Selamat Sore");
+      else setGreeting("Selamat Malam");
+    }
+  }, []);
 
   // ---- Message state updaters ----------------------------------------------
 
@@ -288,20 +351,32 @@ export function AiChatView({ userId }: { userId: string }) {
     return fullText;
   };
 
-  // ---- Image generation -----------------------------------------------------
+  // ---- Image generation (via Puter.js — free, client-side) -------------------
 
   const requestImage = async (prompt: string): Promise<string> => {
-    const response = await fetch("/api/ai/image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
+    const fullPrompt = [
+      "Photorealistic interior design visualization.",
+      "High quality architectural render, realistic lighting, natural materials, clean composition.",
+      "No text, watermark, people, or logos.",
+      `Scene: ${prompt}`,
+    ].join(" ");
 
-    if (!response.ok) throw new Error(`Image API error ${response.status}`);
+    if (!puterReadyRef.current || !window.puter?.ai?.txt2img) {
+      throw new Error("Puter.js is not loaded yet. Please wait a moment.");
+    }
 
-    const data = await response.json();
-    if (!data?.image) throw new Error("No image returned");
-    return data.image as string;
+    try {
+      const imgEl = await window.puter.ai.txt2img({
+        prompt: fullPrompt,
+        provider: "openai-image-generation",
+        model: "gpt-image-1-mini",
+      });
+      if (!imgEl?.src) throw new Error("No image returned from Puter");
+      return imgEl.src;
+    } catch (puterErr: any) {
+      console.error("Puter image generation failed.", puterErr?.message || puterErr);
+      throw puterErr;
+    }
   };
 
   const persistImage = async (dataUrl: string, sessionId: string): Promise<string> => {
@@ -370,10 +445,15 @@ export function AiChatView({ userId }: { userId: string }) {
   // ---- Session helpers ------------------------------------------------------
 
   const ensureSession = async (message: string) => {
-    if (activeSession) return activeSession;
+    // Use ref for synchronous read — avoids stale closure when state hasn't re-rendered yet.
+    const currentId = activeSessionIdRef.current;
+    if (currentId) {
+      const existing = sessions.find((s) => s.id === currentId);
+      if (existing) return existing;
+    }
     const session = await createChatSession(userId, message.slice(0, 60) || "Percakapan Baru");
     setSessions((current) => [session, ...current]);
-    setActiveSessionId(session.id);
+    setActiveSessionIdSynced(session.id);
     return session;
   };
 
@@ -382,6 +462,17 @@ export function AiChatView({ userId }: { userId: string }) {
   const sendMessage = async (value?: string) => {
     const message = (value ?? input).trim();
     if (!message || isLoading) return;
+
+    // Pre-authenticate Puter.js (jika belum) pada saat user klik tombol "Kirim",
+    // agar pop-up login Puter tidak diblokir oleh browser (karena ini adalah respons langsung dari user gesture).
+    if (puterReadyRef.current && window.puter && !window.puter.auth.isSignedIn()) {
+      try {
+        await window.puter.auth.signIn();
+      } catch (authErr) {
+        console.warn("Puter auth cancelled or failed:", authErr);
+        // Tetap lanjut, biarkan gagal di requestImage nantinya atau mungkin user pakai text saja.
+      }
+    }
 
     const userMessage: ChatMessage = {
       id: createMessageId("user"),
@@ -417,7 +508,7 @@ export function AiChatView({ userId }: { userId: string }) {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: chatHistory }),
+        body: JSON.stringify({ messages: chatHistory, mode: chatMode }),
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -446,12 +537,14 @@ export function AiChatView({ userId }: { userId: string }) {
       const fallback =
         "Maaf, terjadi gangguan koneksi. Coba kirim ulang pesan dalam beberapa saat.";
       patchMessage(aiPlaceholder.id, { from: "ai", text: fallback });
-      if (activeSessionId) {
-        await addChatMessage(activeSessionId, "assistant", fallback).catch(() => null);
+      const currentId = activeSessionIdRef.current;
+      if (currentId) {
+        await addChatMessage(currentId, "assistant", fallback).catch(() => null);
       }
     } finally {
       setIsLoading(false);
-      await loadSessions();
+      // Pass the session ID we just used so loadSessions knows what to keep active.
+      await loadSessions(activeSessionIdRef.current ?? undefined);
       // Selesai kirim — izinkan lagi pemuatan pesan dari DB saat ganti sesi.
       suppressLoadRef.current = false;
     }
@@ -467,30 +560,40 @@ export function AiChatView({ userId }: { userId: string }) {
   // ---- Render ---------------------------------------------------------------
 
   return (
-    <div className="grid min-h-0 flex-1 bg-[#F8F6F2] lg:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="border-b border-[#E8E2D9] bg-white lg:min-h-0 lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between border-b border-[#E8E2D9] p-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7A7067]">
-              Riwayat Chat
-            </p>
-            <p className="mt-1 text-[13px] text-[#6B5B52]">Session tersimpan</p>
-          </div>
+    <div className={`grid min-h-0 flex-1 bg-[#F8F6F2] transition-all duration-300 ${isSidebarOpen ? "lg:grid-cols-[300px_minmax(0,1fr)]" : "grid-cols-1"}`}>
+      {isSidebarOpen && (
+        <aside className="flex flex-col border-b border-[#E8E2D9] bg-white lg:min-h-0 lg:border-b-0 lg:border-r">
+          <div className="flex items-center justify-between border-b border-[#E8E2D9] p-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7A7067]">
+                Riwayat Chat
+              </p>
+              <p className="mt-1 text-[13px] text-[#6B5B52]">Session tersimpan</p>
+            </div>
 
-          <button
-            type="button"
-            onClick={async () => {
-              const session = await createChatSession(userId, "Percakapan Baru");
-              setSessions((current) => [session, ...current]);
-              setActiveSessionId(session.id);
-              setMessages([]);
-            }}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-3 text-[12px] font-semibold text-[#6B5B52] transition hover:bg-white"
-          >
-            <Plus size={14} />
-            Baru
-          </button>
-        </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSessionIdSynced(null);
+                  setMessages([]);
+                }}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] px-2.5 text-[12px] font-semibold text-[#6B5B52] transition hover:bg-white"
+                title="Chat Baru"
+              >
+                <Plus size={14} />
+                Baru
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(false)}
+                className="grid h-9 w-9 place-items-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] text-[#6B5B52] transition hover:bg-white"
+                title="Tutup Sidebar"
+              >
+                <PanelLeftClose size={16} />
+              </button>
+            </div>
+          </div>
 
         <div className="max-h-[240px] overflow-y-auto p-3 lg:max-h-none lg:h-[calc(100vh-220px)]">
           {isLoadingHistory ? (
@@ -513,7 +616,7 @@ export function AiChatView({ userId }: { userId: string }) {
                   >
                     <button
                       type="button"
-                      onClick={() => setActiveSessionId(session.id)}
+                      onClick={() => setActiveSessionIdSynced(session.id)}
                       className="min-w-0 flex-1 text-left"
                     >
                       <p className="truncate text-[13px] font-semibold text-[#3D3530]">
@@ -530,9 +633,10 @@ export function AiChatView({ userId }: { userId: string }) {
                         await deleteChatSession(session.id).catch(() => null);
                         const remaining = sessions.filter((item) => item.id !== session.id);
                         setSessions(remaining);
-                        if (activeSessionId === session.id) {
-                          setActiveSessionId(remaining[0]?.id ?? null);
-                          if (remaining.length === 0) setMessages([]);
+                        if (activeSessionIdRef.current === session.id) {
+                          const nextId = remaining[0]?.id ?? null;
+                          setActiveSessionIdSynced(nextId);
+                          if (!nextId) setMessages([]);
                         }
                       }}
                       className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[#8B8179] transition hover:bg-[#F5F0EA] hover:text-[#6B5B52]"
@@ -546,14 +650,26 @@ export function AiChatView({ userId }: { userId: string }) {
           )}
         </div>
       </aside>
-
-      <div className="flex min-h-0 flex-1 flex-col">
+      )}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {!isSidebarOpen && (
+          <div className="absolute left-4 top-4 z-10">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(true)}
+              className="grid h-10 w-10 place-items-center rounded-xl border border-[#E8E2D9] bg-white text-[#6B5B52] shadow-sm transition hover:bg-gray-50"
+              title="Buka Sidebar"
+            >
+              <PanelLeftOpen size={18} />
+            </button>
+          </div>
+        )}
         {!hasMessages ? (
           <section className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
             <div className="w-full max-w-[820px]">
-              <div className="mx-auto max-w-[620px] text-center">
-                <h1 className="font-serif text-[30px] leading-tight text-[#2F2925] sm:text-[40px] lg:text-[44px]">
-                  Halo, adakah yang bisa dibantu?
+              <div className="mx-auto w-full text-center px-4">
+                <h1 className="font-serif text-[24px] leading-tight text-[#2F2925] sm:text-[28px] lg:text-[34px]">
+                  {greeting}, adakah yang bisa dibantu?
                 </h1>
               </div>
 
@@ -566,6 +682,8 @@ export function AiChatView({ userId }: { userId: string }) {
                   onKeyDown={handleKeyDown}
                   textareaRef={textareaRef}
                   variant="large"
+                  chatMode={chatMode}
+                  setChatMode={setChatMode}
                 />
               </div>
             </div>
@@ -574,25 +692,6 @@ export function AiChatView({ userId }: { userId: string }) {
           <>
             <section className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
               <div className="mx-auto w-full max-w-[760px] space-y-5">
-                <div className="sticky top-0 z-10 -mx-1 rounded-2xl border border-[#E8E2D9] bg-white/95 px-3 py-3 shadow-[0_8px_24px_rgba(49,51,44,0.035)] backdrop-blur-xl sm:mx-0 sm:px-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#6B5B52] text-white">
-                      <Bot size={16} />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <h1 className="truncate text-[14px] font-semibold text-[#3D3530]">
-                        {activeSession?.title || "VMatch AI"}
-                      </h1>
-                    </div>
-
-                    <span className="hidden shrink-0 items-center gap-1.5 rounded-full bg-[#F5F0EA] px-3 py-1 text-[11px] font-medium text-[#6B5B52] sm:inline-flex">
-                      <Sparkles size={12} />
-                      AI aktif
-                    </span>
-                  </div>
-                </div>
-
                 <div className="space-y-5 pb-2">
                   {messages.map((message, index) => (
                     <ChatBubble
@@ -607,7 +706,7 @@ export function AiChatView({ userId }: { userId: string }) {
               </div>
             </section>
 
-            <section className="shrink-0 border-t border-[#E8E2D9] bg-[#F8F6F2]/95 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
+            <section className="shrink-0 bg-[#F8F6F2]/95 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
               <div className="mx-auto w-full max-w-[760px]">
                 <ChatInputBox
                   input={input}
@@ -617,6 +716,8 @@ export function AiChatView({ userId }: { userId: string }) {
                   onKeyDown={handleKeyDown}
                   textareaRef={textareaRef}
                   variant="compact"
+                  chatMode={chatMode}
+                  setChatMode={setChatMode}
                 />
               </div>
             </section>
@@ -635,6 +736,8 @@ function ChatInputBox({
   onKeyDown,
   textareaRef,
   variant,
+  chatMode,
+  setChatMode,
 }: {
   input: string;
   setInput: (value: string) => void;
@@ -643,6 +746,8 @@ function ChatInputBox({
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   variant: "large" | "compact";
+  chatMode: "instant" | "reasoning" | "image";
+  setChatMode: (mode: "instant" | "reasoning" | "image") => void;
 }) {
   const isLarge = variant === "large";
 
@@ -669,8 +774,42 @@ function ChatInputBox({
         }`}
       />
 
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <span className="text-[11px] font-medium text-[#B8B2AA]">VMatch AI</span>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 rounded-full bg-[#FAF6F1] p-1 shadow-inner">
+          <button
+            type="button"
+            onClick={() => setChatMode("instant")}
+            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${
+              chatMode === "instant"
+                ? "bg-white text-[#3D3530] shadow-sm"
+                : "text-[#8B8179] hover:text-[#6B5B52]"
+            }`}
+          >
+            Instant
+          </button>
+          <button
+            type="button"
+            onClick={() => setChatMode("reasoning")}
+            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${
+              chatMode === "reasoning"
+                ? "bg-white text-[#3D3530] shadow-sm"
+                : "text-[#8B8179] hover:text-[#6B5B52]"
+            }`}
+          >
+            Reasoning
+          </button>
+          <button
+            type="button"
+            onClick={() => setChatMode("image")}
+            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${
+              chatMode === "image"
+                ? "bg-white text-[#3D3530] shadow-sm"
+                : "text-[#8B8179] hover:text-[#6B5B52]"
+            }`}
+          >
+            Image
+          </button>
+        </div>
 
         <button
           type="button"
@@ -689,24 +828,40 @@ function ChatInputBox({
 }
 
 function ThinkingIndicator() {
+  const texts = [
+    "Memahami konteks...",
+    "Mencari referensi terbaik...",
+    "Menyusun kerangka rencana...",
+    "Menganalisis gaya desain...",
+    "Memfinalisasi jawaban...",
+  ];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % texts.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="flex items-center text-[13px] font-medium sm:text-[14px]">
+    <div className="flex items-center text-[13px] font-extrabold tracking-wide sm:text-[14px]">
       <motion.span
         initial={{ backgroundPosition: "-200% center" }}
         animate={{ backgroundPosition: "200% center" }}
         transition={{
           repeat: Infinity,
-          duration: 3.5,
+          duration: 4.5,
           ease: "linear",
         }}
         style={{
-          background: "linear-gradient(110deg, #A8A199 0%, #3D3530 50%, #A8A199 100%)",
+          background: "linear-gradient(110deg, #B8B2AA 0%, #5A4A42 40%, #1A1412 50%, #5A4A42 60%, #B8B2AA 100%)",
           backgroundSize: "200% auto",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
         }}
       >
-        Thinking
+        {texts[index]}
       </motion.span>
     </div>
   );
@@ -745,6 +900,8 @@ function GeneratingImageCard({ caption }: { caption: string }) {
 }
 
 function GenerationBlock({ generation }: { generation: ChatGeneration }) {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
   if (generation.status === "pending") {
     return <GeneratingImageCard caption={generation.caption} />;
   }
@@ -759,20 +916,68 @@ function GenerationBlock({ generation }: { generation: ChatGeneration }) {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="mt-3 w-full max-w-[340px]"
-    >
-      <div className="overflow-hidden rounded-2xl border border-[#E8E2D9] bg-[#F5F0EA] shadow-[0_10px_28px_rgba(49,51,44,0.08)]">
-        <img src={generation.src} alt={generation.caption} className="h-auto w-full object-cover" />
-      </div>
-      <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-[#8B8179]">
-        <Sparkles size={11} />
-        {generation.caption}
-      </p>
-    </motion.div>
+    <>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="mt-3 w-full max-w-[340px]"
+      >
+        <button
+          type="button"
+          onClick={() => setIsPreviewOpen(true)}
+          className="group relative block w-full overflow-hidden rounded-2xl border border-[#E8E2D9] bg-[#F5F0EA] shadow-[0_10px_28px_rgba(49,51,44,0.08)]"
+        >
+          <img
+            src={generation.src}
+            alt={generation.caption}
+            className="h-auto w-full object-cover transition duration-300 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition duration-300 group-hover:bg-black/10">
+            <span className="rounded-full bg-black/50 p-2 text-white opacity-0 transition group-hover:opacity-100">
+              <Maximize2 size={16} />
+            </span>
+          </div>
+        </button>
+        <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-[#8B8179]">
+          <Sparkles size={11} />
+          {generation.caption}
+        </p>
+      </motion.div>
+
+      {isPreviewOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm sm:p-8"
+          onClick={() => setIsPreviewOpen(false)}
+        >
+          <button
+            className="absolute right-4 top-4 text-white/70 transition hover:text-white"
+            onClick={() => setIsPreviewOpen(false)}
+            aria-label="Tutup preview"
+          >
+            <X size={28} />
+          </button>
+          
+          <img
+            src={generation.src}
+            alt={generation.caption}
+            className="max-h-full max-w-full rounded-md object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          
+          <a
+            href={generation.src}
+            download={`VMatch-AI-${generation.caption.replace(/\s+/g, "-")}.png`}
+            target="_blank"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-8 flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[14px] font-semibold text-[#3D3530] shadow-xl transition hover:scale-105 hover:bg-gray-50"
+          >
+            <Download size={16} />
+            Download Gambar
+          </a>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -790,12 +995,8 @@ function ChatBubble({ message, isLoading }: { message: ChatMessage; isLoading: b
   const showThinking = !message.text && isLoading;
 
   return (
-    <div className="flex min-w-0 items-start gap-3">
-      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#6B5B52] text-white sm:h-9 sm:w-9">
-        <Bot size={15} />
-      </div>
-
-      <div className="min-w-0 max-w-[88%] rounded-2xl rounded-tl-md border border-[#E8E2D9] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(49,51,44,0.035)] sm:max-w-[76%]">
+    <div className="flex w-full items-start gap-3">
+      <div className="min-w-0 flex-1 text-[#3D3530] py-1">
         {showThinking ? <ThinkingIndicator /> : message.text ? <Markdown content={message.text} /> : null}
 
         {message.images && message.images.length > 0 && (

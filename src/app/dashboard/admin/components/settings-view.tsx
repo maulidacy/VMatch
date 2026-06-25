@@ -20,6 +20,9 @@ import type { LucideIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { updateProfile } from "@/lib/api/profiles";
+import type { Profile } from "@/lib/supabase/types";
+import { toast } from "sonner";
 
 import { AdminSectionCard } from "./shared";
 
@@ -62,9 +65,10 @@ const settingTabs: SettingTabItem[] = [
 const inputClass =
   "h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 text-[13px] font-medium text-[#31332C] outline-none transition placeholder:text-[#B8AEA5] focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10";
 
-export function SettingsView({ userEmail, userName }: { userEmail: string; userName: string }) {
+export function SettingsView({ userEmail, userName, profile }: { userEmail: string; userName: string, profile: Profile }) {
   const [activeTab, setActiveTab] = useState<SettingTab>("Profil");
   const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -73,22 +77,52 @@ export function SettingsView({ userEmail, userName }: { userEmail: string; userN
     router.refresh();
   };
 
-  const [adminName, setAdminName] = useState(userName || "Admin VMatch");
+  const [adminName, setAdminName] = useState(profile.full_name || userName || "Admin VMatch");
   const [adminEmail, setAdminEmail] = useState(userEmail || "admin@vmatch.id");
   const [adminRole, setAdminRole] = useState("Super Admin");
-  const [adminPhone, setAdminPhone] = useState("0812-0000-0000");
+  const [adminPhone, setAdminPhone] = useState(profile.phone || "0812-0000-0000");
+  
+  // @ts-ignore
+  const userSettings = profile.settings || {};
+  
   const [profileNote, setProfileNote] = useState(
-    "Akun ini digunakan untuk mengelola operasional utama VMatch, mulai dari request proyek, vendor partner, konsultasi, hingga pembayaran.",
+    userSettings.profileNote || "Akun ini digunakan untuk mengelola operasional utama VMatch, mulai dari request proyek, vendor partner, konsultasi, hingga pembayaran.",
   );
 
-  const [projectNotification, setProjectNotification] = useState(true);
-  const [paymentNotification, setPaymentNotification] = useState(true);
-  const [vendorNotification, setVendorNotification] = useState(true);
-  const [systemNotification, setSystemNotification] = useState(false);
+  const [projectNotification, setProjectNotification] = useState(userSettings.projectNotification ?? true);
+  const [paymentNotification, setPaymentNotification] = useState(userSettings.paymentNotification ?? true);
+  const [vendorNotification, setVendorNotification] = useState(userSettings.vendorNotification ?? true);
+  const [systemNotification, setSystemNotification] = useState(userSettings.systemNotification ?? false);
 
-  const [autoBackup, setAutoBackup] = useState(true);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [publicRegistration, setPublicRegistration] = useState(true);
+  const [autoBackup, setAutoBackup] = useState(userSettings.autoBackup ?? true);
+  const [maintenanceMode, setMaintenanceMode] = useState(userSettings.maintenanceMode ?? false);
+  const [publicRegistration, setPublicRegistration] = useState(userSettings.publicRegistration ?? true);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateProfile(profile.id, {
+        full_name: adminName,
+        phone: adminPhone,
+        // @ts-ignore
+        settings: {
+          profileNote,
+          projectNotification,
+          paymentNotification,
+          vendorNotification,
+          systemNotification,
+          autoBackup,
+          maintenanceMode,
+          publicRegistration
+        }
+      });
+      toast.success("Pengaturan berhasil disimpan");
+    } catch {
+      toast.error("Gagal menyimpan pengaturan");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const activeTabData =
     settingTabs.find((item) => item.id === activeTab) ?? settingTabs[0];
@@ -109,10 +143,12 @@ export function SettingsView({ userEmail, userName }: { userEmail: string; userN
 
         <button
           type="button"
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42] sm:w-fit"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#725F54] px-5 text-[13px] font-semibold text-white transition hover:bg-[#5A4A42] sm:w-fit disabled:opacity-70"
         >
           <Save size={16} />
-          Simpan Perubahan
+          {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
         </button>
 
         <button
@@ -369,7 +405,7 @@ export function SettingsView({ userEmail, userName }: { userEmail: string; userN
                     title="Request Proyek"
                     description="Notifikasi saat customer mengajukan proyek baru."
                     checked={projectNotification}
-                    onChange={() => setProjectNotification((value) => !value)}
+                    onChange={() => setProjectNotification((v: boolean) => !v)}
                   />
 
                   <SettingToggle
@@ -377,7 +413,7 @@ export function SettingsView({ userEmail, userName }: { userEmail: string; userN
                     title="Pembayaran"
                     description="Notifikasi invoice, pembayaran, dan jatuh tempo."
                     checked={paymentNotification}
-                    onChange={() => setPaymentNotification((value) => !value)}
+                    onChange={() => setPaymentNotification((v: boolean) => !v)}
                   />
 
                   <SettingToggle
@@ -385,7 +421,7 @@ export function SettingsView({ userEmail, userName }: { userEmail: string; userN
                     title="Vendor Partner"
                     description="Notifikasi evaluasi vendor dan update proyek."
                     checked={vendorNotification}
-                    onChange={() => setVendorNotification((value) => !value)}
+                    onChange={() => setVendorNotification((v: boolean) => !v)}
                   />
 
                   <SettingToggle
@@ -393,7 +429,7 @@ export function SettingsView({ userEmail, userName }: { userEmail: string; userN
                     title="Sistem"
                     description="Notifikasi backup, maintenance, dan pembaruan sistem."
                     checked={systemNotification}
-                    onChange={() => setSystemNotification((value) => !value)}
+                    onChange={() => setSystemNotification((v: boolean) => !v)}
                   />
                 </div>
               </AdminSectionCard>
@@ -434,7 +470,7 @@ export function SettingsView({ userEmail, userName }: { userEmail: string; userN
                     title="Auto Backup"
                     description="Backup data dashboard secara otomatis setiap hari."
                     checked={autoBackup}
-                    onChange={() => setAutoBackup((value) => !value)}
+                    onChange={() => setAutoBackup((v: boolean) => !v)}
                   />
 
                   <SettingToggle
@@ -442,7 +478,7 @@ export function SettingsView({ userEmail, userName }: { userEmail: string; userN
                     title="Public Registration"
                     description="Izinkan customer baru mendaftar melalui halaman publik."
                     checked={publicRegistration}
-                    onChange={() => setPublicRegistration((value) => !value)}
+                    onChange={() => setPublicRegistration((v: boolean) => !v)}
                   />
 
                   <SettingToggle
@@ -450,7 +486,7 @@ export function SettingsView({ userEmail, userName }: { userEmail: string; userN
                     title="Maintenance Mode"
                     description="Nonaktifkan akses sementara untuk proses maintenance."
                     checked={maintenanceMode}
-                    onChange={() => setMaintenanceMode((value) => !value)}
+                    onChange={() => setMaintenanceMode((v: boolean) => !v)}
                   />
                 </div>
               </AdminSectionCard>

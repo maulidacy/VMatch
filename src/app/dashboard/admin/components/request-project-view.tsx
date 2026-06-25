@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getProjectRequests, getProjects, updateProjectRequest, createProject } from "@/lib/api/projects";
+import { getProjectRequests, getProjects, updateProjectRequest, createProject, getBriefs, updateBrief } from "@/lib/api/projects";
 import { getVendors } from "@/lib/api/profiles";
 import type { ProjectRequest as DBRequest, Profile } from "@/lib/supabase/types";
 import { toast } from "sonner";
@@ -213,6 +213,7 @@ export function RequestProjectView({
     const [activeTab, setActiveTab] = useState<RequestTab>("Semua");
     const [keyword, setKeyword] = useState("");
     const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
 
     const loadRequests = useCallback(async () => {
         try {
@@ -346,11 +347,13 @@ export function RequestProjectView({
         id: string,
         updater: (request: ProjectRequest) => ProjectRequest,
     ) => {
+        if (submitting) return;
         const currentRequest = requests.find(r => r.id === id);
         if (!currentRequest) return;
         const newData = updater(currentRequest);
         
         try {
+            setSubmitting(true);
             await updateProjectRequest(id, {
                 status: newData.status,
                 admin_note: newData.adminNote || null,
@@ -363,6 +366,8 @@ export function RequestProjectView({
             );
         } catch {
             toast.error("Gagal menyimpan perubahan ke database.");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -385,18 +390,6 @@ export function RequestProjectView({
                 setActiveTab("Estimasi");
             }
             if (status === "Menjadi Proyek Aktif") {
-                const req = requests.find((r) => r.id === id);
-                if (req) {
-                    await createProject({
-                        customer_id: req.customerId,
-                        vendor_id: req.selectedVendorId || null,
-                        title: req.title,
-                        project_type: req.projectType,
-                        location: req.location,
-                        status: "Persiapan",
-                        progress: 0,
-                    });
-                }
                 setActiveTab("Aktif");
                 setFeedbackMessage(
                     "Request berhasil dijadikan proyek aktif. Klik tombol di bawah untuk melihat di halaman Proyek Aktif.",
@@ -417,6 +410,8 @@ export function RequestProjectView({
                     : request.briefDocumentStatus,
             briefDocumentUpdatedAt: "Baru saja",
         }));
+
+        localStorage.setItem("pendingBriefRequestId", requestId);
 
         setFeedbackMessage(
             "Halaman Brief & Dokumen dibuka. Lengkapi brief sebelum dikirim ke vendor.",
@@ -450,7 +445,8 @@ export function RequestProjectView({
         setFeedbackMessage("Vendor berhasil dipilih untuk request ini.");
     };
 
-    const sendBriefToVendor = () => {
+    const sendBriefToVendor = async () => {
+        if (submitting) return;
         if (!selectedRequest?.selectedVendorId || !isBriefReadyForVendor(selectedRequest)) {
             setFeedbackMessage(
                 "Lengkapi dan tandai dokumen brief siap sebelum dikirim ke vendor.",
@@ -458,21 +454,47 @@ export function RequestProjectView({
             return;
         }
 
-        updateRequest(selectedRequest.id, (request) => ({
-            ...request,
-            status: "Menunggu Estimasi Vendor",
-            briefDocumentStatus: "Brief Dikirim",
-            briefDocumentUpdatedAt: "Baru saja",
-            sentToVendorAt: "Baru saja",
-            lastMessage:
-                "Brief berhasil dikirim ke vendor. Vendor dapat melihat brief di Vendor Panel dan mengirim estimasi RAB kepada admin.",
-        })).then(() => {
+        try {
+            setSubmitting(true);
+            const allBriefs = await getBriefs();
+            const existingBrief = allBriefs.find(b => b.request_id === selectedRequest.id);
+            if (existingBrief) {
+                await updateBrief(existingBrief.id, {
+                    status: "Dikirim ke Vendor",
+                    vendor_id: selectedRequest.selectedVendorId,
+                });
+            } else {
+                toast.error("Gagal mengirim: Dokumen brief belum dibuat di database. Buka Brief & Dokumen terlebih dahulu.");
+                setSubmitting(false);
+                return;
+            }
+
+            await updateProjectRequest(selectedRequest.id, {
+                status: "Menunggu Estimasi Vendor",
+                brief_document_status: "Brief Dikirim",
+                sent_to_vendor_at: new Date().toISOString(),
+            });
+
+            setRequests((current) =>
+                current.map((request) => (request.id === selectedRequest.id ? {
+                    ...request,
+                    status: "Menunggu Estimasi Vendor",
+                    briefDocumentStatus: "Brief Dikirim",
+                    sentToVendorAt: "Baru saja",
+                    lastMessage: "Brief berhasil dikirim ke vendor. Vendor dapat melihat brief di Vendor Panel dan mengirim estimasi RAB kepada admin.",
+                } : request)),
+            );
+
             setActiveTab("Vendor");
             setFeedbackMessage(
                 "Brief berhasil dikirim ke vendor. Vendor dapat melihat brief di Vendor Panel.",
             );
             toast.success("Brief berhasil dikirim ke vendor.");
-        });
+        } catch {
+            toast.error("Terjadi kesalahan saat mengirim brief ke vendor.");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     if (selectedRequest) {
@@ -499,6 +521,7 @@ export function RequestProjectView({
                 onOpenConsultation={() => onChangePage?.("consultations")}
                 onOpenRabBuilder={() => onChangePage?.("rab-builder")}
                 onOpenActiveProjects={() => onChangePage?.("active-projects")}
+                submitting={submitting}
             />
         );
     }
@@ -627,6 +650,7 @@ function RequestDetailPage({
     onOpenConsultation,
     onOpenRabBuilder,
     onOpenActiveProjects,
+    submitting,
 }: {
     request: ProjectRequest;
     selectedVendor: VendorRecommendation | null;
@@ -649,6 +673,7 @@ function RequestDetailPage({
     onOpenConsultation: () => void;
     onOpenRabBuilder: () => void;
     onOpenActiveProjects: () => void;
+    submitting?: boolean;
 }) {
     const canOpenRab =
         request.status === "Estimasi Dikirim Vendor" ||
@@ -698,7 +723,8 @@ function RequestDetailPage({
                                 onChange={(event) =>
                                     onStatusChange(event.target.value as RequestStatus)
                                 }
-                                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                                disabled={submitting}
+                                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {statusOptions.map((status) => (
                                     <option key={status} value={status}>
@@ -787,7 +813,7 @@ function RequestDetailPage({
                     onMarkBriefReady={onMarkBriefReady}
                 />
 
-                <VendorMatchingSection
+                <RequestBriefSection
                     request={request}
                     vendors={vendorRecommendations}
                     selectedVendor={selectedVendor}
@@ -803,6 +829,7 @@ function RequestDetailPage({
                     onSelectVendor={onSelectVendor}
                     onSendBrief={onSendBrief}
                     onOpenActiveProjects={onOpenActiveProjects}
+                    submitting={submitting}
                 />
             </section>
 
@@ -810,7 +837,8 @@ function RequestDetailPage({
                 <button
                     type="button"
                     onClick={onOpenConsultation}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                    disabled={submitting}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <MessageCircle size={15} />
                     Jadwalkan Konsultasi
@@ -819,12 +847,12 @@ function RequestDetailPage({
                 <button
                     type="button"
                     onClick={onOpenRabBuilder}
-                    disabled={!canOpenRab}
+                    disabled={!canOpenRab || submitting}
                     className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
                         canOpenRab
                             ? "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
                             : "cursor-not-allowed border-[#E8E2D9] bg-white text-[#B8AEA5]"
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                     <FileText size={15} />
                     Buka RAB Builder
@@ -833,7 +861,6 @@ function RequestDetailPage({
         </div>
     );
 }
-
 
 function BriefDocumentActionCard({
     status,
@@ -915,7 +942,7 @@ function BriefDocumentActionCard({
     );
 }
 
-function VendorMatchingSection({
+function RequestBriefSection({
     request,
     vendors,
     selectedVendor,
@@ -931,6 +958,7 @@ function VendorMatchingSection({
     onSelectVendor,
     onSendBrief,
     onOpenActiveProjects,
+    submitting,
 }: {
     request: ProjectRequest;
     vendors: VendorRecommendation[];
@@ -947,6 +975,7 @@ function VendorMatchingSection({
     onSelectVendor: (vendorId: string) => void;
     onSendBrief: () => void;
     onOpenActiveProjects: () => void;
+    submitting?: boolean;
 }) {
     const isActiveProject = request.status === "Menjadi Proyek Aktif";
     return (
@@ -970,15 +999,15 @@ function VendorMatchingSection({
                 <button
                     type="button"
                     onClick={onSendBrief}
-                    disabled={!request.selectedVendorId || !isBriefReadyForVendor(request)}
+                    disabled={!request.selectedVendorId || !isBriefReadyForVendor(request) || submitting}
                     className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
                         request.selectedVendorId && isBriefReadyForVendor(request)
                             ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
                             : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
-                        }`}
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                     <Send size={14} />
-                    Kirim Brief ke Vendor
+                    {submitting ? "Mengirim..." : "Kirim Brief ke Vendor"}
                 </button>
             </div>
 

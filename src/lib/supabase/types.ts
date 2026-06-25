@@ -19,6 +19,7 @@ export type Profile = {
   preferences: string | null;
   status: string;
   notes: string | null;
+  settings?: any;
   created_at: string;
   updated_at: string;
 };
@@ -49,6 +50,7 @@ export type ProjectRequest = {
   sent_to_vendor_at: string | null;
   submitted_at: string;
   updated_at: string;
+  uploaded_files?: string[] | null;
   // Joined fields
   customer?: Profile;
   vendor?: Profile;
@@ -76,6 +78,7 @@ export type Project = {
   current_stage: string | null;
   next_task: string | null;
   admin_note: string | null;
+  revisions?: any;
   created_at: string;
   updated_at: string;
   // Joined
@@ -245,6 +248,7 @@ export type QcChecklist = {
   project_id: string;
   items: { label: string; completed: boolean }[];
   admin_note: string | null;
+  customer_note?: string | null;
   customer_approved_at: string | null;
   status: string;
   created_at: string;

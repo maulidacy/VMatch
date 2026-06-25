@@ -56,6 +56,7 @@ export default function AdminDashboardPage() {
 
   const currentTitle = pageTitles[activePage] ?? "Dashboard";
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const activeTitle = useMemo(() => {
     const item = adminMenuGroups
@@ -69,6 +70,13 @@ export default function AdminDashboardPage() {
     setActivePage(page);
     setSidebarOpen(false);
   };
+
+  useEffect(() => {
+    if (!user) return;
+    getNotifications(user.id).then((notifs) => {
+      setUnreadCount(notifs.filter((n) => !n.is_read).length);
+    }).catch(() => {});
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -102,7 +110,7 @@ export default function AdminDashboardPage() {
         <AdminHeader
           title={currentTitle}
           onOpenSidebar={() => setSidebarOpen(true)}
-          notificationCount={3}
+          notificationCount={unreadCount}
           onOpenNotifications={() => handleChangePage("notifications")}
         />
 
@@ -150,7 +158,7 @@ export default function AdminDashboardPage() {
           {activePage === "notifications" && (
             <NotificationView />
           )}
-          {activePage === "settings" && <SettingsView userEmail={userEmail} userName={userName} />}
+          {activePage === "settings" && <SettingsView userEmail={userEmail} userName={userName} profile={profile} />}
 
           {activePage !== "dashboard" &&
             activePage !== "promo" &&

@@ -102,6 +102,7 @@ export function MeetingView({ userId }: { userId: string }) {
   const [notice, setNotice] = useState("");
   const [dynamicProjectOptions, setDynamicProjectOptions] = useState<string[]>(projectOptions);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   // Fetch consultations and projects from DB
   const loadData = useCallback(async () => {
@@ -230,6 +231,7 @@ export function MeetingView({ userId }: { userId: string }) {
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (
       !form.projectName ||
       !form.topic ||
@@ -242,6 +244,7 @@ export function MeetingView({ userId }: { userId: string }) {
     }
 
     try {
+      setSubmitting(true);
       if (editingId) {
         // Reschedule: update existing consultation
         await updateConsultation(editingId, {
@@ -279,11 +282,15 @@ export function MeetingView({ userId }: { userId: string }) {
       await loadData(); // Refresh from DB
     } catch {
       setFormError("Gagal mengirim. Silakan coba lagi.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleCancelSchedule = async (id: string) => {
+    if (submitting) return;
     try {
+      setSubmitting(true);
       await updateConsultation(id, {
         status: "Dibatalkan",
         meeting_link: null,
@@ -295,6 +302,8 @@ export function MeetingView({ userId }: { userId: string }) {
       await loadData();
     } catch {
       setNotice("Gagal membatalkan. Silakan coba lagi.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -404,14 +413,15 @@ export function MeetingView({ userId }: { userId: string }) {
       </section>
 
       {isModalOpen && (
-        <ConsultationModal
+        <FormModal
           form={form}
-          editing={Boolean(editingId)}
+          editing={!!editingId}
           error={formError}
           projectOptions={dynamicProjectOptions}
           onChange={updateForm}
           onClose={closeModal}
           onSubmit={handleSubmit}
+          submitting={submitting}
         />
       )}
     </div>
@@ -422,10 +432,12 @@ function ConsultationCard({
   item,
   onReschedule,
   onCancel,
+  submitting,
 }: {
   item: Consultation;
   onReschedule: () => void;
   onCancel: () => void;
+  submitting?: boolean;
 }) {
   const confirmed = item.status === "Terkonfirmasi";
   const finished = item.status === "Selesai" || item.status === "Dibatalkan";
@@ -511,7 +523,8 @@ function ConsultationCard({
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-4 text-[12px] font-semibold text-[#31332C] transition hover:bg-[#FCFBF9]"
+            disabled={submitting}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] px-4 text-[12px] font-semibold text-[#31332C] transition hover:bg-[#FCFBF9] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Ban size={14} />
             Batalkan
@@ -522,14 +535,15 @@ function ConsultationCard({
   );
 }
 
-function ConsultationModal({
+function FormModal({
   form,
   editing,
   error,
-  projectOptions: modalProjectOptions,
+  projectOptions,
   onChange,
   onClose,
   onSubmit,
+  submitting,
 }: {
   form: ConsultationForm;
   editing: boolean;
@@ -538,6 +552,7 @@ function ConsultationModal({
   onChange: (key: keyof ConsultationForm, value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
+  submitting: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-end bg-black/35 p-0 backdrop-blur-sm sm:place-items-center sm:p-4">
@@ -581,7 +596,7 @@ function ConsultationModal({
               onChange={(value) => onChange("projectName", value)}
             >
               <option value="">Pilih proyek</option>
-              {modalProjectOptions.map((item: string) => (
+              {projectOptions.map((item: string) => (
                 <option key={item}>{item}</option>
               ))}
             </SelectInput>
@@ -649,7 +664,8 @@ function ConsultationModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-xl border border-[#E4D8CD] px-5 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+            disabled={submitting}
+            className="h-11 rounded-xl border border-[#E4D8CD] px-5 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Batal
           </button>
@@ -657,9 +673,10 @@ function ConsultationModal({
           <button
             type="button"
             onClick={onSubmit}
-            className="h-11 rounded-xl bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+            disabled={submitting}
+            className="h-11 rounded-xl bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Kirim Pengajuan
+            {submitting ? "Mengirim..." : (editing ? "Ubah Jadwal" : "Kirim Pengajuan")}
           </button>
         </div>
       </section>

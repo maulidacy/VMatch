@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getProjects, updateProject, getQcChecklist, upsertQcChecklist } from "@/lib/api/projects";
-import type { Project as DBProject, QcChecklist as DBQcChecklist } from "@/lib/supabase/types";
+import { getProjects, updateProject, getQcChecklist, upsertQcChecklist, getProgressLogs } from "@/lib/api/projects";
+import type { Project as DBProject, QcChecklist as DBQcChecklist, ProgressLog as DBProgressLog } from "@/lib/supabase/types";
 import { toast } from "sonner";
 
 type ProgressStatus =
@@ -114,6 +114,7 @@ export function ProgressQcView() {
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const [adminNoteDraft, setAdminNoteDraft] = useState("");
   const [isAdminNoteSaved, setIsAdminNoteSaved] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const loadLogs = useCallback(async () => {
     try {
@@ -165,17 +166,39 @@ export function ProgressQcView() {
     setIsAdminNoteSaved(false);
 
     try {
-      const qc = await getQcChecklist(log.id);
-      if (qc && qc.items) {
-        updateLog(log.id, (l) => ({
-          ...l,
-          qcChecklist: (qc.items as any[]).map((item, index) => ({
-            id: `qc-${index}`,
-            label: item.label,
-            checked: item.completed,
-          })),
+      const [qc, pLogs] = await Promise.all([
+        getQcChecklist(log.id).catch(() => null),
+        getProgressLogs(log.id).catch(() => [] as DBProgressLog[])
+      ]);
+      
+      const newPhotos = pLogs
+        .filter(l => l.photo_path)
+        .map(l => ({
+          id: l.id,
+          title: l.photo_label || "Foto Progress",
+          description: l.work_summary || "Tidak ada deskripsi",
+          date: new Date(l.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+          path: l.photo_path
         }));
-      }
+
+      const newTimeline = pLogs.map(l => ({
+        id: l.id,
+        title: l.status,
+        description: l.work_summary || "Update progress",
+        time: new Date(l.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        type: l.status === "Ada Kendala" ? "issue" : (l.progress_percent >= 100 ? "done" : "update") as "update" | "qc" | "issue" | "done"
+      }));
+
+      updateLog(log.id, (l) => ({
+        ...l,
+        photos: newPhotos as any[], // Casting to bypass strict type for now as we added 'path'
+        timeline: newTimeline,
+        qcChecklist: (qc?.items as any[])?.map((item, index) => ({
+          id: `qc-${index}`,
+          label: item.label,
+          checked: item.completed,
+        })) || l.qcChecklist,
+      }));
     } catch {
       // silent
     }
@@ -204,6 +227,7 @@ export function ProgressQcView() {
   };
 
   const updateChecklist = async (id: string, checkId: string) => {
+    if (submitting) return;
     const log = logs.find((l) => l.id === id);
     if (!log) return;
 
@@ -217,6 +241,7 @@ export function ProgressQcView() {
     );
 
     try {
+      setSubmitting(true);
       await upsertQcChecklist({
         project_id: id,
         items: newChecklist.map((c) => ({
@@ -230,10 +255,13 @@ export function ProgressQcView() {
       }));
     } catch {
       toast.error("Gagal menyimpan checklist QC.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const updateStatus = async (id: string, status: ProgressStatus) => {
+    if (submitting) return;
     const log = logs.find((l) => l.id === id);
     if (!log) return;
 
@@ -241,6 +269,7 @@ export function ProgressQcView() {
     const newStage = status === "Selesai" ? "Selesai" : log.currentStage;
 
     try {
+      setSubmitting(true);
       await updateProject(id, {
         status,
         progress: newProgress,
@@ -267,13 +296,16 @@ export function ProgressQcView() {
       toast.success(`Status berhasil diubah menjadi ${status}`);
     } catch {
       toast.error("Gagal mengubah status proyek.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const saveAdminNote = async () => {
-    if (!selectedLog) return;
+    if (!selectedLog || submitting) return;
 
     try {
+      setSubmitting(true);
       await updateProject(selectedLog.id, {
         admin_note: adminNoteDraft,
       });
@@ -287,6 +319,8 @@ export function ProgressQcView() {
       toast.success("Catatan admin berhasil disimpan.");
     } catch {
       toast.error("Gagal menyimpan catatan admin.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -296,6 +330,7 @@ export function ProgressQcView() {
         log={selectedLog}
         adminNoteDraft={adminNoteDraft}
         isAdminNoteSaved={isAdminNoteSaved}
+        submitting={submitting}
         onBack={closeDetail}
         onChangeAdminNote={(value) => {
           setAdminNoteDraft(value);
@@ -417,6 +452,7 @@ function ProgressDetailPage({
   log,
   adminNoteDraft,
   isAdminNoteSaved,
+  submitting = false,
   onBack,
   onChangeAdminNote,
   onSaveAdminNote,
@@ -426,6 +462,7 @@ function ProgressDetailPage({
   log: ProgressLog;
   adminNoteDraft: string;
   isAdminNoteSaved: boolean;
+  submitting?: boolean;
   onBack: () => void;
   onChangeAdminNote: (value: string) => void;
   onSaveAdminNote: () => void;
@@ -474,10 +511,11 @@ function ProgressDetailPage({
             <div className="relative mt-3">
               <select
                 value={log.status}
+                disabled={submitting}
                 onChange={(event) =>
                   onStatusChange(event.target.value as ProgressStatus)
                 }
-                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10 disabled:opacity-50"
               >
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
@@ -585,14 +623,22 @@ function ProgressDetailPage({
             description="Foto atau catatan visual yang dikirim vendor."
           >
             <div className="grid gap-3">
-              {log.photos.map((photo) => (
+              {log.photos.map((photo: any) => (
                 <div
                   key={photo.id}
                   className="flex min-w-0 gap-3 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-3"
                 >
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
-                    <ImageIcon size={17} />
-                  </div>
+                  {photo.path ? (
+                    <img
+                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vmatch-files/${photo.path}`}
+                      alt={photo.title}
+                      className="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-[#E8E2D9]"
+                    />
+                  ) : (
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#725F54] ring-1 ring-[#E8E2D9]">
+                      <ImageIcon size={17} />
+                    </div>
+                  )}
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-semibold text-[#31332C]">
@@ -661,14 +707,14 @@ function ProgressDetailPage({
               <button
                 type="button"
                 onClick={onSaveAdminNote}
-                disabled={!isAdminNoteChanged}
-                className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${isAdminNoteChanged
+                disabled={submitting || !isAdminNoteChanged}
+                className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${isAdminNoteChanged && !submitting
                     ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
                     : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
                   }`}
               >
                 <Save size={14} />
-                Simpan Catatan
+                {submitting ? "Menyimpan..." : "Simpan Catatan"}
               </button>
             </div>
           </DetailBlock>
@@ -701,7 +747,8 @@ function ProgressDetailPage({
                 key={item.id}
                 type="button"
                 onClick={() => onChecklistToggle(item.id)}
-                className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${item.checked
+                disabled={submitting}
+                className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition disabled:opacity-70 ${item.checked
                     ? "border-[#725F54] bg-[#F4EEE8]"
                     : "border-[#E8E2D9] bg-[#FCFBF9] hover:bg-white"
                   }`}
@@ -730,19 +777,21 @@ function ProgressDetailPage({
         <button
           type="button"
           onClick={() => onStatusChange("Butuh QC")}
-          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${log.status === "Butuh QC"
+          disabled={submitting}
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition disabled:opacity-50 ${log.status === "Butuh QC"
               ? "border-[#725F54] bg-[#725F54] text-white"
               : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
             }`}
         >
           <ClipboardCheck size={15} />
-          Butuh QC
+          {submitting && log.status !== "Butuh QC" ? "Memproses..." : "Butuh QC"}
         </button>
 
         <button
           type="button"
           onClick={() => onStatusChange("Ada Kendala")}
-          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${log.status === "Ada Kendala"
+          disabled={submitting}
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition disabled:opacity-50 ${log.status === "Ada Kendala"
               ? "border-[#725F54] bg-[#725F54] text-white"
               : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
             }`}
@@ -754,7 +803,8 @@ function ProgressDetailPage({
         <button
           type="button"
           onClick={() => onStatusChange("Selesai")}
-          className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${log.status === "Selesai"
+          disabled={submitting}
+          className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition disabled:opacity-50 sm:col-span-1 ${log.status === "Selesai"
               ? "border-[#725F54] bg-[#725F54] text-white"
               : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
             }`}

@@ -130,6 +130,7 @@ export function InvoicePaymentsView() {
   );
   const [invoiceDraft, setInvoiceDraft] = useState<InvoiceDraft | null>(null);
   const [isInvoiceSaved, setIsInvoiceSaved] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const loadInvoices = useCallback(async () => {
     try {
@@ -263,43 +264,46 @@ export function InvoicePaymentsView() {
   };
 
   const updateStatus = async (id: string, status: PaymentStatus) => {
+    if (submitting) return;
     try {
+      setSubmitting(true);
       await updateInvoiceRecord(id, { status });
-    } catch (error) {
-      toast.error("Gagal mengirim invoice.");
-      loadInvoices();
-      return;
-    }
+      updateInvoice(id, (invoice) => {
+        if (status === "Terbayar") {
+          return {
+            ...invoice,
+            status,
+            paidAmount: invoice.totalAmount,
+            remainingAmount: "Rp0",
+          };
+        }
 
-    updateInvoice(id, (invoice) => {
-      if (status === "Terbayar") {
         return {
           ...invoice,
           status,
-          paidAmount: invoice.totalAmount,
-          remainingAmount: "Rp0",
         };
+      });
+
+      if (status === "Draft" || status === "Menunggu Pembayaran") {
+        setActiveTab("Menunggu");
       }
 
-      return {
-        ...invoice,
-        status,
-      };
-    });
-
-    if (status === "Draft" || status === "Menunggu Pembayaran") {
-      setActiveTab("Menunggu");
+      if (status === "Terbayar") setActiveTab("Terbayar");
+      if (status === "Terlambat") setActiveTab("Terlambat");
+      if (status === "Refund") setActiveTab("Refund");
+    } catch (error) {
+      toast.error("Gagal mengirim invoice.");
+      loadInvoices();
+    } finally {
+      setSubmitting(false);
     }
-
-    if (status === "Terbayar") setActiveTab("Terbayar");
-    if (status === "Terlambat") setActiveTab("Terlambat");
-    if (status === "Refund") setActiveTab("Refund");
   };
 
   const saveInvoiceChanges = async () => {
-    if (!selectedInvoice || !invoiceDraft) return;
+    if (!selectedInvoice || !invoiceDraft || submitting) return;
 
     try {
+      setSubmitting(true);
       await updateInvoiceRecord(selectedInvoice.id, {
         due_date: invoiceDraft.dueDate || null,
         payment_method: invoiceDraft.paymentMethod || null,
@@ -314,19 +318,20 @@ export function InvoicePaymentsView() {
         adminNote: invoiceDraft.adminNote,
         customerNote: invoiceDraft.customerNote,
       }));
+      toast.success("Invoice berhasil disimpan.");
+      setIsInvoiceSaved(true);
     } catch (error) {
       toast.error("Gagal menyimpan pengaturan invoice.");
       loadInvoices();
-      return;
+    } finally {
+      setSubmitting(false);
     }
-
-    toast.success("Invoice berhasil disimpan.");
-    setIsInvoiceSaved(true);
   };
 
   const handleCreatePayout = async () => {
-    if (!selectedInvoice || !selectedInvoice.projectId) return;
+    if (!selectedInvoice || !selectedInvoice.projectId || submitting) return;
     try {
+      setSubmitting(true);
       const projects = await getProjects();
       const project = projects.find(p => p.id === selectedInvoice.projectId);
       if (!project || !project.vendor_id) {
@@ -344,6 +349,8 @@ export function InvoicePaymentsView() {
       toast.success("Payout berhasil diteruskan ke Vendor.");
     } catch {
       toast.error("Gagal meneruskan payout ke vendor.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -353,6 +360,7 @@ export function InvoicePaymentsView() {
         invoice={selectedInvoice}
         invoiceDraft={invoiceDraft}
         isInvoiceSaved={isInvoiceSaved}
+        submitting={submitting}
         onBack={closeDetail}
         onChangeDraft={setInvoiceDraft}
         onSave={saveInvoiceChanges}
@@ -613,6 +621,7 @@ function InvoiceDetailPage({
   invoice,
   invoiceDraft,
   isInvoiceSaved,
+  submitting = false,
   onBack,
   onChangeDraft,
   onSave,
@@ -622,6 +631,7 @@ function InvoiceDetailPage({
   invoice: InvoicePayment;
   invoiceDraft: InvoiceDraft;
   isInvoiceSaved: boolean;
+  submitting?: boolean;
   onBack: () => void;
   onChangeDraft: (draft: InvoiceDraft) => void;
   onSave: () => void;
@@ -677,10 +687,11 @@ function InvoiceDetailPage({
             <div className="relative mt-3">
               <select
                 value={invoice.status}
+                disabled={submitting}
                 onChange={(event) =>
                   onStatusChange(event.target.value as PaymentStatus)
                 }
-                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10"
+                className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-white pl-4 pr-11 text-[13px] font-semibold text-[#31332C] outline-none transition focus:border-[#725F54] focus:ring-2 focus:ring-[#725F54]/10 disabled:opacity-50"
               >
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
@@ -895,15 +906,15 @@ function InvoiceDetailPage({
               <button
                 type="button"
                 onClick={onSave}
-                disabled={!isInvoiceChanged}
+                disabled={submitting || !isInvoiceChanged}
                 className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
-                  isInvoiceChanged
+                  isInvoiceChanged && !submitting
                     ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
                     : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
                 }`}
               >
                 <Save size={14} />
-                Simpan Perubahan
+                {submitting ? "Menyimpan..." : "Simpan Perubahan"}
               </button>
             </div>
 
@@ -912,9 +923,10 @@ function InvoiceDetailPage({
                 <button
                   type="button"
                   onClick={onCreatePayout}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#DCEBDD] bg-[#F5FAF6] px-4 h-11 text-[13px] font-semibold text-[#4F7A5F] transition hover:bg-[#EBF5EE]"
+                  disabled={submitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#DCEBDD] bg-[#F5FAF6] px-4 h-11 text-[13px] font-semibold text-[#4F7A5F] transition hover:bg-[#EBF5EE] disabled:opacity-50"
                 >
-                  Teruskan Payout ke Vendor
+                  {submitting ? "Meneruskan..." : "Teruskan Payout ke Vendor"}
                 </button>
                 <p className="mt-2 text-center text-[11px] text-[#7B756E]">
                   Aksi ini akan membuat record Milestone Pembayaran untuk vendor proyek ini.
@@ -929,33 +941,36 @@ function InvoiceDetailPage({
         <button
           type="button"
           onClick={() => onStatusChange("Menunggu Pembayaran")}
-          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+          disabled={submitting}
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition disabled:opacity-50 ${
             invoice.status === "Menunggu Pembayaran"
               ? "border-[#725F54] bg-[#725F54] text-white"
               : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
           }`}
         >
           <Send size={15} />
-          Kirim
+          {submitting && invoice.status !== "Menunggu Pembayaran" ? "Mengirim..." : "Kirim"}
         </button>
 
         <button
           type="button"
           onClick={() => onStatusChange("Terbayar")}
-          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
+          disabled={submitting}
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition disabled:opacity-50 ${
             invoice.status === "Terbayar"
               ? "border-[#725F54] bg-[#725F54] text-white"
               : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
           }`}
         >
           <CheckCircle2 size={15} />
-          Terbayar
+          {submitting && invoice.status !== "Terbayar" ? "Memproses..." : "Terbayar"}
         </button>
 
         <button
           type="button"
           onClick={() => onStatusChange("Terlambat")}
-          className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition sm:col-span-1 ${
+          disabled={submitting}
+          className={`col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition disabled:opacity-50 sm:col-span-1 ${
             invoice.status === "Terlambat"
               ? "border-[#725F54] bg-[#725F54] text-white"
               : "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"

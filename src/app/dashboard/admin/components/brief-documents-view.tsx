@@ -240,7 +240,42 @@ export function BriefDocumentsView() {
     };
 
     useEffect(() => {
-        loadBriefs();
+        loadBriefs().then(async () => {
+            const pendingReqId = localStorage.getItem("pendingBriefRequestId");
+            if (!pendingReqId) return;
+            localStorage.removeItem("pendingBriefRequestId");
+
+            try {
+                const requests = await getProjectRequests();
+                const req = requests.find(r => r.id === pendingReqId);
+                if (!req) return;
+
+                const allBriefs = await getBriefs();
+                const existingBrief = allBriefs.find(b => b.request_id === pendingReqId);
+
+                if (existingBrief) {
+                    openDetail(mapDbToLocal(existingBrief));
+                } else {
+                    const projects = await getProjects();
+                    setAvailableProjects(projects);
+                    setAvailableRequests(requests);
+
+                    setNewBriefForm({
+                        project_title: req.project_name,
+                        project_id: "",
+                        request_id: req.id,
+                        customer_id: req.customer_id,
+                        vendor_id: req.selected_vendor_id || "",
+                        project_type: req.project_type || "",
+                        location: req.location || "",
+                        budget: req.budget || "",
+                    });
+                    setIsCreateModalOpen(true);
+                }
+            } catch (error) {
+                console.error("Failed to load pending brief", error);
+            }
+        });
     }, [loadBriefs]);
 
     const localIdRef = useRef(10);

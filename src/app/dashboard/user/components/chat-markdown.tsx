@@ -273,7 +273,7 @@ export function Markdown({ content }: { content: string }) {
           return (
             <blockquote
               key={key}
-              className="space-y-1 border-l-[3px] border-[#D9C8BA] bg-[#FBF8F4] py-1.5 pl-3 pr-2 text-[13px] italic text-[#6B5B52]"
+              className="space-y-1 border-l-[3px] border-[#D9C8BA] bg-[#FBF8F4] py-1.5 pl-3 pr-2 text-[13px] italic text-[#6B5B52] [text-align:justify]"
             >
               {block.lines.map((qline, idx) => (
                 <p key={`${key}-${idx}`}>{renderInline(qline, `${key}-${idx}`)}</p>

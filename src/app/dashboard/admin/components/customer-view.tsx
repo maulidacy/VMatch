@@ -17,6 +17,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCustomers } from "@/lib/api/profiles";
+import { getProjects, getProjectRequests, getInvoices } from "@/lib/api/projects";
 import type { Profile as DBProfile } from "@/lib/supabase/types";
 
 import type { AdminPageId } from "../types";
@@ -124,8 +125,38 @@ export function CustomerView({
 
     const loadCustomers = useCallback(async () => {
         try {
-            const data = await getCustomers();
-            setCustomers(data.map(mapDbToLocalCustomer));
+            const [data, projects, requests, invoices] = await Promise.all([
+                getCustomers(),
+                getProjects(),
+                getProjectRequests(),
+                getInvoices(),
+            ]);
+            const mapped = data.map((p) => {
+                const base = mapDbToLocalCustomer(p);
+                const customerRequests = requests.filter((r) => r.customer_id === p.id);
+                const customerProjects = projects.filter((proj) => proj.customer_id === p.id);
+                const activeProjs = customerProjects.filter((proj) => proj.status !== "Selesai");
+                const completedProjs = customerProjects.filter((proj) => proj.status === "Selesai");
+                const totalValue = invoices
+                    .filter((inv) => inv.customer_id === p.id)
+                    .reduce((sum, inv) => sum + Number((inv.total_amount ?? "0").replace(/[^\d]/g, "")), 0);
+                const projectItems: CustomerProject[] = customerProjects.map((proj) => ({
+                    id: proj.id,
+                    title: proj.title,
+                    status: proj.status,
+                    progress: proj.progress || 0,
+                    value: proj.estimated_cost || "Rp0",
+                }));
+                return {
+                    ...base,
+                    totalRequests: customerRequests.length,
+                    activeProjects: activeProjs.length,
+                    completedProjects: completedProjs.length,
+                    totalValue: totalValue > 0 ? `Rp${new Intl.NumberFormat("id-ID").format(totalValue)}` : "Rp0",
+                    projects: projectItems,
+                };
+            });
+            setCustomers(mapped);
         } catch {
             // silent
         }

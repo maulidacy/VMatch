@@ -28,7 +28,7 @@ type VendorPortfolioProfile = {
   description: string;
 };
 
-type InspirationDetail = {
+export type InspirationDetail = {
   id: string;
   title: string;
   category: string;

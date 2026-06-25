@@ -19,6 +19,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getVendors } from "@/lib/api/profiles";
+import { getProjects } from "@/lib/api/projects";
 import type { Profile as DBProfile } from "@/lib/supabase/types";
 
 import type { AdminPageId } from "../types";
@@ -110,8 +111,15 @@ export function VendorPartnerView({
 
   const loadVendors = useCallback(async () => {
     try {
-      const data = await getVendors();
-      setVendors(data.map(mapDbToLocalVendor));
+      const [data, projects] = await Promise.all([getVendors(), getProjects()]);
+      const mapped = data.map((p) => {
+        const vendorProjects = projects.filter((proj) => proj.vendor_id === p.id);
+        const completed = vendorProjects.filter((proj) => proj.status === "Selesai").length;
+        const active = vendorProjects.filter((proj) => proj.status !== "Selesai").length;
+        const local = mapDbToLocalVendor(p);
+        return { ...local, completedProjects: completed, activeProjects: active };
+      });
+      setVendors(mapped);
     } catch {
       // silent
     }

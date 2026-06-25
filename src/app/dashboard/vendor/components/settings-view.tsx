@@ -36,6 +36,9 @@ export function SettingsView({ vendorId, profile: vendorProfile2, userEmail }: {
     router.refresh();
   };
 
+    // @ts-ignore
+    const userSettings = vendorProfile2.settings || {};
+
   const [form, setForm] = useState({
     name: vendorProfile2.full_name || "",
     email: userEmail || "",
@@ -44,9 +47,9 @@ export function SettingsView({ vendorId, profile: vendorProfile2, userEmail }: {
     skill: vendorProfile2.skills || "",
     bankName: vendorProfile2.bank_name || "",
     bankAccount: vendorProfile2.bank_account || "",
-    notificationWhatsapp: true,
-    notificationEmail: true,
-    notificationProject: true,
+    notificationWhatsapp: userSettings.notificationWhatsapp ?? true,
+    notificationEmail: userSettings.notificationEmail ?? true,
+    notificationProject: userSettings.notificationProject ?? true,
   });
 
   const [saved, setSaved] = useState(false);
@@ -69,6 +72,12 @@ export function SettingsView({ vendorId, profile: vendorProfile2, userEmail }: {
         skills: form.skill,
         bank_name: form.bankName,
         bank_account: form.bankAccount,
+        // @ts-ignore
+        settings: {
+          notificationWhatsapp: form.notificationWhatsapp,
+          notificationEmail: form.notificationEmail,
+          notificationProject: form.notificationProject,
+        }
       });
       setSaved(true);
     } catch {

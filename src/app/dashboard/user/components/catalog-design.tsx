@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { InspirationDetailView } from "./inspiration-detail-view";
+import { InspirationDetailView, type InspirationDetail } from "./inspiration-detail-view";
 import { getInspirationItems } from "@/lib/api/inspirations";
 import type { InspirationItem as DBInspirationItem } from "@/lib/supabase/types";
 
@@ -301,8 +301,66 @@ export function CatalogDesign({
     };
 
     if (detailItem) {
+        const dynamicInspiration: InspirationDetail = {
+            id: detailItem.id,
+            title: detailItem.name,
+            category: detailItem.category,
+            packageLevel: detailItem.packageType,
+            style: detailItem.style,
+            budgetRange: detailItem.budget,
+            idealSize: "Custom",
+            projectLocation: detailItem.locationArea,
+            projectTimeline: "Menyesuaikan kebutuhan",
+            vendorProfile: {
+                vendorName: "Vendor Partner VMatch",
+                studioName: "VMatch Partner",
+                location: detailItem.locationArea,
+                specialty: detailItem.category,
+                experience: "Terverifikasi",
+                completedProjects: "Selesai",
+                description: "Vendor Partner VMatch",
+            },
+            spaceType: detailItem.propertyType,
+            suitableFor: detailItem.suitableFor ? detailItem.suitableFor.split(",").map((s) => s.trim()) : [],
+            materials: detailItem.materials ? detailItem.materials.split(",").map((m) => m.trim()) : [],
+            shortDescription: detailItem.description,
+            fullDescription: detailItem.description,
+            designElements: [
+                "Desain Custom",
+                "Pilihan Material Berkualitas",
+                "Pengerjaan Presisi",
+                "Sesuai Preferensi Klien",
+            ],
+            materialPackages: [
+                {
+                    name: "Basic",
+                    description: "Pilihan ekonomis menggunakan MDF Board dan finishing melamine untuk kebutuhan interior sederhana.",
+                },
+                {
+                    name: "Standard",
+                    description: "Pilihan seimbang menggunakan multiplek 15mm dan finishing HPL dengan tampilan yang rapi dan tahan pakai.",
+                },
+                {
+                    name: "Premium",
+                    description: "Pilihan terbaik menggunakan multiplek 18mm, finishing premium, dan hardware soft close untuk hasil yang lebih elegan dan tahan lama.",
+                },
+            ],
+            timeline: [
+                "Konsultasi & validasi kebutuhan",
+                "Survey ukuran",
+                "Finalisasi desain dan RAB",
+                "Produksi",
+                "Instalasi",
+                "QC dan handover",
+            ],
+            notes: detailItem.notes || "Inspirasi ini digunakan sebagai referensi awal.",
+            images: [detailItem.image],
+            related: [],
+        };
+
         return (
             <InspirationDetailView
+                inspiration={dynamicInspiration}
                 onBack={() => setDetailItem(null)}
                 onChangePage={onChangePage}
             />

@@ -66,6 +66,16 @@ export async function getMyProjects(userId: string) {
   return data as Project[];
 }
 
+export async function getProjectById(id: string) {
+  const { data, error } = await supabase()
+    .from("projects")
+    .select("*, customer:profiles!customer_id(*), vendor:profiles!vendor_id(*)")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data as Project;
+}
+
 export async function createProject(payload: Partial<Project>) {
   const { data, error } = await supabase()
     .from("projects")
@@ -176,7 +186,7 @@ export async function getRabs() {
 export async function getCustomerRabs(customerId: string) {
   const { data, error } = await supabase()
     .from("rab")
-    .select("*")
+    .select("*, vendor_estimate:vendor_estimates!estimate_id(*)")
     .eq("customer_id", customerId)
     .order("created_at", { ascending: false });
   if (error) throw error;

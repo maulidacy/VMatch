@@ -7,6 +7,7 @@ import {
     FolderKanban,
     ImagePlus,
     Send,
+    X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -118,6 +119,11 @@ export function ProgressLogView({ vendorId }: { vendorId: string }) {
         try {
             const finalProgress = Number(progressPercent) || selectedProject.progress;
             
+            if (finalProgress < selectedProject.progress) {
+                toast.error("Presentase progress tidak boleh lebih kecil dari sebelumnya.");
+                return;
+            }
+            
             await createProgressLog({
                 project_id: selectedProject.id,
                 vendor_id: vendorId,
@@ -131,6 +137,9 @@ export function ProgressLogView({ vendorId }: { vendorId: string }) {
             });
 
             await updateProject(selectedProject.id, { progress: finalProgress });
+            setVendorProjects(current => current.map(p => 
+                p.id === selectedProject.id ? { ...p, progress: finalProgress } : p
+            ));
 
             // Reload logs from DB
             const dbLogs = await getProgressLogs(selectedProjectId);
@@ -332,6 +341,23 @@ export function ProgressLogView({ vendorId }: { vendorId: string }) {
                                 />
                             </label>
                         </div>
+
+                        {uploadedPhotoPath && (
+                            <div className="relative mt-2 h-32 w-32 overflow-hidden rounded-xl border border-[#E8E2D9]">
+                                <img
+                                    src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vmatch-files/${uploadedPhotoPath}`}
+                                    alt="Preview"
+                                    className="h-full w-full object-cover"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setUploadedPhotoPath(null)}
+                                    className="absolute right-1 top-1 rounded-md bg-white/80 p-1 text-red-500 hover:bg-white"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        )}
 
                         <div className="flex justify-end">
                             <button

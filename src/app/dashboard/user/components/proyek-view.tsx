@@ -31,6 +31,8 @@ import {
   updateRab,
   upsertQcChecklist,
   createVendorBonus,
+  getProjectById,
+  updateProject,
 } from "@/lib/api/projects";
 import { toast } from "sonner";
 import type {
@@ -82,6 +84,7 @@ type ProjectItem = {
   estimatedFinish: string;
   nextStep: string;
   solution: string;
+  createdAt: string;
 };
 
 type Invoice = {
@@ -181,6 +184,7 @@ function mapDbProjectToItem(p: DBProject): ProjectItem {
     estimatedFinish: p.estimated_finish || "Menunggu jadwal",
     nextStep: p.next_task || "Menunggu update dari tim VMatch.",
     solution: p.solution || p.description || "Solusi akan ditampilkan setelah brief disetujui.",
+    createdAt: p.created_at,
   };
 }
 
@@ -332,7 +336,7 @@ export function ProyekView({ userId }: { userId: string }) {
 }
 
 function ProjectDetail({
-  projectData,
+  projectData: initialProjectData,
   userId,
   onBack,
 }: {
@@ -341,6 +345,8 @@ function ProjectDetail({
   onBack: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("ringkasan");
+  const [currentProject, setCurrentProject] = useState<ProjectItem>(initialProjectData);
+  const projectData = currentProject;
 
   const [materialStatus, setMaterialStatus] = useState(
     projectData.filter === "selesai"
@@ -366,6 +372,7 @@ function ProjectDetail({
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [revisionModalOpen, setRevisionModalOpen] = useState(false);
   const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [receiptInvoice, setReceiptInvoice] = useState<Invoice | null>(null);
   const [documentPreview, setDocumentPreview] = useState<DocumentItem | null>(
     null,
@@ -389,20 +396,31 @@ function ProjectDetail({
   useEffect(() => {
     const loadProjectDetail = async () => {
       try {
-        const [invoiceRows, progressRows, qcRow, warrantyRows, rabs] = await Promise.all([
-          getProjectInvoices(projectData.id),
-          getProgressLogs(projectData.id),
-          getQcChecklist(projectData.id),
-          getWarrantyClaims(projectData.id),
+        const [invoiceRows, progressRows, qcRow, warrantyRows, rabs, projectDetail] = await Promise.all([
+          getProjectInvoices(initialProjectData.id),
+          getProgressLogs(initialProjectData.id),
+          getQcChecklist(initialProjectData.id),
+          getWarrantyClaims(initialProjectData.id),
           getCustomerRabs(userId),
+          getProjectById(initialProjectData.id),
         ]);
 
         setInvoices(invoiceRows.map(mapDbInvoiceToLocalInvoice));
         setProgressLogs(progressRows);
         setQcChecklistData(qcRow);
         setWarrantyClaims(warrantyRows.map(mapDbWarrantyToLocalWarranty));
+        
+        // @ts-ignore
+        if (projectDetail && projectDetail.revisions) {
+          // @ts-ignore
+          setRevisions(projectDetail.revisions);
+        }
 
-        const projRab = rabs.find(r => r.project_id === projectData.id);
+        if (projectDetail) {
+          setCurrentProject(mapDbProjectToItem(projectDetail));
+        }
+
+        const projRab = rabs.find(r => r.project_id === initialProjectData.id);
         if (projRab) {
           setCustomerRab(projRab);
           if (projRab.status === "RAB Dikirim ke Customer") setRabStatus("RAB Diterima");
@@ -428,7 +446,7 @@ function ProjectDetail({
     };
 
     loadProjectDetail();
-  }, [projectData.id]);
+  }, [initialProjectData.id]);
 
   const progressTimeline = useMemo(
     () => createProgressTimeline(projectData, projectDone, progressLogs),
@@ -451,7 +469,9 @@ function ProjectDetail({
   );
 
   const handlePaySuccess = async (invoice: Invoice) => {
+    if (submitting) return;
     try {
+      setSubmitting(true);
       await updateInvoice(invoice.id, {
         status: invoice.title === "Pelunasan" ? "Lunas" : "Terbayar",
         paid_at: new Date().toISOString(),
@@ -471,11 +491,15 @@ function ProjectDetail({
       toast.success("Pembayaran berhasil dikonfirmasi.");
     } catch {
       toast.error("Gagal mengkonfirmasi pembayaran.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleApproveQC = async () => {
+    if (submitting) return;
     try {
+      setSubmitting(true);
       await upsertQcChecklist({
         project_id: projectData.id,
         status: "Disetujui",
@@ -509,6 +533,7 @@ function ProjectDetail({
       toast.error("Gagal menyetujui hasil QC.");
     } finally {
       setQcConfirmModalOpen(false);
+      setSubmitting(false);
     }
   };
 
@@ -591,6 +616,7 @@ function ProjectDetail({
         <RabTab
           projectData={projectData}
           rabStatus={rabStatus}
+          customerRab={customerRab}
           onApprove={() => setRabApproveOpen(true)}
           onRequestRevision={() => setRabRevisionOpen(true)}
         />
@@ -641,19 +667,31 @@ function ProjectDetail({
           placeholder="Contoh: ingin warna finishing lebih hangat atau material yang lebih tahan lembap."
           submitLabel="Kirim Perubahan"
           onClose={() => setMaterialModalOpen(false)}
-          onSubmit={(text) => {
-            setRevisions((current) => [
-              {
-                id: `rev-${Date.now()}`,
-                type: "Perubahan material",
-                description: text || "Customer meminta perubahan material.",
-                status: "Diajukan",
-                date: "Hari ini",
-              },
-              ...current,
-            ]);
-            setMaterialStatus("Menunggu Review Perubahan");
-            setMaterialModalOpen(false);
+          submitting={submitting}
+          onSubmit={async (text) => {
+            if (submitting) return;
+            const newRev: Revision = {
+              id: `rev-${Date.now()}`,
+              type: "Perubahan material",
+              description: text || "Customer meminta perubahan material.",
+              status: "Diajukan",
+              date: "Hari ini",
+            };
+            const updatedRevisions = [newRev, ...revisions];
+            
+            try {
+              setSubmitting(true);
+              // @ts-ignore
+              await updateProject(projectData.id, { revisions: updatedRevisions });
+              setRevisions(updatedRevisions);
+              setMaterialStatus("Menunggu Review Perubahan");
+              toast.success("Perubahan material berhasil diajukan.");
+              setMaterialModalOpen(false);
+            } catch {
+              toast.error("Gagal mengajukan perubahan material.");
+            } finally {
+              setSubmitting(false);
+            }
           }}
         />
       )}
@@ -661,18 +699,30 @@ function ProjectDetail({
       {revisionModalOpen && (
         <RevisionModal
           onClose={() => setRevisionModalOpen(false)}
-          onSubmit={(data) => {
-            setRevisions((current) => [
-              {
-                id: `rev-${Date.now()}`,
-                type: data.type,
-                description: data.description || "Customer mengajukan revisi.",
-                status: "Diajukan",
-                date: "Hari ini",
-              },
-              ...current,
-            ]);
-            setRevisionModalOpen(false);
+          submitting={submitting}
+          onSubmit={async (data) => {
+            if (submitting) return;
+            const newRev: Revision = {
+              id: `rev-${Date.now()}`,
+              type: data.type,
+              description: data.description || "Customer mengajukan revisi.",
+              status: "Diajukan",
+              date: "Hari ini",
+            };
+            const updatedRevisions = [newRev, ...revisions];
+            
+            try {
+              setSubmitting(true);
+              // @ts-ignore
+              await updateProject(projectData.id, { revisions: updatedRevisions });
+              setRevisions(updatedRevisions);
+              toast.success("Revisi berhasil diajukan.");
+              setRevisionModalOpen(false);
+            } catch {
+              toast.error("Gagal mengajukan revisi.");
+            } finally {
+              setSubmitting(false);
+            }
           }}
         />
       )}
@@ -682,6 +732,7 @@ function ProjectDetail({
           invoice={paymentInvoice}
           onClose={() => setPaymentInvoice(null)}
           onSuccess={() => handlePaySuccess(paymentInvoice)}
+          submitting={submitting}
         />
       )}
 
@@ -696,6 +747,11 @@ function ProjectDetail({
       {documentPreview && (
         <DocumentPreviewModal
           document={documentPreview}
+          projectData={projectData}
+          invoices={invoices}
+          progressLogs={progressLogs}
+          qcChecklistData={qcChecklistData}
+          customerRab={customerRab}
           onClose={() => setDocumentPreview(null)}
         />
       )}
@@ -707,9 +763,25 @@ function ProjectDetail({
           placeholder="Contoh: bagian laci kanan perlu dicek ulang karena terasa kurang halus."
           submitLabel="Kirim Catatan"
           onClose={() => setQcNoteModalOpen(false)}
-          onSubmit={() => {
-            setQcStatus("Perlu Catatan");
-            setQcNoteModalOpen(false);
+          submitting={submitting}
+          onSubmit={async (text) => {
+            if (submitting) return;
+            try {
+              setSubmitting(true);
+              await upsertQcChecklist({
+                project_id: projectData.id,
+                status: "Perlu Catatan",
+                // @ts-ignore
+                customer_note: text || "Perlu cek ulang",
+              });
+              setQcStatus("Perlu Catatan");
+              toast.success("Catatan QC berhasil dikirim.");
+              setQcNoteModalOpen(false);
+            } catch {
+              toast.error("Gagal mengirim catatan QC.");
+            } finally {
+              setSubmitting(false);
+            }
           }}
         />
       )}
@@ -721,14 +793,18 @@ function ProjectDetail({
           confirmLabel="Setujui Hasil"
           onClose={() => setQcConfirmModalOpen(false)}
           onConfirm={handleApproveQC}
+          submitting={submitting}
         />
       )}
 
       {warrantyModalOpen && (
         <WarrantyClaimModal
           onClose={() => setWarrantyModalOpen(false)}
+          submitting={submitting}
           onSubmit={async (claim) => {
+            if (submitting) return;
             try {
+              setSubmitting(true);
               const res = await createWarrantyClaim({
                 project_id: projectData.id,
                 customer_id: userId,
@@ -748,10 +824,12 @@ function ProjectDetail({
                 },
                 ...current,
               ]);
-              setWarrantyModalOpen(false);
               toast.success("Klaim garansi berhasil diajukan.");
+              setWarrantyModalOpen(false);
             } catch {
               toast.error("Gagal mengajukan klaim garansi.");
+            } finally {
+              setSubmitting(false);
             }
           }}
         />
@@ -764,24 +842,30 @@ function ProjectDetail({
           placeholder="Contoh: budget terlalu tinggi, minta opsi material yang lebih hemat."
           submitLabel="Kirim Permintaan Revisi"
           onClose={() => setRabRevisionOpen(false)}
+          submitting={submitting}
           onSubmit={async (text) => {
+            if (submitting) return;
             if (customerRab) {
               try {
+                setSubmitting(true);
                 await updateRab(customerRab.id, { 
-                  status: "Revisi Diminta Customer", 
-                  revision_note: text || "Customer meminta revisi RAB." 
+                   status: "Revisi Diminta Customer", 
+                   revision_note: text || "Customer meminta revisi RAB." 
                 });
                 setRabRevisionNote(text || "Customer meminta revisi RAB.");
                 setRabStatus("Minta Revisi");
                 toast.success("Permintaan revisi RAB berhasil dikirim.");
+                setRabRevisionOpen(false);
               } catch {
                 toast.error("Gagal mengirim permintaan revisi RAB.");
+              } finally {
+                setSubmitting(false);
               }
             } else {
               setRabRevisionNote(text || "Customer meminta revisi RAB.");
               setRabStatus("Minta Revisi");
+              setRabRevisionOpen(false);
             }
-            setRabRevisionOpen(false);
           }}
         />
       )}
@@ -793,19 +877,25 @@ function ProjectDetail({
           confirmLabel="Setujui RAB"
           onClose={() => setRabApproveOpen(false)}
           onConfirm={async () => {
+            if (submitting) return;
             if (customerRab) {
               try {
+                setSubmitting(true);
                 await updateRab(customerRab.id, { status: "RAB Disetujui Customer" });
                 setRabStatus("Disetujui");
                 toast.success("RAB berhasil disetujui.");
+                setRabApproveOpen(false);
               } catch {
                 toast.error("Gagal menyetujui RAB.");
+              } finally {
+                setSubmitting(false);
               }
             } else {
               setRabStatus("Disetujui");
+              setRabApproveOpen(false);
             }
-            setRabApproveOpen(false);
           }}
+          submitting={submitting}
         />
       )}
     </div>
@@ -939,11 +1029,13 @@ function SummaryTab({
 function RabTab({
   projectData,
   rabStatus,
+  customerRab,
   onApprove,
   onRequestRevision,
 }: {
   projectData: ProjectItem;
   rabStatus: RabReviewStatus;
+  customerRab?: DBRab | null;
   onApprove: () => void;
   onRequestRevision: () => void;
 }) {
@@ -965,17 +1057,26 @@ function RabTab({
             </h2>
             <p className="mt-2 max-w-[680px] text-[14px] leading-7 text-[#7B756E]">
               {isWaiting
-                ? "Tim VMatch sedang menyiapkan estimasi biaya proyek berdasarkan kebutuhan dan survey awal. Kamu akan mendapat notifikasi ketika RAB siap."
+                ? "Tim VMatch sedang menyiapkan estimasi biaya proyek berdasarkan kebutuhan dan survey awal. Anda akan mendapat notifikasi ketika RAB siap."
                 : isApproved
                 ? "RAB sudah disetujui. Tim VMatch sedang memproses langkah berikutnya dan akan segera mengirimkan invoice pembayaran pertama."
                 : isRevision
-                ? "Permintaan revisi sudah dikirim ke tim VMatch. Kamu akan mendapat RAB yang sudah disesuaikan dalam waktu dekat."
-                : "Tinjau estimasi biaya dari tim VMatch. Kamu bisa menyetujui atau meminta revisi sebelum pengerjaan dimulai."}
+                ? "Permintaan revisi sudah dikirim ke tim VMatch. Anda akan mendapat RAB yang sudah disesuaikan dalam waktu dekat."
+                : "Tinjau estimasi biaya dari tim VMatch. Anda bisa menyetujui atau meminta revisi sebelum pengerjaan dimulai."}
             </p>
           </div>
           <StatusPill
             label={isApproved ? "Disetujui" : isRevision ? "Minta Revisi" : isWaiting ? "Menunggu" : "Siap Ditinjau"}
           />
+        </div>
+
+        <div className="mt-5 border-t border-[#E8E2D9] pt-5">
+          <h3 className="text-[14px] font-semibold text-[#31332C]">Apa itu RAB?</h3>
+          <p className="mt-1.5 text-[13px] leading-6 text-[#6F6860]">
+            <strong>Rencana Anggaran Biaya (RAB)</strong> adalah dokumen rincian estimasi biaya material, 
+            jasa pengerjaan oleh vendor partner, serta biaya pengawasan dari VMatch. Kami menampilkan biaya secara transparan 
+            agar Anda mengetahui alokasi dana proyek dengan jelas tanpa biaya tersembunyi.
+          </p>
         </div>
       </div>
 
@@ -992,12 +1093,49 @@ function RabTab({
             <InfoCard icon={PackageCheck} label="Jenis Proyek" value={projectData.type} />
           </div>
 
+          <div className="mt-5">
+            <h3 className="text-[15px] font-semibold text-[#31332C]">Rincian Anggaran Transparan</h3>
+            <div className="mt-3 overflow-hidden rounded-xl border border-[#E8E2D9]">
+              <table className="w-full text-left border-collapse text-[13px]">
+                <thead>
+                  <tr className="bg-[#FCFBF9] border-b border-[#E8E2D9] text-[#7B756E] font-medium">
+                    <th className="p-3">Komponen Biaya</th>
+                    <th className="p-3 text-right">Jumlah</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E8E2D9] text-[#31332C]">
+                  <tr>
+                    <td className="p-3">Jasa Pembuatan & Material (Vendor Partner)</td>
+                    <td className="p-3 text-right font-medium">
+                      {customerRab 
+                        ? formatRupiah(parseRupiah(customerRab.grand_total) - parseRupiah(customerRab.vmatch_service_fee))
+                        : projectData.estimatedCost}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-3">Biaya Layanan & Jaminan Pengawasan Mutu (VMatch)</td>
+                    <td className="p-3 text-right font-medium">{customerRab ? customerRab.vmatch_service_fee : "Rp0"}</td>
+                  </tr>
+                  <tr className="bg-[#F8F6F2] font-bold text-[#725F54]">
+                    <td className="p-3">Total Anggaran Proyek (RAB)</td>
+                    <td className="p-3 text-right">
+                      {customerRab ? customerRab.grand_total : projectData.estimatedCost}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-[12px] leading-5 text-[#7B756E]">
+              * Seluruh biaya di atas sudah mencakup proses quality control (QC) berkala oleh tim VMatch, jaminan garansi pasca-selesai, dan perlindungan pembayaran termin aman (escrow).
+            </p>
+          </div>
+
           <div className="mt-5 rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#725F54]">
               Catatan dari VMatch
             </p>
             <p className="mt-2 text-[13px] leading-7 text-[#6F6860]">
-              Estimasi ini sudah mencakup biaya material, produksi, instalasi, dan biaya layanan VMatch. Nominal final akan dikonfirmasi setelah survey ulang jika diperlukan.
+              Estimasi rincian di atas telah disesuaikan dengan brief Anda. Jika ada perubahan detail pengerjaan, nominal final dapat disesuaikan kembali melalui revisi RAB.
             </p>
           </div>
 
@@ -1033,7 +1171,7 @@ function RabTab({
           {isRevision && (
             <div className="mt-5 rounded-xl border border-[#E8D6BE] bg-[#FFF8ED] px-4 py-3">
               <p className="text-[13px] font-semibold text-[#8A5A24]">
-                Permintaan revisi sudah dikirim. Tim VMatch akan menghubungi kamu untuk konfirmasi.
+                Permintaan revisi sudah dikirim. Tim VMatch akan menghubungi Anda untuk konfirmasi.
               </p>
             </div>
           )}
@@ -1107,26 +1245,70 @@ function ProgressTab({
 
           <Card title="Update dari VMatch">
             <p className="text-[14px] leading-7 text-[#6F6860]">
-              Progress proyek {projectData.name} mengikuti jadwal yang sudah
-              disusun. Jika ada perubahan, update akan muncul di dashboard ini.
+              Laporan pengerjaan harian langsung dari vendor partner di lapangan. 
+              Semua detail pekerjaan, rencana kelanjutan, serta dokumentasi foto dilampirkan secara transparan di bawah ini.
             </p>
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {progressLogs.filter(log => log.photo_path).length > 0 ? (
-                progressLogs
-                  .filter(log => log.photo_path)
-                  .map((log) => (
-                    <VendorPhoto
-                      key={log.id}
-                      label={log.photo_label || "Update Progress"}
-                      path={log.photo_path!}
-                    />
-                  ))
+            <div className="mt-4 space-y-4">
+              {progressLogs.length > 0 ? (
+                progressLogs.map((log) => (
+                  <div key={log.id} className="rounded-xl border border-[#E8E2D9] p-4 bg-[#FCFBF9] space-y-3">
+                    <div className="flex justify-between items-center pb-2 border-b border-[#E8E2D9]">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          log.status === "Sesuai Jadwal" 
+                            ? "bg-green-50 text-green-700 border border-green-200" 
+                            : log.status === "Ada Kendala" 
+                              ? "bg-red-50 text-red-700 border border-red-200" 
+                              : "bg-amber-50 text-amber-700 border border-amber-200"
+                        }`}>
+                          {log.status}
+                        </span>
+                        <span className="text-[13px] font-bold text-[#725F54]">
+                          Progres {log.progress_percent}%
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#9A8F86]">
+                        {new Date(log.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9A8F86]">Ringkasan Pekerjaan</p>
+                      <p className="mt-1 text-[13px] text-[#31332C] leading-relaxed">{log.work_summary}</p>
+                    </div>
+
+                    {log.next_plan && (
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9A8F86]">Rencana Selanjutnya</p>
+                        <p className="mt-1 text-[13px] text-[#6F6860] leading-relaxed">{log.next_plan}</p>
+                      </div>
+                    )}
+
+                    {log.status === "Ada Kendala" && log.issue && (
+                      <div className="bg-red-50 border border-red-100 rounded-lg p-2.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-red-700">Kendala Dilaporkan</p>
+                        <p className="mt-1 text-[13px] text-red-700 font-medium leading-relaxed">{log.issue}</p>
+                      </div>
+                    )}
+
+                    {log.photo_path && (
+                      <div className="mt-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9A8F86] mb-1.5">Dokumentasi Foto</p>
+                        <div className="max-w-[280px]">
+                          <VendorPhoto
+                            label={log.photo_label || "Update Progress"}
+                            path={log.photo_path}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
               ) : (
-                <>
-                  <MockPhoto label="Progress pekerjaan" />
-                  <MockPhoto label="Finishing material" />
-                </>
+                <div className="rounded-xl border border-dashed border-[#E4D8CD] bg-[#FCFBF9] p-8 text-center text-[#7B756E]">
+                  Belum ada laporan progress dari vendor.
+                </div>
               )}
             </div>
           </Card>
@@ -1358,6 +1540,18 @@ function DocumentTab({
   onPreview: (document: DocumentItem) => void;
   onCreateClaim: () => void;
 }) {
+  const handleDownload = (doc: DocumentItem) => {
+    if (typeof window === "undefined") return;
+    const element = window.document.createElement("a");
+    const file = new Blob([`${doc.title}\nKategori: ${doc.category}\nStatus: ${doc.status}\nTanggal: ${doc.date}\n\nDeskripsi:\n${doc.description}\n\nDokumen resmi VMatch System.`], { type: "text/plain" });
+    element.href = URL.createObjectURL(file);
+    element.download = `${doc.title.replace(/\s+/g, "_")}.txt`;
+    window.document.body.appendChild(element);
+    element.click();
+    window.document.body.removeChild(element);
+    toast.success(`Mengunduh ${doc.title}...`);
+  };
+
   return (
     <div className="space-y-5">
       <Card title="Dokumen Proyek">
@@ -1403,6 +1597,7 @@ function DocumentTab({
 
                   <button
                     type="button"
+                    onClick={() => handleDownload(document)}
                     disabled={document.status !== "Tersedia"}
                     className="inline-flex h-10 items-center gap-2 rounded-[16px] border border-[#E4D8CD] px-4 text-[12px] font-semibold text-[#31332C] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -1818,18 +2013,6 @@ function ScheduleRow({ label, date }: { label: string; date: string }) {
   );
 }
 
-function MockPhoto({ label }: { label: string }) {
-  return (
-    <div className="group relative aspect-video w-full overflow-hidden rounded-[16px] border border-[#E8E2D9] bg-[#FCFBF9]">
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-[#9A8F86] transition-transform duration-500 group-hover:scale-110">
-        <Upload size={24} className="mb-2 opacity-40" />
-        <span className="text-[12px] font-medium">{label}</span>
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-[#725F54]/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-    </div>
-  );
-}
-
 function VendorPhoto({ label, path }: { label: string; path: string }) {
   const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vmatch-files/${path}`;
   return (
@@ -1895,9 +2078,11 @@ function BaseModal({
 function RevisionModal({
   onClose,
   onSubmit,
+  submitting,
 }: {
   onClose: () => void;
   onSubmit: (data: { type: string; description: string }) => void;
+  submitting?: boolean;
 }) {
   const [type, setType] = useState("Revisi desain");
   const [description, setDescription] = useState("");
@@ -1913,6 +2098,7 @@ function RevisionModal({
           <select
             value={type}
             onChange={(event) => setType(event.target.value)}
+            disabled={submitting}
             className={fieldClass}
           >
             <option>Revisi desain</option>
@@ -1928,6 +2114,7 @@ function RevisionModal({
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
+            disabled={submitting}
             rows={5}
             className={textareaClass}
             placeholder="Contoh: ingin menambah rak lipat di bagian kanan wardrobe."
@@ -1938,6 +2125,7 @@ function RevisionModal({
           onClose={onClose}
           onSubmit={() => onSubmit({ type, description })}
           submitLabel="Kirim Revisi"
+          disabled={submitting}
         />
       </div>
     </BaseModal>
@@ -1948,10 +2136,12 @@ function PaymentModal({
   invoice,
   onClose,
   onSuccess,
+  submitting,
 }: {
   invoice: Invoice;
   onClose: () => void;
   onSuccess: () => void;
+  submitting?: boolean;
 }) {
   return (
     <BaseModal
@@ -1977,6 +2167,7 @@ function PaymentModal({
           onClose={onClose}
           onSubmit={onSuccess}
           submitLabel="Simulasikan Berhasil"
+          disabled={submitting}
         />
       </div>
     </BaseModal>
@@ -2053,33 +2244,304 @@ function ReceiptModal({
 
 function DocumentPreviewModal({
   document,
+  projectData,
+  invoices,
+  progressLogs,
+  qcChecklistData,
+  customerRab,
   onClose,
 }: {
   document: DocumentItem;
+  projectData: ProjectItem;
+  invoices: Invoice[];
+  progressLogs: DBProgressLog[];
+  qcChecklistData: DBQcChecklist | null;
+  customerRab: DBRab | null;
   onClose: () => void;
 }) {
-  return (
-    <BaseModal
-      title={document.title}
-      description={document.category}
-      onClose={onClose}
-    >
-      <div className="rounded-[18px] border border-[#E4D8CD] bg-[#FCFBF9] p-5">
-        <FileText size={28} className="text-[#725F54]" />
-        <p className="mt-4 text-[13px] leading-6 text-[#6F6860]">
-          {document.description}
-        </p>
-        <p className="mt-4 text-[12px] font-semibold text-[#31332C]">
-          Dokumen ini tersedia di storage.
-        </p>
-      </div>
+  const isBrief = document.category === "Brief Proyek";
+  const isSolution = document.category === "Solusi Proyek";
+  const isInvoice = document.category === "Invoice";
+  const isProgress = document.category === "Progress";
+  const isQC = document.category === "QC";
+  const isFinal = document.category === "Final Project";
+  const isWarranty = document.category === "Garansi";
 
-      <ModalActions
-        onClose={onClose}
-        onSubmit={onClose}
-        submitLabel="Tutup Preview"
-      />
-    </BaseModal>
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[90vh] w-full max-w-[720px] flex-col rounded-2xl border border-[#E4D8CD] bg-white shadow-[0_24px_70px_rgba(0,0,0,0.22)] overflow-hidden">
+        {/* Header */}
+        <header className="border-b border-[#E8E2D9] bg-[#FCFBF9] px-6 py-4 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#725F54]">VMatch Document System</span>
+            <h2 className="font-serif text-[22px] font-semibold text-[#31332C] mt-0.5">{document.title}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-xl text-[#7B756E] hover:bg-[#FCFBF9] hover:text-[#31332C] transition"
+            aria-label="Tutup preview"
+          >
+            <X size={18} />
+          </button>
+        </header>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 text-[#31332C]">
+          {/* Document Header Brand */}
+          <div className="flex justify-between items-start border-b-2 border-double border-[#E8E2D9] pb-4">
+            <div>
+              <h3 className="font-serif text-[20px] font-bold text-[#725F54] tracking-tight">VMATCH</h3>
+              <p className="text-[10px] text-[#7B756E] uppercase tracking-widest mt-0.5">Interior & Fit Out System</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] font-semibold text-[#31332C]">REF NO: VM-{document.id.toUpperCase()}-{projectData.id.slice(0, 8).toUpperCase()}</p>
+              <p className="text-[11px] text-[#7B756E] mt-0.5">Tanggal: {document.date}</p>
+            </div>
+          </div>
+
+          {/* Render Document Content depending on Category */}
+          {isBrief && (
+            <div className="space-y-4">
+              <h4 className="text-[13px] font-semibold uppercase tracking-wider text-[#725F54] border-b border-[#E8E2D9] pb-1">Spesifikasi Brief Proyek</h4>
+              <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[13px]">
+                <DetailRow label="Nama Proyek" value={projectData.name} />
+                <DetailRow label="Tipe Desain" value={projectData.designStyle} />
+                <DetailRow label="Jenis Proyek" value={projectData.type} />
+                <DetailRow label="Lokasi Proyek" value={projectData.location} />
+                <DetailRow label="Ukuran Ruangan" value={projectData.roomSize} />
+                <DetailRow label="Estimasi Anggaran" value={projectData.estimatedCost} />
+                <DetailRow label="Partner Vendor" value={projectData.vendorPartner} />
+                <DetailRow label="Status Saat Ini" value={projectData.status} />
+              </div>
+              <div className="mt-4 pt-3 border-t border-[#E8E2D9]">
+                <h5 className="text-[12px] font-semibold text-[#725F54] mb-1">Deskripsi Kebutuhan Customer:</h5>
+                <p className="text-[13px] leading-6 text-[#6F6860] bg-[#FCFBF9] p-3 rounded-xl border border-[#E8E2D9] whitespace-pre-wrap">
+                  {projectData.solution}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isSolution && (
+            <div className="space-y-4">
+              <h4 className="text-[13px] font-semibold uppercase tracking-wider text-[#725F54] border-b border-[#E8E2D9] pb-1">Rekomendasi Solusi & Material VMatch</h4>
+              <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[13px]">
+                <DetailRow label="Solusi Untuk" value={projectData.name} />
+                <DetailRow label="Tipe Pengerjaan" value={projectData.type} />
+                <DetailRow label="Estimasi Durasi" value={projectData.startDate !== "Menunggu jadwal" && projectData.estimatedFinish !== "Menunggu jadwal" ? "2 Bulan" : "Menunggu jadwal"} />
+                <DetailRow label="Estimasi Mulai" value={projectData.startDate} />
+                <DetailRow label="Estimasi Selesai" value={projectData.estimatedFinish} />
+                <DetailRow label="Rencana Anggaran (RAB)" value={customerRab ? customerRab.grand_total : projectData.estimatedCost} />
+              </div>
+              <div className="mt-4 pt-3 border-t border-[#E8E2D9] space-y-3">
+                <div>
+                  <h5 className="text-[12px] font-semibold text-[#725F54] mb-1">Pendekatan Desain & Pengerjaan:</h5>
+                  <p className="text-[13px] leading-6 text-[#6F6860] bg-[#FCFBF9] p-3 rounded-xl border border-[#E8E2D9]">
+                    Fokus pengerjaan ditujukan untuk efisiensi ruang dengan gaya {projectData.designStyle || "Modern"}. Tim vendor menggunakan material ramah lingkungan berkualitas tinggi dengan pengawasan mutu 3-tahap (3-stage QC) dari tim VMatch.
+                  </p>
+                </div>
+                <div>
+                  <h5 className="text-[12px] font-semibold text-[#725F54] mb-1.5">Rekomendasi Material Utama:</h5>
+                  <div className="grid grid-cols-2 gap-2 text-[12px]">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#FCFBF9] border border-[#E8E2D9]">
+                      <span className="font-semibold text-[#725F54]">Kayu & Board:</span> Plywood/Blockboard 18mm
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#FCFBF9] border border-[#E8E2D9]">
+                      <span className="font-semibold text-[#725F54]">Finishing:</span> High Pressure Laminate (HPL) Matte
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#FCFBF9] border border-[#E8E2D9]">
+                      <span className="font-semibold text-[#725F54]">Fitting:</span> Rel Laci Tandem & Engsel Soft-Close
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#FCFBF9] border border-[#E8E2D9]">
+                      <span className="font-semibold text-[#725F54]">Edging:</span> PVC Edging sewarna HPL
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isInvoice && (
+            <div className="space-y-4">
+              <h4 className="text-[13px] font-semibold uppercase tracking-wider text-[#725F54] border-b border-[#E8E2D9] pb-1">Daftar Invoice Pembayaran</h4>
+              {invoices.length > 0 ? (
+                <div className="overflow-hidden rounded-xl border border-[#E8E2D9]">
+                  <table className="w-full text-left border-collapse text-[13px]">
+                    <thead>
+                      <tr className="bg-[#FCFBF9] border-b border-[#E8E2D9] text-[#7B756E] font-medium">
+                        <th className="p-3">Deskripsi Tagihan</th>
+                        <th className="p-3 text-right">Nominal</th>
+                        <th className="p-3 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E8E2D9]">
+                      {invoices.map((inv) => (
+                        <tr key={inv.id}>
+                          <td className="p-3">
+                            <p className="font-semibold text-[#31332C]">{inv.title}</p>
+                            <p className="text-[11px] text-[#7B756E] mt-0.5">Jatuh Tempo: {inv.dueDate}</p>
+                          </td>
+                          <td className="p-3 text-right font-semibold text-[#31332C]">{inv.amount}</td>
+                          <td className="p-3 text-center">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              inv.status === "Terbayar" || inv.status === "Lunas"
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : "bg-amber-50 text-amber-700 border border-amber-200"
+                            }`}>
+                              {inv.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-[13px] text-[#9A8F86] text-center py-6">Belum ada invoice yang diterbitkan untuk proyek ini.</p>
+              )}
+            </div>
+          )}
+
+          {isProgress && (
+            <div className="space-y-4">
+              <h4 className="text-[13px] font-semibold uppercase tracking-wider text-[#725F54] border-b border-[#E8E2D9] pb-1">Log Progress Aktual Pengerjaan</h4>
+              {progressLogs.length > 0 ? (
+                <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+                  {progressLogs.map((log) => (
+                    <div key={log.id} className="relative pl-6 border-l-2 border-[#E8E2D9]">
+                      <div className="absolute -left-[6px] top-1.5 h-2.5 w-2.5 rounded-full bg-[#725F54] ring-4 ring-white" />
+                      <div className="rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 text-[13px]">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-[#725F54]">Progress: {log.progress_percent}%</span>
+                          <span className="text-[11px] text-[#7B756E]">{formatIndoDate(log.log_date)}</span>
+                        </div>
+                        <p className="mt-2 text-[#31332C] leading-relaxed"><strong className="text-[12px] text-[#725F54]">Pekerjaan:</strong> {log.work_summary}</p>
+                        {log.next_plan && <p className="mt-1 text-[#6F6860]"><strong className="text-[12px] text-[#725F54]">Rencana Selanjutnya:</strong> {log.next_plan}</p>}
+                        {log.issue && <p className="mt-2 text-red-700 bg-red-50 p-2 rounded-lg border border-red-200"><strong className="text-[12px] text-red-800">Kendala:</strong> {log.issue}</p>}
+                        {log.photo_path && (
+                          <div className="mt-3 overflow-hidden rounded-xl border border-[#E8E2D9] max-w-[240px]">
+                            <img src={log.photo_path} alt="Progress dokumentasi" className="h-32 w-full object-cover" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[13px] text-[#9A8F86] text-center py-6">Belum ada pembaruan log progres dari vendor.</p>
+              )}
+            </div>
+          )}
+
+          {isQC && (
+            <div className="space-y-4">
+              <h4 className="text-[13px] font-semibold uppercase tracking-wider text-[#725F54] border-b border-[#E8E2D9] pb-1">Checklist Pengawasan Mutu (Quality Control)</h4>
+              <div className="rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-4">
+                <div className="flex justify-between items-center border-b border-[#E8E2D9] pb-3 mb-3 text-[13px]">
+                  <span className="font-semibold text-[#31332C]">Status QC VMatch:</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold border ${
+                    qcChecklistData?.status === "Disetujui"
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-amber-50 text-amber-700 border border-amber-200"
+                  }`}>
+                    {qcChecklistData?.status || "Sedang Dicek"}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {qcChecklist.map((item, idx) => {
+                    // Check if item is completed
+                    let isCompleted = false;
+                    if (qcChecklistData?.items) {
+                      const itemObj = qcChecklistData.items.find((i: any) => i.label === item || i.id === `qc-${idx}`);
+                      isCompleted = itemObj ? itemObj.completed : (qcChecklistData.status === "Disetujui");
+                    } else if (qcChecklistData?.status === "Disetujui") {
+                      isCompleted = true;
+                    }
+                    return (
+                      <div key={idx} className="flex items-center gap-3 text-[13px]">
+                        <CheckCircle2 size={16} className={isCompleted ? "text-green-600 shrink-0" : "text-gray-300 shrink-0"} />
+                        <span className={isCompleted ? "text-[#31332C] font-medium" : "text-[#7B756E]"}>{item}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {qcChecklistData?.customer_note && (
+                  <div className="mt-4 pt-3 border-t border-[#E8E2D9] text-[12px]">
+                    <strong className="text-[#725F54]">Catatan dari Klien:</strong>
+                    <p className="mt-1 text-[#6F6860] bg-white p-2.5 rounded-lg border border-[#E8E2D9]">{qcChecklistData.customer_note}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isFinal && (
+            <div className="space-y-4">
+              <h4 className="text-[13px] font-semibold uppercase tracking-wider text-[#725F54] border-b border-[#E8E2D9] pb-1">Berita Acara Serah Terima (BAST)</h4>
+              <div className="rounded-xl border-2 border-dashed border-[#E8E2D9] bg-[#FFFDF9] p-5 text-[13px] space-y-4">
+                <div className="text-center space-y-1">
+                  <h5 className="font-serif text-[16px] font-bold text-[#725F54]">SURAT PERNYATAAN SERAH TERIMA PEKERJAAN</h5>
+                  <p className="text-[11px] text-[#7B756E]">Nominal Final: {customerRab ? customerRab.grand_total : projectData.estimatedCost}</p>
+                </div>
+                <p className="leading-6 text-[#6F6860]">
+                  Pada hari ini, dengan ditandatanganinya berita acara ini, pekerjaan konstruksi fit-out untuk <strong>{projectData.name}</strong> dinyatakan telah <strong>SELESAI 100%</strong> dengan hasil inspeksi mutu baik dan siap digunakan. Tanggung jawab perawatan secara penuh berpindah ke tangan pemilik proyek, dilindungi oleh Jaminan Garansi VMatch.
+                </p>
+                <div className="grid grid-cols-2 pt-4 border-t border-[#E8E2D9] text-center gap-4">
+                  <div className="space-y-8">
+                    <p className="text-[12px] font-semibold text-[#725F54]">Pihak Pertama (VMatch & Vendor)</p>
+                    <p className="font-serif font-bold text-[#31332C] underline decoration-[#725F54]">Andi Interior Partner</p>
+                  </div>
+                  <div className="space-y-8">
+                    <p className="text-[12px] font-semibold text-[#725F54]">Pihak Kedua (Klien / Customer)</p>
+                    <p className="font-serif font-bold text-[#31332C] underline decoration-[#725F54]">{projectData.status === "Selesai" || qcChecklistData?.customer_approved_at ? "Klien Terverifikasi" : "Menunggu Tanda Tangan"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isWarranty && (
+            <div className="space-y-4">
+              <h4 className="text-[13px] font-semibold uppercase tracking-wider text-[#725F54] border-b border-[#E8E2D9] pb-1">Sertifikat Garansi Mutu VMatch</h4>
+              <div className="rounded-2xl border-4 border-double border-[#D9C8BA] bg-[#FFFDF9] p-5 text-center space-y-4">
+                <span className="inline-block rounded-full bg-[#EFE7DD] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#725F54]">
+                  Official Warranty Certificate
+                </span>
+                <div className="space-y-1">
+                  <h5 className="font-serif text-[22px] font-bold text-[#725F54]">JAMINAN PEMELIHARAAN INTERIOR</h5>
+                  <p className="text-[12px] text-[#7B756E]">No Sertifikat: W-VM-{projectData.id.slice(0, 8).toUpperCase()}</p>
+                </div>
+                <div className="max-w-[420px] mx-auto text-[13px] leading-6 text-[#6F6860] border-t border-b border-[#E8E2D9] py-3 my-2">
+                  Sertifikat ini menjamin bahwa pekerjaan <strong>{projectData.name}</strong> bebas dari cacat pengerjaan atau kelalaian material selama masa pemeliharaan <strong>3 Bulan</strong> terhitung sejak tanggal serah terima pekerjaan.
+                </div>
+                <div className="grid grid-cols-2 text-center text-[12px] gap-2 max-w-[320px] mx-auto">
+                  <div>
+                    <span className="text-[#7B756E] block">Masa Berlaku:</span>
+                    <strong className="text-[#31332C] font-semibold">90 Hari Kalender</strong>
+                  </div>
+                  <div>
+                    <span className="text-[#7B756E] block">Status Garansi:</span>
+                    <strong className="text-green-700 font-bold uppercase">AKTIF</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <footer className="border-t border-[#E8E2D9] bg-[#FCFBF9] px-6 py-4 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 rounded-xl border border-[#E4D8CD] px-5 text-[12px] font-semibold text-[#725F54] hover:bg-white transition"
+          >
+            Tutup Preview
+          </button>
+        </footer>
+      </div>
+    </div>
   );
 }
 
@@ -2090,6 +2552,7 @@ function SimpleTextModal({
   submitLabel,
   onClose,
   onSubmit,
+  submitting,
 }: {
   title: string;
   description: string;
@@ -2097,6 +2560,7 @@ function SimpleTextModal({
   submitLabel: string;
   onClose: () => void;
   onSubmit: (value: string) => void;
+  submitting?: boolean;
 }) {
   const [value, setValue] = useState("");
 
@@ -2105,6 +2569,7 @@ function SimpleTextModal({
       <textarea
         value={value}
         onChange={(event) => setValue(event.target.value)}
+        disabled={submitting}
         rows={5}
         className={textareaClass}
         placeholder={placeholder}
@@ -2114,6 +2579,7 @@ function SimpleTextModal({
         onClose={onClose}
         onSubmit={() => onSubmit(value)}
         submitLabel={submitLabel}
+        disabled={submitting}
       />
     </BaseModal>
   );
@@ -2125,19 +2591,25 @@ function ConfirmModal({
   confirmLabel,
   onClose,
   onConfirm,
+  submitting,
 }: {
   title: string;
   description: string;
   confirmLabel: string;
   onClose: () => void;
   onConfirm: () => void;
+  submitting?: boolean;
 }) {
   return (
     <BaseModal title={title} description={description} onClose={onClose}>
+      <p className="text-[13px] leading-6 text-[#6F6860] mb-4">
+        {description}
+      </p>
       <ModalActions
         onClose={onClose}
         onSubmit={onConfirm}
         submitLabel={confirmLabel}
+        disabled={submitting}
       />
     </BaseModal>
   );
@@ -2146,6 +2618,7 @@ function ConfirmModal({
 function WarrantyClaimModal({
   onClose,
   onSubmit,
+  submitting,
 }: {
   onClose: () => void;
   onSubmit: (claim: {
@@ -2153,6 +2626,7 @@ function WarrantyClaimModal({
     description: string;
     incidentDate: string;
   }) => void;
+  submitting?: boolean;
 }) {
   const [issueType, setIssueType] = useState(
     "Engsel/laci tidak berfungsi normal",
@@ -2171,6 +2645,7 @@ function WarrantyClaimModal({
           <select
             value={issueType}
             onChange={(event) => setIssueType(event.target.value)}
+            disabled={submitting}
             className={fieldClass}
           >
             <option>Kerusakan pemasangan</option>
@@ -2185,6 +2660,7 @@ function WarrantyClaimModal({
             type="date"
             value={incidentDate}
             onChange={(event) => setIncidentDate(event.target.value)}
+            disabled={submitting}
             className={fieldClass}
           />
         </Field>
@@ -2193,6 +2669,7 @@ function WarrantyClaimModal({
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
+            disabled={submitting}
             rows={4}
             className={textareaClass}
             placeholder="Jelaskan masalah yang terjadi."
@@ -2209,6 +2686,7 @@ function WarrantyClaimModal({
             })
           }
           submitLabel="Kirim Klaim"
+          disabled={submitting}
         />
       </div>
     </BaseModal>
@@ -2219,17 +2697,20 @@ function ModalActions({
   onClose,
   onSubmit,
   submitLabel,
+  disabled,
 }: {
   onClose: () => void;
   onSubmit: () => void;
   submitLabel: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
       <button
         type="button"
         onClick={onClose}
-        className="h-11 rounded-[16px] border border-[#E4D8CD] px-5 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+        disabled={disabled}
+        className="h-11 rounded-[16px] border border-[#E4D8CD] px-5 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9] disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Batal
       </button>
@@ -2237,9 +2718,10 @@ function ModalActions({
       <button
         type="button"
         onClick={onSubmit}
-        className="h-11 rounded-[16px] bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+        disabled={disabled}
+        className="h-11 rounded-[16px] bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {submitLabel}
+        {disabled ? "Mengirim..." : submitLabel}
       </button>
     </div>
   );
@@ -2323,26 +2805,36 @@ function mapDbWarrantyToLocalWarranty(claim: DBWarrantyClaim): WarrantyClaim {
   };
 }
 
+function parseRupiah(val: string | null | undefined): number {
+  if (!val) return 0;
+  const cleaned = val.replace(/[^0-9]/g, "");
+  return parseInt(cleaned, 10) || 0;
+}
+
+function formatRupiah(num: number): string {
+  return "Rp" + num.toLocaleString("id-ID");
+}
+
+function formatIndoDate(dateStr: string): string {
+  if (!dateStr || dateStr === "Menunggu jadwal") return "Menunggu jadwal";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const months = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  } catch {
+    return dateStr;
+  }
+}
+
 function createProgressTimeline(
   projectData: ProjectItem,
   projectDone: boolean,
   logs: DBProgressLog[],
 ) {
-  if (logs.length > 0) {
-    return logs
-      .slice()
-      .reverse()
-      .map((log) => ({
-        title: log.status,
-        status:
-          log.progress_percent >= 100
-            ? "Selesai"
-            : log.progress_percent > 0
-              ? "Berjalan"
-              : "Terjadwal",
-        desc: log.work_summary || log.next_plan || "Update progress proyek.",
-      }));
-  }
 
   if (projectDone || projectData.filter === "selesai") {
     return [
@@ -2389,6 +2881,9 @@ function createProgressTimeline(
     ];
   }
 
+  const prodStatus = projectData.progress >= 100 ? "Selesai" : projectData.progress > 0 ? "Berjalan" : "Terjadwal";
+  const instStatus = projectData.progress >= 100 ? "Berjalan" : "Terjadwal";
+
   return [
     {
       title: "Request diterima",
@@ -2407,12 +2902,12 @@ function createProgressTimeline(
     },
     {
       title: "Produksi / pengerjaan",
-      status: "Berjalan",
+      status: prodStatus,
       desc: `Pengerjaan ${projectData.type} sedang berjalan.`,
     },
     {
       title: "Instalasi",
-      status: "Terjadwal",
+      status: instStatus,
       desc: "Instalasi dijadwalkan setelah produksi selesai.",
     },
     {
@@ -2425,11 +2920,12 @@ function createProgressTimeline(
 
 function createWorkSchedules(projectData: ProjectItem) {
   if (projectData.filter === "selesai") {
+    const end = projectData.estimatedFinish !== "Menunggu jadwal" ? formatIndoDate(projectData.estimatedFinish) : "Selesai";
     return [
-      { label: "Survey lokasi", date: "10 Mei 2026" },
-      { label: "Produksi / pengerjaan", date: "12–25 Mei 2026" },
-      { label: "Instalasi", date: "28 Mei 2026" },
-      { label: "QC & serah terima", date: "30 Mei 2026" },
+      { label: "Survey lokasi", date: projectData.startDate !== "Menunggu jadwal" ? formatIndoDate(projectData.startDate) : "Selesai" },
+      { label: "Produksi / pengerjaan", date: projectData.startDate !== "Menunggu jadwal" ? `${formatIndoDate(projectData.startDate)} s/d ${end}` : "Selesai" },
+      { label: "Instalasi", date: end },
+      { label: "QC & serah terima", date: end },
     ];
   }
 
@@ -2441,11 +2937,21 @@ function createWorkSchedules(projectData: ProjectItem) {
     ];
   }
 
+  if (projectData.startDate !== "Menunggu jadwal") {
+    const end = projectData.estimatedFinish !== "Menunggu jadwal" ? formatIndoDate(projectData.estimatedFinish) : "Menunggu jadwal";
+    return [
+      { label: "Survey lokasi", date: formatIndoDate(projectData.startDate) },
+      { label: "Produksi furniture", date: `${formatIndoDate(projectData.startDate)} s/d ${end}` },
+      { label: "Instalasi", date: end },
+      { label: "QC & Serah Terima", date: "Dikonfirmasi setelah instalasi" },
+    ];
+  }
+
   return [
-    { label: "Survey lokasi", date: "18 Juni 2026" },
-    { label: "Produksi furniture", date: "20–25 Juni 2026" },
-    { label: "Instalasi", date: "27 Juni 2026" },
-    { label: "QC", date: "28 Juni 2026" },
+    { label: "Survey lokasi", date: "Menunggu penjadwalan survey" },
+    { label: "Produksi furniture", date: "Menunggu jadwal produksi" },
+    { label: "Instalasi", date: "Menunggu jadwal instalasi" },
+    { label: "QC", date: "Menunggu jadwal QC" },
   ];
 }
 
@@ -2484,13 +2990,15 @@ function createDocuments(
   progressLogs: DBProgressLog[],
   qcChecklistData: DBQcChecklist | null,
 ): DocumentItem[] {
+  const dateStr = projectData.createdAt ? formatIndoDate(projectData.createdAt) : "Terbaru";
+
   return [
     {
       id: "doc-1",
       title: `Brief Proyek ${projectData.name}`,
       category: "Brief Proyek",
       status: "Tersedia",
-      date: "18 Juni 2026",
+      date: dateStr,
       description:
         "Berisi kebutuhan awal customer, referensi desain, budget, lokasi, dan catatan proyek.",
     },
@@ -2499,7 +3007,7 @@ function createDocuments(
       title: "Solusi Awal VMatch",
       category: "Solusi Proyek",
       status: "Tersedia",
-      date: "19 Juni 2026",
+      date: dateStr,
       description:
         "Berisi solusi awal, estimasi, material rekomendasi, dan langkah pengerjaan.",
     },
@@ -2508,7 +3016,7 @@ function createDocuments(
       title: "Invoice Proyek",
       category: "Invoice",
       status: invoices.length > 0 ? "Tersedia" : "Belum tersedia",
-      date: invoices[0]?.dueDate || "-",
+      date: invoices[0]?.dueDate ? formatIndoDate(invoices[0].dueDate) : "-",
       description: "Dokumen tagihan pembayaran proyek.",
     },
     {
@@ -2516,7 +3024,7 @@ function createDocuments(
       title: "Log Progress Proyek",
       category: "Progress",
       status: progressLogs.length > 0 ? "Tersedia" : "Belum tersedia",
-      date: progressLogs[0]?.log_date || "-",
+      date: progressLogs[0]?.log_date ? formatIndoDate(progressLogs[0].log_date) : "-",
       description: "Dokumen pembaruan pengerjaan dari vendor dan tim VMatch.",
     },
     {
@@ -2524,7 +3032,7 @@ function createDocuments(
       title: "Checklist QC",
       category: "QC",
       status: qcChecklistData ? "Tersedia" : "Belum tersedia",
-      date: qcChecklistData?.updated_at || "-",
+      date: qcChecklistData?.updated_at ? formatIndoDate(qcChecklistData.updated_at) : "-",
       description: "Checklist quality control proyek.",
     },
     {
@@ -2532,7 +3040,7 @@ function createDocuments(
       title: "Dokumen Final",
       category: "Final Project",
       status: projectDone ? "Tersedia" : "Belum tersedia",
-      date: projectDone ? "Selesai" : "-",
+      date: projectDone && projectData.estimatedFinish !== "Menunggu jadwal" ? formatIndoDate(projectData.estimatedFinish) : "-",
       description:
         "Dokumen final proyek setelah pekerjaan selesai dan disetujui customer.",
     },
@@ -2541,7 +3049,7 @@ function createDocuments(
       title: "Dokumen Garansi",
       category: "Garansi",
       status: warrantyActive ? "Tersedia" : "Belum tersedia",
-      date: warrantyActive ? "28 Juni 2026" : "-",
+      date: warrantyActive && projectData.estimatedFinish !== "Menunggu jadwal" ? formatIndoDate(projectData.estimatedFinish) : "-",
       description:
         "Dokumen garansi yang aktif setelah proyek selesai dan QC disetujui.",
     },
