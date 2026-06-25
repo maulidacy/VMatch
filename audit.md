@@ -688,3 +688,95 @@ Secara UI/UX, setiap role sudah memiliki dashboard yang **sangat lengkap dan mat
 8. Vendor payout tidak ada di admin
 
 **Rekomendasi:** Sebelum backend, **unify data model dulu** di frontend. Buat shared types, standarisasi status terms, dan pastikan setiap action di satu role punya "landing point" di role lain.
+
+---
+---
+
+# 🔍 UPDATE AUDIT (25 Juni 2026): End-to-End System Audit (Real DB Flow)
+
+Laporan audit lanjutan terhadap alur pengajuan proyek dari User, pemrosesan oleh Admin, hingga pengerjaan oleh Vendor pada sistem VMatch yang telah dihubungkan dengan Supabase (Database, Auth, dan Storage).
+
+Secara keseluruhan, **sekitar 90% fitur aplikasi sudah tersambung dengan Supabase Asli dan terbebas dari mock data**. Namun, ada **3 Blocker Kritis**, **3 Fitur Fake/Local State**, dan **4 Bottleneck UX** yang harus diperbaiki agar flow benar-benar 100% sempurna tanpa *dead-end*.
+
+---
+
+## 🚨 P0: KRITIS (BLOCKER FLOW DB)
+
+Temuan ini **menyebabkan aplikasi crash atau flow terputus di tengah jalan**, sehingga data gagal tersimpan ke database.
+
+### 1. BUG-01: Status "Persiapan" Invalid (Crash DB)
+- **Lokasi:** `src/app/dashboard/admin/components/request-project-view.tsx`
+- **Masalah:** Saat admin mengklik tombol agar request "Menjadi Proyek Aktif", aplikasi memanggil fungsi `createProject({ status: "Persiapan" })`. Status "Persiapan" **TIDAK ADA** di aturan `CHECK constraint` database PostgreSQL untuk tabel `projects`. 
+- **Dampak:** Aplikasi gagal total memproses perubahan status (Dead-end) dengan mengembalikan error dari Supabase.
+- **Solusi Final:** Ganti parameter menjadi `status: "Berjalan"`.
+
+### 2. BUG-02: Duplikasi Logika Pembuatan Proyek (Conflict)
+- **Lokasi:** `src/app/dashboard/admin/components/request-project-view.tsx` & `DATABASE/schema.sql` (Trigger)
+- **Masalah:** Terdapat dua mekanisme yang bertabrakan:
+  1. API `updateProjectRequest()` yang mengubah status request ke `"Menjadi Proyek Aktif"`. Perubahan ini otomatis **memicu Trigger Database** `sync_project_request_to_projects()` yang bertugas melakukan upsert ke tabel `projects`.
+  2. Secara bersamaan di sisi frontend, kode secara **manual** mengeksekusi `createProject()`.
+- **Dampak:** Tabel `projects` rentan menerima *duplicate insert* atau mengalami *conflict error* jika trigger dieksekusi lebih dulu oleh PostgreSQL.
+- **Solusi Final:** Hapus pemanggilan fungsi manual `createProject()` di frontend. Serahkan sepenuhnya kepada Trigger DB.
+
+### 3. BUG-03: Mapping Status di Trigger Berantakan
+- **Lokasi:** `DATABASE/schema.sql` (Fungsi Trigger `sync_project_request_to_projects`)
+- **Masalah:** Trigger database mencoba mendeteksi status dari tabel `project_requests` dengan nilai seperti `'Estimasi Diterima'`, `'RAB Disetujui'`, dan `'Dikerjakan'`. Ketiga nilai tersebut **TIDAK PERNAH ADA** di database karena tidak diizinkan oleh constraint CHECK tabel `project_requests`.
+- **Dampak:** Trigger selalu gagal menemukan status yang valid dan selalu *fall-back* mengeksekusi klausa `ELSE 'Berjalan'`, yang membuat update status selanjutnya tidak proporsional.
+- **Solusi Final:** Sesuaikan parameter `CASE` di trigger dengan nilai valid dari constraint CHECK tabel `project_requests` (misal: `'Estimasi Dikirim Vendor'`, `'RAB Dikirim ke Customer'`).
+
+---
+
+## 🚫 P1: PELANGGARAN BATASAN (FAKE DATA / LOCAL STATE)
+
+Sesuai dengan kriteria, sistem dilarang keras menggunakan *mock data*. Namun, terdapat beberapa fitur yang **hanya memanipulasi Local React State** dan akan **hilang ketika browser direfresh** (tidak pernah menembak API ke Supabase).
+
+### 4. FAKE-01: User - Minta Perubahan Material
+- **Lokasi:** `src/app/dashboard/user/components/proyek-view.tsx`
+- **Masalah:** Saat user mengisi form "Minta Perubahan Material", kode hanya menjalankan fungsi set local state `setRevisions([ ...current ])` dan `setMaterialStatus("Menunggu Review")`.
+- **Dampak:** Permintaan tidak pernah tersimpan di database. Admin tidak akan pernah menerima info ini. (Murni *fake UI*).
+- **Solusi Final:** Simpan data revisi ini dengan memanggil endpoint Supabase untuk `updateProject()` (misal ke field `customer_note`) atau insert ke tabel `revisions` yang sesungguhnya.
+
+### 5. FAKE-02: User - Minta Revisi Umum
+- **Lokasi:** `src/app/dashboard/user/components/proyek-view.tsx`
+- **Masalah:** Sama seperti material, form modal untuk meminta revisi proyek hanya memperbarui React State `revisions`. Tidak memanggil fungsi API `createRevision` atau sejenisnya.
+- **Dampak:** Revisi hilang saat refresh dan tidak akan pernah diproses Admin.
+- **Solusi Final:** Implementasikan pemanggilan API agar data revisi tersimpan permanen.
+
+### 6. FAKE-03: User - Ajukan Catatan QC
+- **Lokasi:** `src/app/dashboard/user/components/proyek-view.tsx`
+- **Masalah:** Saat user mengklik "Kirim Catatan QC", kode hanya mengeksekusi `setQcStatus("Perlu Catatan")`. Tidak ada pemanggilan API seperti `upsertQcChecklist` dengan pesan penolakan tersebut.
+- **Dampak:** Admin tidak akan pernah tau bahwa user menolak QC atau memberikan catatan karena catatannya ditelan local state.
+- **Solusi Final:** Ubah kode agar memanggil `updateProject()` atau `upsertQcChecklist()` ke database sebelum memperbarui UI.
+
+---
+
+## ⚠️ P2: KENDALA LOGIKA & UX (BOTTLENECK FLOW)
+
+Temuan ini tidak membuat sistem crash, tetapi memutus efektivitas UX antar tiga Role.
+
+### 7. FLOW-01: Brief Dokumen Terputus dari Request
+- **Lokasi:** Navigasi dari halaman `Request Project` ke `Brief Documents` di sisi Admin.
+- **Masalah:** Ketika Admin menekan "Buat Dokumen Brief" di detail request, sistem hanya menavigasi ke halaman Brief. Di sana, form brief masih kosong dan Admin harus mengetik manual nama proyek dan info lainnya.
+- **Dampak:** Tidak ada ikatan otomatis (`request_id`). Rentan terjadi inkonsistensi data.
+- **Solusi Final:** Pass ID dari request melalui state atau URL (misal `?requestId=123`) agar halaman Brief bisa fetch data awal dan menautkan `createBrief()` dengan `request_id` yang benar.
+
+### 8. FLOW-02: Vendor Tidak Punya Tombol "Selesai" (Dead-end)
+- **Lokasi:** `src/app/dashboard/vendor/components/project-view.tsx`
+- **Masalah:** Setelah Vendor mengerjakan proyek hingga progress 100%, tidak ada satupun tombol untuk mengubah status proyek menjadi `"Menunggu QC"` atau `"Selesai"`. 
+- **Dampak:** Vendor tidak bisa secara mandiri menyelesaikan proyek. Selalu harus lewat Admin.
+- **Solusi Final:** Tambahkan fitur "Ajukan QC / Tandai Selesai" di UI Vendor.
+
+### 9. FLOW-03: Ketiadaan Sinkronisasi Real-Time (Stale Data)
+- **Lokasi:** Seluruh aplikasi.
+- **Masalah:** Data hanya diambil (fetch) saat *mounting component*. Tidak ada *Supabase Realtime subscriptions*.
+- **Dampak:** Jika Vendor merespons Brief, Admin yang sedang membuka halaman tidak akan melihat update sebelum melakukan *refresh* manual browser.
+- **Solusi Final:** Implementasikan listener `supabase.channel` di tingkat komponen utama agar bisa otomatis me-*refetch* data bila ada perubahan di DB.
+
+### 10. FLOW-04: Notifikasi Fiktif
+- **Lokasi:** Seluruh trigger event penting.
+- **Masalah:** VMatch memiliki fitur tombol bel notifikasi dan tabel `notifications` di Supabase, tetapi notifikasi tidak pernah terbuat secara terprogram melalui `createNotification()` pada *event* krusial (misal: "Proyek Baru", "RAB Disetujui").
+- **Solusi Final:** Integrasikan fungsi `createNotification()` setiap kali terjadi perubahan status penting di API backend/frontend.
+
+---
+**KESIMPULAN AUDIT TERBARU:**  
+Jika ke-10 temuan (terutama BUG-01, BUG-02, dan FAKE 01-03) diperbaiki, seluruh alur aplikasi *User Request Project* dari sisi fungsionalitas dan interaksi database dijamin **bekerja secara E2E 100% sempurna tanpa ada hambatan**, mematuhi syarat wajib penggunaan data asli tanpa mock data.
