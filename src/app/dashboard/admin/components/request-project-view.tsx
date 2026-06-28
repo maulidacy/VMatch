@@ -255,7 +255,9 @@ export function RequestProjectView({
     }, []);
 
     useEffect(() => {
-        loadRequests();
+        void Promise.resolve().then(() => {
+            loadRequests();
+        });
     }, [loadRequests]);
     const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
         null,
@@ -351,7 +353,7 @@ export function RequestProjectView({
         const currentRequest = requests.find(r => r.id === id);
         if (!currentRequest) return;
         const newData = updater(currentRequest);
-        
+
         try {
             setSubmitting(true);
             await updateProjectRequest(id, {
@@ -377,7 +379,7 @@ export function RequestProjectView({
                 ...request,
                 status,
             }));
-            
+
             toast.success(`Status berhasil diubah menjadi ${status}`);
 
             if (status === "Butuh Konsultasi") setActiveTab("Konsultasi");
@@ -588,8 +590,8 @@ export function RequestProjectView({
                                         type="button"
                                         onClick={() => setActiveTab(tab)}
                                         className={`inline-flex h-10 shrink-0 items-center justify-center rounded-xl px-4 text-[12px] font-semibold transition ${active
-                                                ? "bg-[#725F54] text-white shadow-sm"
-                                                : "text-[#6F6860] hover:bg-white"
+                                            ? "bg-[#725F54] text-white shadow-sm"
+                                            : "text-[#6F6860] hover:bg-white"
                                             }`}
                                     >
                                         {tab}
@@ -848,11 +850,10 @@ function RequestDetailPage({
                     type="button"
                     onClick={onOpenRabBuilder}
                     disabled={!canOpenRab || submitting}
-                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${
-                        canOpenRab
-                            ? "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
-                            : "cursor-not-allowed border-[#E8E2D9] bg-white text-[#B8AEA5]"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-[12px] font-semibold transition ${canOpenRab
+                        ? "border-[#E4D8CD] bg-white text-[#725F54] hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                        : "cursor-not-allowed border-[#E8E2D9] bg-white text-[#B8AEA5]"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                     <FileText size={15} />
                     Buka RAB Builder
@@ -912,11 +913,11 @@ function BriefDocumentActionCard({
                         </div>
                     </div>
 
-                    <div className="grid gap-2 sm:grid-cols-2 lg:w-[320px]">
+                    <div className="grid gap-2 sm:grid-cols-2 lg:w-[420px]">
                         <button
                             type="button"
                             onClick={onOpenBriefDocument}
-                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
+                            className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#E4D8CD] bg-white px-3 text-[12px] font-semibold text-[#725F54] transition hover:border-[#725F54] hover:bg-[#725F54] hover:text-white"
                         >
                             <FileText size={14} />
                             {actionLabel}
@@ -926,11 +927,10 @@ function BriefDocumentActionCard({
                             type="button"
                             onClick={onMarkBriefReady}
                             disabled={isSent}
-                            className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
-                                isReady
-                                    ? "bg-[#F5FAF6] text-[#4F7A5F] ring-1 ring-[#DCEBDD]"
-                                    : "bg-[#725F54] text-white hover:bg-[#5A4A42]"
-                            } ${isSent ? "cursor-not-allowed opacity-80" : ""}`}
+                            className={`inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-[12px] font-semibold transition ${isReady
+                                ? "bg-[#F5FAF6] text-[#4F7A5F] ring-1 ring-[#DCEBDD]"
+                                : "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                                } ${isSent ? "cursor-not-allowed opacity-80" : ""}`}
                         >
                             <CheckCircle2 size={14} />
                             {isReady ? "Brief Siap" : "Tandai Siap"}
@@ -1000,10 +1000,9 @@ function RequestBriefSection({
                     type="button"
                     onClick={onSendBrief}
                     disabled={!request.selectedVendorId || !isBriefReadyForVendor(request) || submitting}
-                    className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${
-                        request.selectedVendorId && isBriefReadyForVendor(request)
-                            ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
-                            : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
+                    className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold transition ${request.selectedVendorId && isBriefReadyForVendor(request)
+                        ? "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                        : "cursor-not-allowed bg-[#E8E2D9] text-[#9A8F86]"
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                     <Send size={14} />
@@ -1058,8 +1057,8 @@ function RequestBriefSection({
             <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div
                     className={`min-w-0 ${vendors.length > 2
-                            ? "xl:max-h-[640px] xl:overflow-y-auto xl:pr-2 [scrollbar-width:thin]"
-                            : ""
+                        ? "xl:max-h-[640px] xl:overflow-y-auto xl:pr-2 [scrollbar-width:thin]"
+                        : ""
                         }`}
                 >
                     {vendors.length > 0 ? (
@@ -1172,8 +1171,8 @@ function VendorRecommendationCard({
     return (
         <article
             className={`rounded-2xl border p-4 transition ${selected
-                    ? "border-[#725F54] bg-white ring-2 ring-[#725F54]/12"
-                    : "border-[#E8E2D9] bg-white hover:border-[#725F54]"
+                ? "border-[#725F54] bg-white ring-2 ring-[#725F54]/12"
+                : "border-[#E8E2D9] bg-white hover:border-[#725F54]"
                 }`}
         >
             <div className="flex items-start gap-3">
@@ -1205,8 +1204,8 @@ function VendorRecommendationCard({
                     <span
                         key={skill}
                         className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${skill === request.projectType
-                                ? "border-[#D9C8BA] bg-[#FFFDF9] text-[#725F54]"
-                                : "border-[#E8E2D9] bg-[#FCFBF9] text-[#7B756E]"
+                            ? "border-[#D9C8BA] bg-[#FFFDF9] text-[#725F54]"
+                            : "border-[#E8E2D9] bg-[#FCFBF9] text-[#7B756E]"
                             }`}
                     >
                         {skill}
@@ -1238,8 +1237,8 @@ function VendorRecommendationCard({
                 type="button"
                 onClick={onSelect}
                 className={`mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl text-[12px] font-semibold transition ${selected
-                        ? "bg-[#F5FAF6] text-[#4F7A5F] ring-1 ring-[#DCEBDD]"
-                        : "bg-[#725F54] text-white hover:bg-[#5A4A42]"
+                    ? "bg-[#F5FAF6] text-[#4F7A5F] ring-1 ring-[#DCEBDD]"
+                    : "bg-[#725F54] text-white hover:bg-[#5A4A42]"
                     }`}
             >
                 <CheckCircle2 size={14} />

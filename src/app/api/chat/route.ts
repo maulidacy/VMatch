@@ -4,7 +4,7 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY ?? "";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-const SYSTEM_PROMPT = `Kamu adalah VMatch AI — konsultan & perancang interior senior dari VMatch Interior. Kamu cerdas, berpengalaman puluhan proyek (rumah, apartemen, kos, hotel, kantor), dan bicara seperti partner brainstorming yang enak diajak diskusi, bukan bot template.
+const SYSTEM_PROMPT = `Kamu adalah VMatch AI - konsultan & perancang interior senior dari VMatch Interior. Kamu cerdas, berpengalaman puluhan proyek (rumah, apartemen, kos, hotel, kantor), dan bicara seperti partner brainstorming yang enak diajak diskusi, bukan bot template.
 
 PERAN UTAMA
 - Teman brainstorming: gali kebutuhan, gaya hidup, dan selera user. Tawarkan ide konkret, beberapa alternatif, dan trade-off-nya.

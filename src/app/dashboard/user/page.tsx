@@ -115,7 +115,7 @@ export default function UserDashboardPage() {
           </div>
         )}
       </section>
-      <FloatingWhatsApp />
+      {activePage !== "ai" && <FloatingWhatsApp />}
     </main>
   );
 }

@@ -510,8 +510,8 @@ function DesignTab({
     return (
         <div className="space-y-5">
             <section className="rounded-xl border border-[#E8E2D9] bg-white p-4 sm:p-5">
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_220px_220px_220px_150px] lg:items-end">
-                    <label className="grid gap-1.5">
+                <div className="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(130px,160px)_minmax(130px,160px)_minmax(130px,160px)_96px] lg:items-end">
+                    <label className="grid min-w-0 gap-1.5">
                         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7B756E]">
                             Cari Inspirasi
                         </span>
@@ -525,7 +525,7 @@ function DesignTab({
                             <input
                                 value={search}
                                 onChange={(event) => onSearchChange(event.target.value)}
-                                className="h-11 w-full rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] pl-11 pr-4 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54]"
+                                className="h-11 w-full min-w-0 rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] pl-11 pr-4 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54]"
                                 placeholder="Cari desain, material, ruangan, atau area..."
                             />
                         </div>
@@ -564,7 +564,7 @@ function DesignTab({
                     <button
                         type="button"
                         onClick={onResetFilter}
-                        className="h-11 rounded-xl bg-[#725F54] px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#5A4A42]"
+                        className="h-11 rounded-xl bg-[#725F54] px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#5A4A42] active:bg-[#5A4A42]"
                     >
                         Reset
                     </button>
@@ -887,7 +887,7 @@ function UseReferencePopup({
                     ruangan.
                 </p>
 
-                <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                <div className="mt-5 grid gap-2 sm:grid-cols-[1fr_1fr_1.4fr]">
                     <button
                         type="button"
                         onClick={onClose}
@@ -917,7 +917,7 @@ function UseReferencePopup({
                     <button
                         type="button"
                         onClick={onUseAndEdit}
-                        className="h-11 rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
+                        className="h-11 whitespace-nowrap rounded-xl bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] active:bg-[#5A4A42]"
                     >
                         Gunakan & Edit Request
                     </button>
@@ -1105,7 +1105,7 @@ function FilterSelect({
     onChange: (value: string) => void;
 }) {
     return (
-        <label className="grid gap-1.5">
+        <label className="grid min-w-0 gap-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7B756E]">
                 {label}
             </span>
@@ -1114,7 +1114,7 @@ function FilterSelect({
                 <select
                     value={value}
                     onChange={(event) => onChange(event.target.value)}
-                    className="h-11 w-full appearance-none rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-4 pr-10 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54]"
+                    className="h-11 w-full min-w-0 appearance-none truncate rounded-xl border border-[#E4D8CD] bg-[#FCFBF9] px-3 pr-9 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54]"
                 >
                     {options.map((item) => (
                         <option key={item.value} value={item.value}>
