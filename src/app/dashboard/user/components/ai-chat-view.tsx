@@ -118,6 +118,27 @@ function dataUrlToBlob(dataUrl: string): Blob {
 
 // ---- Component --------------------------------------------------------------
 
+function getJakartaGreeting() {
+  const formatter = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    hour: "numeric",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(new Date());
+  const hourPart = parts.find((p) => p.type === "hour");
+
+  if (!hourPart) return "Halo";
+
+  const h = parseInt(hourPart.value, 10);
+
+  if (h >= 4 && h < 11) return "Selamat Pagi";
+  if (h >= 11 && h < 15) return "Selamat Siang";
+  if (h >= 15 && h < 18) return "Selamat Sore";
+
+  return "Selamat Malam";
+}
+
 export function AiChatView({ userId }: { userId: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -134,7 +155,7 @@ export function AiChatView({ userId }: { userId: string }) {
   // Track activeSessionId synchronously to avoid stale-closure bugs in async flows.
   const activeSessionIdRef = useRef<string | null>(null);
   const puterReadyRef = useRef(false);
-  const [greeting, setGreeting] = useState("Halo");
+  const greeting = useMemo(() => getJakartaGreeting(), []);
   // Saat true, effect pemuat pesan tidak boleh menimpa pesan optimistik
   // yang sedang dikirim (mencegah jawaban AI terhapus saat sesi baru dibuat).
   const suppressLoadRef = useRef(false);
@@ -246,23 +267,6 @@ export function AiChatView({ userId }: { userId: string }) {
     textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 116)}px`;
   }, [input]);
 
-  useEffect(() => {
-    const formatter = new Intl.DateTimeFormat("id-ID", {
-      timeZone: "Asia/Jakarta",
-      hour: "numeric",
-      hour12: false,
-    });
-    const parts = formatter.formatToParts(new Date());
-    const hourPart = parts.find((p) => p.type === "hour");
-    if (hourPart) {
-      const h = parseInt(hourPart.value, 10);
-      if (h >= 4 && h < 11) setGreeting("Selamat Pagi");
-      else if (h >= 11 && h < 15) setGreeting("Selamat Siang");
-      else if (h >= 15 && h < 18) setGreeting("Selamat Sore");
-      else setGreeting("Selamat Malam");
-    }
-  }, []);
-
   // ---- Message state updaters ----------------------------------------------
 
   const patchMessage = (messageId: string, patch: Partial<ChatMessage>) => {
@@ -304,10 +308,10 @@ export function AiChatView({ userId }: { userId: string }) {
     const data = await response.json();
     return String(
       data.content ??
-        data.message ??
-        data.reply ??
-        data.text ??
-        "Maaf, saya belum mendapatkan jawaban dari sistem.",
+      data.message ??
+      data.reply ??
+      data.text ??
+      "Maaf, saya belum mendapatkan jawaban dari sistem.",
     );
   };
 
@@ -353,6 +357,38 @@ export function AiChatView({ userId }: { userId: string }) {
 
   // ---- Image generation (via Puter.js — free, client-side) -------------------
 
+
+  const waitForPuterReady = async () => {
+    if (typeof window === "undefined") {
+      throw new Error("Puter hanya bisa berjalan di browser.");
+    }
+
+    if (window.puter?.ai?.txt2img) {
+      puterReadyRef.current = true;
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      let attempts = 0;
+
+      const timer = window.setInterval(() => {
+        if (window.puter?.ai?.txt2img) {
+          puterReadyRef.current = true;
+          window.clearInterval(timer);
+          resolve();
+          return;
+        }
+
+        attempts += 1;
+
+        if (attempts >= 75) {
+          window.clearInterval(timer);
+          reject(new Error("Puter.js belum siap. Coba beberapa saat lagi."));
+        }
+      }, 200);
+    });
+  };
+
   const requestImage = async (prompt: string): Promise<string> => {
     const fullPrompt = [
       "Photorealistic interior design visualization.",
@@ -361,22 +397,27 @@ export function AiChatView({ userId }: { userId: string }) {
       `Scene: ${prompt}`,
     ].join(" ");
 
-    if (!puterReadyRef.current || !window.puter?.ai?.txt2img) {
-      throw new Error("Puter.js is not loaded yet. Please wait a moment.");
+    await waitForPuterReady();
+
+    if (!window.puter?.ai?.txt2img || !window.puter?.auth) {
+      throw new Error("Puter.js tidak tersedia di browser.");
     }
 
-    try {
-      const imgEl = await window.puter.ai.txt2img({
-        prompt: fullPrompt,
-        provider: "openai-image-generation",
-        model: "gpt-image-1-mini",
-      });
-      if (!imgEl?.src) throw new Error("No image returned from Puter");
-      return imgEl.src;
-    } catch (puterErr: any) {
-      console.error("Puter image generation failed.", puterErr?.message || puterErr);
-      throw puterErr;
+    if (!window.puter.auth.isSignedIn()) {
+      await window.puter.auth.signIn();
     }
+
+    const imgEl = await window.puter.ai.txt2img({
+      prompt: fullPrompt,
+      provider: "openai-image-generation",
+      model: "gpt-image-1-mini",
+    });
+
+    if (!imgEl?.src) {
+      throw new Error("Tidak ada gambar yang dikembalikan dari Puter.");
+    }
+
+    return imgEl.src;
   };
 
   const persistImage = async (dataUrl: string, sessionId: string): Promise<string> => {
@@ -462,17 +503,6 @@ export function AiChatView({ userId }: { userId: string }) {
   const sendMessage = async (value?: string) => {
     const message = (value ?? input).trim();
     if (!message || isLoading) return;
-
-    // Pre-authenticate Puter.js (jika belum) pada saat user klik tombol "Kirim",
-    // agar pop-up login Puter tidak diblokir oleh browser (karena ini adalah respons langsung dari user gesture).
-    if (puterReadyRef.current && window.puter && !window.puter.auth.isSignedIn()) {
-      try {
-        await window.puter.auth.signIn();
-      } catch (authErr) {
-        console.warn("Puter auth cancelled or failed:", authErr);
-        // Tetap lanjut, biarkan gagal di requestImage nantinya atau mungkin user pakai text saja.
-      }
-    }
 
     const userMessage: ChatMessage = {
       id: createMessageId("user"),
@@ -595,61 +625,60 @@ export function AiChatView({ userId }: { userId: string }) {
             </div>
           </div>
 
-        <div className="max-h-[240px] overflow-y-auto p-3 lg:max-h-none lg:h-[calc(100vh-220px)]">
-          {isLoadingHistory ? (
-            <div className="py-8 text-center text-[13px] text-[#8B8179]">Memuat riwayat...</div>
-          ) : sessions.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-4 text-center">
-              <MessageSquare size={18} className="mx-auto text-[#6B5B52]" />
-              <p className="mt-3 text-[13px] font-semibold text-[#3D3530]">Belum ada chat</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {sessions.map((session) => {
-                const active = session.id === activeSessionId;
-                return (
-                  <div
-                    key={session.id}
-                    className={`flex items-start gap-2 rounded-2xl border p-3 ${
-                      active ? "border-[#D9C8BA] bg-[#FFFDF9]" : "border-[#E8E2D9] bg-white"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setActiveSessionIdSynced(session.id)}
-                      className="min-w-0 flex-1 text-left"
+          <div className="max-h-[240px] overflow-y-auto p-3 lg:max-h-none lg:h-[calc(100vh-220px)]">
+            {isLoadingHistory ? (
+              <div className="py-8 text-center text-[13px] text-[#8B8179]">Memuat riwayat...</div>
+            ) : sessions.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[#E8E2D9] bg-[#FCFBF9] p-4 text-center">
+                <MessageSquare size={18} className="mx-auto text-[#6B5B52]" />
+                <p className="mt-3 text-[13px] font-semibold text-[#3D3530]">Belum ada chat</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {sessions.map((session) => {
+                  const active = session.id === activeSessionId;
+                  return (
+                    <div
+                      key={session.id}
+                      className={`flex items-start gap-2 rounded-2xl border p-3 ${active ? "border-[#D9C8BA] bg-[#FFFDF9]" : "border-[#E8E2D9] bg-white"
+                        }`}
                     >
-                      <p className="truncate text-[13px] font-semibold text-[#3D3530]">
-                        {session.title}
-                      </p>
-                      <p className="mt-1 text-[11px] text-[#8B8179]">
-                        {new Date(session.updated_at).toLocaleDateString("id-ID")}
-                      </p>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSessionIdSynced(session.id)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <p className="truncate text-[13px] font-semibold text-[#3D3530]">
+                          {session.title}
+                        </p>
+                        <p className="mt-1 text-[11px] text-[#8B8179]">
+                          {new Date(session.updated_at).toLocaleDateString("id-ID")}
+                        </p>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await deleteChatSession(session.id).catch(() => null);
-                        const remaining = sessions.filter((item) => item.id !== session.id);
-                        setSessions(remaining);
-                        if (activeSessionIdRef.current === session.id) {
-                          const nextId = remaining[0]?.id ?? null;
-                          setActiveSessionIdSynced(nextId);
-                          if (!nextId) setMessages([]);
-                        }
-                      }}
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[#8B8179] transition hover:bg-[#F5F0EA] hover:text-[#6B5B52]"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </aside>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await deleteChatSession(session.id).catch(() => null);
+                          const remaining = sessions.filter((item) => item.id !== session.id);
+                          setSessions(remaining);
+                          if (activeSessionIdRef.current === session.id) {
+                            const nextId = remaining[0]?.id ?? null;
+                            setActiveSessionIdSynced(nextId);
+                            if (!nextId) setMessages([]);
+                          }
+                        }}
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[#8B8179] transition hover:bg-[#F5F0EA] hover:text-[#6B5B52]"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </aside>
       )}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {!isSidebarOpen && (
@@ -753,11 +782,10 @@ function ChatInputBox({
 
   return (
     <div
-      className={`border border-[#E8E2D9] bg-white text-left ${
-        isLarge
-          ? "rounded-3xl p-4 shadow-[0_18px_45px_rgba(49,51,44,0.07)]"
-          : "rounded-2xl p-3 shadow-[0_10px_28px_rgba(49,51,44,0.055)]"
-      }`}
+      className={`border border-[#E8E2D9] bg-white text-left ${isLarge
+        ? "rounded-3xl p-4 shadow-[0_18px_45px_rgba(49,51,44,0.07)]"
+        : "rounded-2xl p-3 shadow-[0_10px_28px_rgba(49,51,44,0.055)]"
+        }`}
     >
       <textarea
         ref={textareaRef}
@@ -767,11 +795,10 @@ function ChatInputBox({
         rows={isLarge ? 2 : 1}
         placeholder="Tanya soal desain, budget, atau minta visualisasi..."
         disabled={isLoading}
-        className={`w-full resize-none bg-transparent px-1 text-[#3D3530] outline-none placeholder:text-[#B8B2AA] disabled:opacity-60 ${
-          isLarge
-            ? "max-h-[116px] min-h-[52px] text-[15px] leading-7 sm:text-[16px]"
-            : "max-h-[104px] min-h-[42px] text-[14px] leading-6 sm:text-[15px]"
-        }`}
+        className={`w-full resize-none bg-transparent px-1 text-[#3D3530] outline-none placeholder:text-[#B8B2AA] disabled:opacity-60 ${isLarge
+          ? "max-h-[116px] min-h-[52px] text-[15px] leading-7 sm:text-[16px]"
+          : "max-h-[104px] min-h-[42px] text-[14px] leading-6 sm:text-[15px]"
+          }`}
       />
 
       <div className="mt-3 flex items-center justify-end gap-3">
@@ -779,33 +806,30 @@ function ChatInputBox({
           <button
             type="button"
             onClick={() => setChatMode("instant")}
-            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${
-              chatMode === "instant"
-                ? "bg-white text-[#3D3530] shadow-sm"
-                : "text-[#8B8179] hover:text-[#6B5B52]"
-            }`}
+            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${chatMode === "instant"
+              ? "bg-white text-[#3D3530] shadow-sm"
+              : "text-[#8B8179] hover:text-[#6B5B52]"
+              }`}
           >
             Instant
           </button>
           <button
             type="button"
             onClick={() => setChatMode("reasoning")}
-            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${
-              chatMode === "reasoning"
-                ? "bg-white text-[#3D3530] shadow-sm"
-                : "text-[#8B8179] hover:text-[#6B5B52]"
-            }`}
+            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${chatMode === "reasoning"
+              ? "bg-white text-[#3D3530] shadow-sm"
+              : "text-[#8B8179] hover:text-[#6B5B52]"
+              }`}
           >
             Reasoning
           </button>
           <button
             type="button"
             onClick={() => setChatMode("image")}
-            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${
-              chatMode === "image"
-                ? "bg-white text-[#3D3530] shadow-sm"
-                : "text-[#8B8179] hover:text-[#6B5B52]"
-            }`}
+            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${chatMode === "image"
+              ? "bg-white text-[#3D3530] shadow-sm"
+              : "text-[#8B8179] hover:text-[#6B5B52]"
+              }`}
           >
             Image
           </button>
@@ -815,9 +839,8 @@ function ChatInputBox({
           type="button"
           onClick={onSend}
           disabled={!input.trim() || isLoading}
-          className={`grid shrink-0 place-items-center rounded-xl bg-[#6B5B52] text-white transition hover:bg-[#5A4A42] disabled:cursor-not-allowed disabled:bg-[#D6D0CA] disabled:text-white ${
-            isLarge ? "h-10 w-10" : "h-9 w-9"
-          }`}
+          className={`grid shrink-0 place-items-center rounded-xl bg-[#6B5B52] text-white transition hover:bg-[#5A4A42] disabled:cursor-not-allowed disabled:bg-[#D6D0CA] disabled:text-white ${isLarge ? "h-10 w-10" : "h-9 w-9"
+            }`}
           aria-label="Kirim pesan"
         >
           {isLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={16} />}
@@ -910,7 +933,7 @@ function GeneratingImageCard({ caption }: { caption: string }) {
               <Wand2 size={20} />
             </motion.div>
             <span className="text-[12px] font-semibold">Membuat visualisasi...</span>
-            <span className="text-[10.5px] text-[#8B8179]">Gemini sedang menggambar</span>
+            <span className="text-[10.5px] text-[#8B8179]">AI sedang membuat gambar</span>
           </div>
         </div>
       </div>
@@ -977,14 +1000,14 @@ function GenerationBlock({ generation }: { generation: ChatGeneration }) {
           >
             <X size={28} />
           </button>
-          
+
           <img
             src={generation.src}
             alt={generation.caption}
             className="max-h-full max-w-full rounded-md object-contain shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
-          
+
           <a
             href={generation.src}
             download={`VMatch-AI-${generation.caption.replace(/\s+/g, "-")}.png`}
