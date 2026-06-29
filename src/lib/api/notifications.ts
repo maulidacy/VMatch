@@ -42,13 +42,10 @@ export async function markAllNotificationsRead(userId: string) {
 }
 
 export async function createNotification(payload: Partial<Notification>) {
-  const { data, error } = await supabase()
+  const { error } = await supabase()
     .from("notifications")
-    .insert(payload)
-    .select()
-    .single();
+    .insert(payload);
   if (error) throw error;
-  return data as Notification;
 }
 
 export async function deleteNotification(id: string) {

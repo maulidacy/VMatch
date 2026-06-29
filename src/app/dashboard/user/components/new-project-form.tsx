@@ -279,14 +279,14 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
                 project_name: mode === "ai" ? (briefResult?.chips?.jenis ? `Proyek ${briefResult.chips.jenis}` : "Proyek Baru") : manualForm.projectName,
                 project_type: mode === "ai" ? (briefResult?.chips?.jenis || "Belum ditentukan") : manualForm.projectType,
                 design_style: mode === "ai" ? (briefResult?.chips?.style || null) : (manualForm.designStyle || null),
-                location: manualForm.location || "Belum ditentukan",
-                room_size: manualForm.roomSize || null,
+                location: mode === "ai" ? (briefResult?.chips?.lokasi || "Belum ditentukan") : (manualForm.location || "Belum ditentukan"),
+                room_size: mode === "ai" ? (briefResult?.chips?.ukuran || null) : (manualForm.roomSize || null),
                 budget: mode === "ai" ? (briefResult?.chips?.budget || null) : (manualForm.budget || null),
-                material_preference: manualForm.materialPreference || null,
+                material_preference: mode === "ai" ? (briefResult?.chips?.material || null) : (manualForm.materialPreference || null),
                 material_package: manualForm.materialPackage || null,
-                reference_name: manualForm.referenceName || null,
-                start_target: manualForm.startTarget || null,
-                finish_target: manualForm.finishTarget || null,
+                reference_name: mode === "ai" ? (briefResult?.chips?.referensi || null) : (manualForm.referenceName || null),
+                start_target: mode === "ai" ? "Menunggu jadwal" : (manualForm.startTarget || null),
+                finish_target: mode === "ai" ? (briefResult?.chips?.timeline || null) : (manualForm.finishTarget || null),
                 notes: manualForm.notes || null,
                 ai_description: mode === "ai" ? aiDescription : null,
                 ai_brief_summary: mode === "ai" ? (briefResult?.summary || null) : null,
@@ -311,8 +311,8 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
 
     const handleSubmitRequest = async () => {
         if (mode === "ai") {
-            if (!generatedBrief || !isBriefSelected) {
-                toast.error("Silakan buat dan setujui brief AI terlebih dahulu.");
+            if (!briefResult) {
+                toast.error("Silakan buat brief AI terlebih dahulu.");
                 return;
             }
         } else {
@@ -349,14 +349,14 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
                 project_name: mode === "ai" ? (briefResult?.chips?.jenis ? `Proyek ${briefResult.chips.jenis}` : "Proyek Baru") : manualForm.projectName,
                 project_type: mode === "ai" ? (briefResult?.chips?.jenis || "Belum ditentukan") : manualForm.projectType,
                 design_style: mode === "ai" ? (briefResult?.chips?.style || null) : (manualForm.designStyle || null),
-                location: manualForm.location || "Belum ditentukan",
-                room_size: manualForm.roomSize || null,
+                location: mode === "ai" ? (briefResult?.chips?.lokasi || "Belum ditentukan") : (manualForm.location || "Belum ditentukan"),
+                room_size: mode === "ai" ? (briefResult?.chips?.ukuran || null) : (manualForm.roomSize || null),
                 budget: mode === "ai" ? (briefResult?.chips?.budget || null) : (manualForm.budget || null),
-                material_preference: manualForm.materialPreference || null,
+                material_preference: mode === "ai" ? (briefResult?.chips?.material || null) : (manualForm.materialPreference || null),
                 material_package: manualForm.materialPackage || null,
-                reference_name: manualForm.referenceName || null,
-                start_target: manualForm.startTarget || null,
-                finish_target: manualForm.finishTarget || null,
+                reference_name: mode === "ai" ? (briefResult?.chips?.referensi || null) : (manualForm.referenceName || null),
+                start_target: mode === "ai" ? "Menunggu jadwal" : (manualForm.startTarget || null),
+                finish_target: mode === "ai" ? (briefResult?.chips?.timeline || null) : (manualForm.finishTarget || null),
                 notes: manualForm.notes || null,
                 ai_description: mode === "ai" ? aiDescription : null,
                 ai_brief_summary: mode === "ai" ? (briefResult?.summary || null) : null,

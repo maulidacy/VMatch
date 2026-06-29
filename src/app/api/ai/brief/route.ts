@@ -13,7 +13,11 @@ Format JSON yang diharapkan HARUS sama persis dengan struktur ini:
     "style": "string (WAJIB PILIH SALAH SATU: 'Modern minimalis', 'Japandi', 'Scandinavian', 'Industrial', atau 'Classic')",
     "budget": "string (WAJIB PILIH SALAH SATU: 'Di bawah Rp30 juta', 'Rp30–60 juta', 'Rp60–100 juta', 'Rp100–150 juta', atau 'Di atas Rp150 juta')",
     "timeline": "string (WAJIB PILIH SALAH SATU: 'Fleksibel', 'Secepatnya', 'Minggu depan', 'Bulan depan', atau '2–3 bulan')",
-    "prioritas": "string (wajib diisi, contoh: Fungsi & Estetika, Storage maksimal, Durabilitas material, dsb)"
+    "prioritas": "string (wajib diisi, contoh: Fungsi & Estetika, Storage maksimal, Durabilitas material, dsb)",
+    "lokasi": "string (Tebak lokasi dari teks. Jika tidak disebutkan, tebak 'Belum ditentukan' atau kota umum)",
+    "ukuran": "string (Tebak ukuran dari teks. Jika tidak disebutkan, BERIKAN ESTIMASI WAJAR sesuai ruangan, misal '3x4m' atau '4x5m', JANGAN isi '-')",
+    "referensi": "string (Tebak referensi dari teks. Jika tidak disebutkan, BERIKAN SARAN REFERENSI UMUM, misal 'Katalog Pinterest' atau 'Portofolio VMatch', JANGAN isi '-')",
+    "material": "string (Tebak material dari teks. Jika tidak disebutkan, BERIKAN SARAN MATERIAL WAJAR sesuai proyek, misal 'HPL & Multiplek' atau 'Kayu Solid', JANGAN isi '-')"
   },
   "summary": "string (Ringkasan proyek profesional dalam 2-3 kalimat)",
   "recommendations": ["string", "string", "string"] (wajib berikan minimal 3 rekomendasi fitur/material terbaik),

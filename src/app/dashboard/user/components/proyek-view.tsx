@@ -387,6 +387,8 @@ export function ProyekView({ userId }: { userId: string }) {
   );
 }
 
+import { EditDraftModal } from "./edit-draft-modal";
+
 function ProjectDetail({
   projectData: initialProjectData,
   userId,
@@ -429,6 +431,7 @@ function ProjectDetail({
   const [documentPreview, setDocumentPreview] = useState<DocumentItem | null>(
     null,
   );
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [qcNoteModalOpen, setQcNoteModalOpen] = useState(false);
   const [qcConfirmModalOpen, setQcConfirmModalOpen] = useState(false);
   const [warrantyModalOpen, setWarrantyModalOpen] = useState(false);
@@ -599,11 +602,13 @@ function ProjectDetail({
     try {
       setSubmitting(true);
       const supabase = createClient();
-      await supabase.from("project_requests").update({ status: "Baru Masuk", submitted_at: new Date().toISOString() }).eq("id", projectData.id);
+      const { error } = await supabase.from("project_requests").update({ status: "Baru Masuk", submitted_at: new Date().toISOString() }).eq("id", projectData.id);
+      if (error) throw error;
       setCurrentProject((prev) => ({ ...prev, status: "Baru Masuk", filter: "menunggu" }));
       toast.success("Request proyek berhasil dikirim!");
-    } catch {
-      toast.error("Gagal mengirim request.");
+    } catch (error: any) {
+      console.error("Submit Draft Error:", error);
+      toast.error("Gagal mengirim request: " + (error.message || "Unknown error"));
     } finally {
       setSubmitting(false);
     }
@@ -638,14 +643,24 @@ function ProjectDetail({
 
           <div className="flex items-center gap-3">
             {projectData.status === "Draft" && (
-              <button
-                type="button"
-                onClick={handleSubmitDraft}
-                disabled={submitting}
-                className="h-9 rounded-[14px] bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-50"
-              >
-                Kirim Request
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  disabled={submitting}
+                  className="h-9 rounded-[14px] border border-[#E4D8CD] bg-white px-4 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9] disabled:opacity-50"
+                >
+                  Edit Proyek
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitDraft}
+                  disabled={submitting}
+                  className="h-9 rounded-[14px] bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-50"
+                >
+                  Kirim Request
+                </button>
+              </>
             )}
             <StatusPill label={projectDone ? "Selesai" : projectData.status} />
           </div>
@@ -980,6 +995,18 @@ function ProjectDetail({
             }
           }}
           submitting={submitting}
+        />
+      )}
+
+      {isEditModalOpen && (
+        <EditDraftModal
+          project={projectData}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={(updated) => {
+            setCurrentProject(updated);
+            // Simulate reload or just rely on state update
+            window.location.reload(); 
+          }}
         />
       )}
     </div>

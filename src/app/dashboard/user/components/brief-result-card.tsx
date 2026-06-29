@@ -26,6 +26,10 @@ export type BriefResultData = {
         budget: string;
         timeline: string;
         prioritas: string;
+        lokasi: string;
+        ukuran: string;
+        referensi: string;
+        material: string;
     };
     summary: string;
     recommendations: string[];
@@ -39,6 +43,10 @@ export const mockBriefResult: BriefResultData = {
         budget: "Rp30–60 juta",
         timeline: "Fleksibel",
         prioritas: "Storage maksimal",
+        lokasi: "Belum ditentukan",
+        ukuran: "-",
+        referensi: "-",
+        material: "-",
     },
     summary:
         "Customer ingin membuat wardrobe custom untuk kamar utama dengan konsep modern minimalis, hemat tempat, dan memiliki banyak ruang penyimpanan seperti area gantungan baju, laci, rak lipat, dan tempat barang kecil.",
@@ -201,6 +209,38 @@ export function BriefResultCard({
                                 className={inputClass}
                             />
                         </EditField>
+
+                        <EditField label="Lokasi">
+                            <input
+                                value={draft.chips.lokasi}
+                                onChange={(event) => updateChip("lokasi", event.target.value)}
+                                className={inputClass}
+                            />
+                        </EditField>
+
+                        <EditField label="Ukuran Ruangan">
+                            <input
+                                value={draft.chips.ukuran}
+                                onChange={(event) => updateChip("ukuran", event.target.value)}
+                                className={inputClass}
+                            />
+                        </EditField>
+
+                        <EditField label="Preferensi Material">
+                            <input
+                                value={draft.chips.material}
+                                onChange={(event) => updateChip("material", event.target.value)}
+                                className={inputClass}
+                            />
+                        </EditField>
+
+                        <EditField label="Referensi Desain">
+                            <input
+                                value={draft.chips.referensi}
+                                onChange={(event) => updateChip("referensi", event.target.value)}
+                                className={inputClass}
+                            />
+                        </EditField>
                     </div>
 
                     <EditField label="Ringkasan Kebutuhan">
@@ -329,6 +369,26 @@ export function BriefResultCard({
                         icon={Target}
                         label="Prioritas"
                         value={data.chips.prioritas}
+                    />
+                    <SummaryChip
+                        icon={Layers}
+                        label="Lokasi"
+                        value={data.chips.lokasi}
+                    />
+                    <SummaryChip
+                        icon={Layers}
+                        label="Ukuran Ruangan"
+                        value={data.chips.ukuran}
+                    />
+                    <SummaryChip
+                        icon={ClipboardList}
+                        label="Preferensi Material"
+                        value={data.chips.material}
+                    />
+                    <SummaryChip
+                        icon={Target}
+                        label="Referensi Desain"
+                        value={data.chips.referensi}
                     />
                 </div>
 
