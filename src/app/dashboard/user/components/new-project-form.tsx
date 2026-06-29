@@ -20,6 +20,7 @@ import {
 } from "./brief-result-card";
 import { createProjectRequest } from "@/lib/api/projects";
 import { uploadFileToStorage } from "@/lib/api/storage";
+import { createNotification } from "@/lib/api/notifications";
 
 type SelectedInspiration = {
     source: "design" | "material";
@@ -278,12 +279,12 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
 
             await createProjectRequest({
                 customer_id: userId,
-                project_name: mode === "ai" ? (briefResult?.summary?.slice(0, 50) || "Proyek Baru") : manualForm.projectName,
-                project_type: mode === "ai" ? "Belum ditentukan" : manualForm.projectType,
-                design_style: manualForm.designStyle || null,
+                project_name: mode === "ai" ? (briefResult?.chips?.jenis ? `Proyek ${briefResult.chips.jenis}` : "Proyek Baru") : manualForm.projectName,
+                project_type: mode === "ai" ? (briefResult?.chips?.jenis || "Belum ditentukan") : manualForm.projectType,
+                design_style: mode === "ai" ? (briefResult?.chips?.style || null) : (manualForm.designStyle || null),
                 location: manualForm.location || "Belum ditentukan",
                 room_size: manualForm.roomSize || null,
-                budget: manualForm.budget || null,
+                budget: mode === "ai" ? (briefResult?.chips?.budget || null) : (manualForm.budget || null),
                 material_preference: manualForm.materialPreference || null,
                 material_package: manualForm.materialPackage || null,
                 reference_name: manualForm.referenceName || null,
@@ -293,7 +294,7 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
                 ai_description: mode === "ai" ? aiDescription : null,
                 ai_brief_summary: mode === "ai" ? (briefResult?.summary || null) : null,
                 inspiration_reference: selectedInspiration?.referenceName || null,
-                status: "Baru Masuk",
+                status: "Draft",
                 // @ts-ignore
                 uploaded_files: uploadedFileUrls.length > 0 ? uploadedFileUrls : null
             });
@@ -347,12 +348,12 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
 
             await createProjectRequest({
                 customer_id: userId,
-                project_name: mode === "ai" ? (briefResult?.summary?.slice(0, 50) || "Proyek Baru") : manualForm.projectName,
-                project_type: mode === "ai" ? "Belum ditentukan" : manualForm.projectType,
-                design_style: manualForm.designStyle || null,
+                project_name: mode === "ai" ? (briefResult?.chips?.jenis ? `Proyek ${briefResult.chips.jenis}` : "Proyek Baru") : manualForm.projectName,
+                project_type: mode === "ai" ? (briefResult?.chips?.jenis || "Belum ditentukan") : manualForm.projectType,
+                design_style: mode === "ai" ? (briefResult?.chips?.style || null) : (manualForm.designStyle || null),
                 location: manualForm.location || "Belum ditentukan",
                 room_size: manualForm.roomSize || null,
-                budget: manualForm.budget || null,
+                budget: mode === "ai" ? (briefResult?.chips?.budget || null) : (manualForm.budget || null),
                 material_preference: manualForm.materialPreference || null,
                 material_package: manualForm.materialPackage || null,
                 reference_name: manualForm.referenceName || null,
@@ -368,6 +369,19 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
                 uploaded_files: uploadedFileUrls.length > 0 ? uploadedFileUrls : null
             });
 
+            try {
+                const finalProjectName = mode === "ai" ? (briefResult?.chips?.jenis ? `Proyek ${briefResult.chips.jenis}` : "Proyek Baru") : (manualForm.projectName || "Proyek Baru");
+                await createNotification({
+                    recipient_id: "00000000-0000-0000-0000-000000000001", // Admin ID
+                    title: "Request Proyek Baru",
+                    description: `Customer telah mengajukan request proyek baru: ${finalProjectName}`,
+                    priority: "info",
+                    category: "requests",
+                });
+            } catch (notifError) {
+                console.error("Gagal mengirim notifikasi admin:", notifError);
+            }
+
             setRequestStatus("submitted");
             toast.success(
                 "Request proyek berhasil dikirim dan sedang menunggu review tim VMatch.",
@@ -377,7 +391,8 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
                     onSubmitSuccess();
                 }, 1500);
             }
-        } catch {
+        } catch (error) {
+            console.error("Submit Request Error:", error);
             toast.error("Gagal mengirim request. Silakan coba lagi.");
         } finally {
             setIsGenerating(false);
@@ -774,26 +789,61 @@ function UploadBox({
                     className="sr-only"
                     onChange={(event) => {
                         const files = Array.from(event.target.files ?? []);
-                        onFilesChange(files);
+                        // Append new files to existing ones
+                        onFilesChange([...uploadedFiles, ...files]);
+                        
+                        // Reset input so the same file can be selected again if needed
+                        event.target.value = "";
                     }}
                 />
             </label>
 
             {uploadedFiles.length > 0 && (
-                <div className="mt-3 rounded-2xl bg-[#F8F6F2] p-4">
-                    <p className="text-[12px] font-semibold text-[#6B5B52]">
+                <div className="mt-4">
+                    <p className="mb-3 text-[12px] font-semibold text-[#6B5B52]">
                         {uploadedFiles.length} file dipilih
                     </p>
 
-                    <div className="mt-2 space-y-1">
-                        {uploadedFiles.map((file) => (
-                            <p
-                                key={file.name}
-                                className="truncate text-[12px] text-[#7A7067]"
-                            >
-                                {file.name}
-                            </p>
-                        ))}
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                        {uploadedFiles.map((file, index) => {
+                            const isImage = file.type.startsWith("image/");
+                            return (
+                                <div
+                                    key={`${file.name}-${index}`}
+                                    className="group relative overflow-hidden rounded-xl border border-[#E4D8CD] bg-[#FCFBF9]"
+                                >
+                                    {isImage ? (
+                                        <div className="aspect-square w-full">
+                                            <img
+                                                src={URL.createObjectURL(file)}
+                                                alt={file.name}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="flex aspect-square w-full items-center justify-center bg-[#F8F6F2]">
+                                            <FileText className="text-[#8B8179]" size={24} />
+                                        </div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100" />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const newFiles = uploadedFiles.filter((_, i) => i !== index);
+                                            onFilesChange(newFiles);
+                                        }}
+                                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white text-red-500 opacity-0 shadow-sm transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                                        <p className="truncate text-[10px] font-medium text-white">
+                                            {file.name}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

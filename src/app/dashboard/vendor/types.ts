@@ -95,6 +95,7 @@ export type AdminBriefFile = {
 export type WorkBrief = {
   id: string;
   projectId: string;
+  requestId: string;
   projectName: string;
   customerId: string;
   projectType: string;

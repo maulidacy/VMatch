@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import {
   getMyProjects,
+  getMyProjectRequests,
   getProgressLogs,
   getProjectInvoices,
   getQcChecklist,
@@ -39,6 +40,7 @@ import type {
   Invoice as DBInvoice,
   ProgressLog as DBProgressLog,
   Project as DBProject,
+  ProjectRequest as DBProjectRequest,
   QcChecklist as DBQcChecklist,
   WarrantyClaim as DBWarrantyClaim,
   Rab as DBRab,
@@ -47,7 +49,7 @@ import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 type DetailTab = "ringkasan" | "rab" | "progress" | "pembayaran" | "dokumen";
-type ProjectFilter = "semua" | "aktif" | "menunggu" | "selesai";
+type ProjectFilter = "semua" | "aktif" | "menunggu" | "selesai" | "draft";
 
 type PaymentStatus =
   | "Menunggu Pembayaran"
@@ -135,6 +137,7 @@ const projectFilterTabs: { id: ProjectFilter; label: string }[] = [
   { id: "semua", label: "Semua" },
   { id: "aktif", label: "Aktif" },
   { id: "menunggu", label: "Menunggu" },
+  { id: "draft", label: "Draft" },
   { id: "selesai", label: "Selesai" },
 ];
 
@@ -157,6 +160,37 @@ const warrantyCoverage = [
   "Finishing mengelupas karena pengerjaan",
   "Komponen tidak sesuai hasil QC",
 ];
+
+
+function mapDbProjectRequestToItem(r: DBProjectRequest): ProjectItem {
+  const filterMap: Record<string, ProjectFilter> = {
+    "Draft": "draft",
+    "Baru Masuk": "menunggu",
+    "Review": "menunggu",
+    "Estimasi": "menunggu",
+  };
+
+  return {
+    id: r.id,
+    filter: filterMap[r.status] || "menunggu",
+    name: r.project_name || "Proyek Tanpa Nama",
+    type: r.project_type || "-",
+    status: r.status,
+    progress: 0,
+    location: r.location || "-",
+    roomSize: r.room_size || "-",
+    designStyle: r.design_style || "-",
+    estimatedCost: r.budget || "-",
+    estimatedDuration: "-",
+    vendorPartner: "Belum dipilih",
+    vendor_id: r.selected_vendor_id || null,
+    startDate: "Menunggu jadwal",
+    estimatedFinish: "Menunggu jadwal",
+    nextStep: r.status === "Draft" ? "Lengkapi form dan kirim request." : "Menunggu update dari tim VMatch.",
+    solution: r.ai_brief_summary || "Solusi akan ditampilkan setelah brief disetujui.",
+    createdAt: r.submitted_at || new Date().toISOString(),
+  };
+}
 
 function mapDbProjectToItem(p: DBProject): ProjectItem {
   const filterMap: Record<string, ProjectFilter> = {
@@ -197,9 +231,18 @@ export function ProyekView({ userId }: { userId: string }) {
   const loadProjects = useCallback(async () => {
     try {
       setIsLoading(true);
-      const dbProjects = await getMyProjects(userId);
-      const mapped = dbProjects.map(mapDbProjectToItem);
-      setProjects(mapped);
+      const [dbProjects, dbRequests] = await Promise.all([
+        getMyProjects(userId),
+        getMyProjectRequests(userId)
+      ]);
+      const mappedProjects = dbProjects.map(mapDbProjectToItem);
+      const mappedRequests = dbRequests.map(mapDbProjectRequestToItem);
+      
+      const combined = [...mappedProjects, ...mappedRequests].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      setProjects(combined);
     } catch {
       // Silent fail — show empty state
     } finally {
@@ -382,7 +425,9 @@ function ProjectDetail({
   const [warrantyModalOpen, setWarrantyModalOpen] = useState(false);
 
   // RAB review state
+  const isRequest = ["Baru Masuk", "Draft", "Review", "Estimasi"].includes(projectData.status);
   const [rabStatus, setRabStatus] = useState<RabReviewStatus>(
+    isRequest ? "Menunggu RAB" :
     projectData.filter === "menunggu" ? "RAB Diterima" : 
     projectData.filter === "selesai" ? "Disetujui" : "Menunggu RAB"
   );
@@ -395,6 +440,9 @@ function ProjectDetail({
 
   useEffect(() => {
     const loadProjectDetail = async () => {
+      if (["Baru Masuk", "Draft", "Review", "Estimasi"].includes(initialProjectData.status)) {
+        return; // Don't load full details for pending requests
+      }
       try {
         const [invoiceRows, progressRows, qcRow, warrantyRows, rabs, projectDetail] = await Promise.all([
           getProjectInvoices(initialProjectData.id),
@@ -2992,7 +3040,7 @@ function createDocuments(
 ): DocumentItem[] {
   const dateStr = projectData.createdAt ? formatIndoDate(projectData.createdAt) : "Terbaru";
 
-  return [
+  const allDocs: DocumentItem[] = [
     {
       id: "doc-1",
       title: `Brief Proyek ${projectData.name}`,
@@ -3054,4 +3102,10 @@ function createDocuments(
         "Dokumen garansi yang aktif setelah proyek selesai dan QC disetujui.",
     },
   ];
+
+  const isReq = ["Baru Masuk", "Draft", "Review", "Estimasi"].includes(projectData.status);
+  if (isReq) {
+    return allDocs.filter(doc => doc.status === "Tersedia");
+  }
+  return allDocs;
 }

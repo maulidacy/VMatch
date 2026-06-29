@@ -19,6 +19,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getProjectRequests, getProjects, updateProjectRequest, createProject, getBriefs, updateBrief } from "@/lib/api/projects";
+import { createNotification } from "@/lib/api/notifications";
 import { getVendors } from "@/lib/api/profiles";
 import type { ProjectRequest as DBRequest, Profile } from "@/lib/supabase/types";
 import { toast } from "sonner";
@@ -128,7 +129,7 @@ function mapDbToLocalRequest(r: DBRequest): ProjectRequest {
         title: r.project_name,
         customerId: r.customer_id,
         customerName: r.customer?.full_name || "Customer",
-        customerEmail: r.customer?.phone || "",
+        customerEmail: r.customer?.phone || "-",
         location: r.location,
         budget: r.budget || "-",
         projectType: r.project_type,
@@ -375,6 +376,8 @@ export function RequestProjectView({
 
     const updateStatus = async (id: string, status: RequestStatus) => {
         try {
+            const currentRequest = requests.find(r => r.id === id);
+            
             await updateRequest(id, (request) => ({
                 ...request,
                 status,
@@ -392,6 +395,27 @@ export function RequestProjectView({
                 setActiveTab("Estimasi");
             }
             if (status === "Menjadi Proyek Aktif") {
+                if (currentRequest) {
+                    await createProject({
+                        request_id: currentRequest.id,
+                        customer_id: currentRequest.customerId,
+                        vendor_id: currentRequest.selectedVendorId || null,
+                        title: currentRequest.title,
+                        project_type: currentRequest.projectType,
+                        location: currentRequest.location,
+                        room_size: currentRequest.roomSize,
+                        design_style: currentRequest.designStyle,
+                        description: currentRequest.description,
+                        estimated_cost: currentRequest.budget,
+                        status: "Berjalan",
+                        progress: 0,
+                        current_stage: "Persiapan",
+                        next_task: "Menunggu brief dan rencana kerja disetujui",
+                    }).catch(err => {
+                        console.error("Gagal membuat proyek", err);
+                        toast.error("Status berubah, tapi gagal membuat entri proyek.");
+                    });
+                }
                 setActiveTab("Aktif");
                 setFeedbackMessage(
                     "Request berhasil dijadikan proyek aktif. Klik tombol di bawah untuk melihat di halaman Proyek Aktif.",
@@ -476,6 +500,16 @@ export function RequestProjectView({
                 brief_document_status: "Brief Dikirim",
                 sent_to_vendor_at: new Date().toISOString(),
             });
+
+            if (selectedRequest.selectedVendorId) {
+                await createNotification({
+                    recipient_id: selectedRequest.selectedVendorId,
+                    title: "Brief Proyek Baru",
+                    description: `Admin telah mengirimkan brief untuk proyek: ${selectedRequest.title}`,
+                    priority: "action",
+                    category: "projects",
+                });
+            }
 
             setRequests((current) =>
                 current.map((request) => (request.id === selectedRequest.id ? {

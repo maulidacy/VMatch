@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { createVendorEstimate, getVendorBriefs, updateBrief, createRab } from "@/lib/api/projects";
+import { createVendorEstimate, getVendorBriefs, updateBrief, createRab, updateProjectRequest } from "@/lib/api/projects";
+import { createNotification } from "@/lib/api/notifications";
 import type { Brief as DBBrief } from "@/lib/supabase/types";
 import type { VendorPageId, WorkBrief, WorkPlanStatus, AdminBriefFile } from "../types";
 import {
@@ -96,6 +97,7 @@ export function BriefWorkPlanView({
       const mapped: WorkBrief[] = dbBriefs.map((b: DBBrief) => ({
         id: b.id,
         projectId: b.project_id || "",
+        requestId: b.request_id || "",
         projectName: b.project_title,
         customerId: b.customer_id,
         projectType: "-", // Will be updated by Admin
@@ -285,6 +287,20 @@ export function BriefWorkPlanView({
         status: "Estimasi Dikirim",
         vendor_note: vendorNoteDraft || currentEstimateDraft.vendorNote || null,
         vendor_responded_at: new Date().toISOString(),
+      });
+
+      if (selectedBrief.requestId) {
+        await updateProjectRequest(selectedBrief.requestId, {
+          status: "Estimasi Dikirim Vendor",
+        });
+      }
+
+      await createNotification({
+        recipient_id: "00000000-0000-0000-0000-000000000001", // Admin ID
+        title: "Estimasi Vendor Diterima",
+        description: `Vendor telah mengirim estimasi untuk proyek: ${selectedBrief.projectName}`,
+        priority: "action",
+        category: "projects",
       });
 
       setEstimateDrafts((current) => ({

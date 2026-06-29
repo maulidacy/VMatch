@@ -20,6 +20,7 @@ import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { getInvoices, updateInvoice as updateInvoiceRecord, createInvoice, getProjects, createVendorPayout } from "@/lib/api/projects";
+import { createNotification } from "@/lib/api/notifications";
 import type { Invoice as DBInvoice, Project as DBProject } from "@/lib/supabase/types";
 
 type PaymentStatus =
@@ -42,6 +43,7 @@ type InvoicePayment = {
   projectId: string;
   invoiceNumber: string;
   projectTitle: string;
+  customerId: string;
   customerName: string;
   vendorName: string;
   status: PaymentStatus;
@@ -95,6 +97,7 @@ function mapDbToLocalInvoice(inv: DBInvoice): InvoicePayment {
     projectId: inv.project_id || "",
     invoiceNumber: inv.invoice_number,
     projectTitle: inv.project_title,
+    customerId: inv.customer_id,
     customerName: "-",
     vendorName: "-",
     status: (inv.status as PaymentStatus) || "Draft",
@@ -283,6 +286,19 @@ export function InvoicePaymentsView() {
           status,
         };
       });
+
+      if (status === "Menunggu Pembayaran") {
+        const invoice = invoices.find(inv => inv.id === id);
+        if (invoice?.customerId) {
+          await createNotification({
+            recipient_id: invoice.customerId,
+            title: "Invoice Baru Diterbitkan",
+            description: `Invoice ${invoice.invoiceNumber} untuk proyek ${invoice.projectTitle} telah dikirim. Silakan lakukan pembayaran.`,
+            priority: "action",
+            category: "payments",
+          });
+        }
+      }
 
       if (status === "Draft" || status === "Menunggu Pembayaran") {
         setActiveTab("Menunggu");

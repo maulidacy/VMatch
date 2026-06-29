@@ -21,6 +21,7 @@ import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getRabs, updateRab as updateRabRecord, createRab, getProjects, getProjectRequests } from "@/lib/api/projects";
+import { createNotification } from "@/lib/api/notifications";
 import type { Rab as DBRab, Project as DBProject, ProjectRequest as DBProjectRequest } from "@/lib/supabase/types";
 
 import type { AdminPageId } from "../types";
@@ -53,6 +54,7 @@ type VendorEstimate = {
 type RabData = {
     id: string;
     projectTitle: string;
+    customerId: string;
     customerName: string;
     projectType: string;
     location: string;
@@ -100,6 +102,7 @@ function mapDbToLocalRab(r: DBRab): RabData {
     return {
         id: r.id,
         projectTitle: r.project_title,
+        customerId: r.customer_id,
         customerName: r.customer?.full_name || "Customer",
         projectType: r.project_type || "-",
         location: r.location || "-",
@@ -373,6 +376,17 @@ export function RabBuilderView({
                 updatedAt: "Baru saja",
             }));
             syncTabFromStatus("RAB Dikirim ke Customer");
+
+            if (selectedRab.customerId) {
+                await createNotification({
+                    recipient_id: selectedRab.customerId,
+                    title: "RAB Final Tersedia",
+                    description: `RAB final untuk proyek ${selectedRab.projectTitle} telah diterbitkan. Silakan direview.`,
+                    priority: "action",
+                    category: "rab",
+                });
+            }
+
             setFeedbackMessage("RAB final berhasil dikirim ke customer untuk persetujuan.");
             toast.success("RAB berhasil dikirim ke customer.");
         } catch (error) {
@@ -464,6 +478,17 @@ export function RabBuilderView({
             }));
 
             setActiveTab("Dikirim Customer");
+
+            if (selectedRab.customerId) {
+                await createNotification({
+                    recipient_id: selectedRab.customerId,
+                    title: "Revisi RAB Tersedia",
+                    description: `Revisi RAB untuk proyek ${selectedRab.projectTitle} telah dikirim ulang. Silakan direview.`,
+                    priority: "action",
+                    category: "rab",
+                });
+            }
+
             setFeedbackMessage("Revisi RAB berhasil dikirim ulang ke customer.");
             toast.success("RAB berhasil dikirim ulang.");
         } catch {
