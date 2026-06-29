@@ -99,17 +99,17 @@ Saya ingin tim VMatch membantu menyesuaikan solusi berdasarkan ukuran, kondisi r
 
 const defaultManualForm: ManualFormState = {
     projectName: "",
-    projectType: "Kitchen Set",
+    projectType: "",
     designStyle: "",
     location: "",
     roomSize: "",
-    budget: "Rp60–100 juta",
+    budget: "",
     materialPreference: "",
     materialPackage: "",
     referenceName: "",
     notes: "",
-    startTarget: "Secepatnya",
-    finishTarget: "Fleksibel",
+    startTarget: "",
+    finishTarget: "",
 };
 
 export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; onSubmitSuccess?: () => void }) {
@@ -138,6 +138,7 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
     const [isBriefSelected, setIsBriefSelected] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isRegenerating, setIsRegenerating] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const [requestStatus, setRequestStatus] = useState<
         "draft" | "selected" | "submitted"
@@ -248,11 +249,7 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
     };
 
     const handleUseBrief = () => {
-        setIsBriefSelected(true);
-        setRequestStatus("selected");
-        toast.success(
-            "Brief ini sudah dipilih untuk review. Ini belum mengirim request proyek.",
-        );
+        setShowConfirmModal(true);
     };
 
     const handleChangeBriefData = (data: BriefResultData) => {
@@ -304,8 +301,9 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
                     onSubmitSuccess();
                 }, 1500);
             }
-        } catch {
-            toast.error("Gagal menyimpan draft. Silakan coba lagi.");
+        } catch (error: any) {
+            console.error("Save Draft Error:", error);
+            toast.error("Gagal menyimpan draft: " + (error.message || "Unknown error"));
         } finally {
             setIsGenerating(false);
         }
@@ -391,9 +389,9 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
                     onSubmitSuccess();
                 }, 1500);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Submit Request Error:", error);
-            toast.error("Gagal mengirim request. Silakan coba lagi.");
+            toast.error("Gagal mengirim request: " + (error.message || "Unknown error"));
         } finally {
             setIsGenerating(false);
         }
@@ -483,28 +481,81 @@ export function NewProjectForm({ userId, onSubmitSuccess }: { userId: string; on
                     )}
                 </AiBriefForm>
             ) : (
-                <ManualBriefForm
-                    form={manualForm}
-                    selectedInspiration={selectedInspiration}
-                    onRemoveReference={handleRemoveReference}
-                    onChange={(key, value) =>
-                        setManualForm((prev) => ({ ...prev, [key]: value }))
-                    }
-                />
+                <div className="space-y-6 w-full">
+                    <ManualBriefForm
+                        form={manualForm}
+                        selectedInspiration={selectedInspiration}
+                        onRemoveReference={handleRemoveReference}
+                        onChange={(key, value) =>
+                            setManualForm((prev) => ({ ...prev, [key]: value }))
+                        }
+                    />
+                    <div className="flex justify-end gap-3 mt-6">
+                        <button
+                            type="button"
+                            onClick={handleSaveDraft}
+                            disabled={isGenerating}
+                            className="h-11 rounded-xl border border-[#E4D8CD] px-5 text-[12px] font-semibold text-[#31332C] transition hover:bg-[#FCFBF9] disabled:opacity-50"
+                        >
+                            Simpan Draft
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSubmitRequest}
+                            disabled={isGenerating}
+                            className="h-11 rounded-xl bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-50"
+                        >
+                            {isGenerating ? "Mengirim..." : "Kirim Request Proyek"}
+                        </button>
+                    </div>
+                </div>
             )}
 
-            <section className="w-full">
-                <ReviewSubmitCard
-                    hasGeneratedBrief={Boolean(generatedBrief || selectedInspiration)}
-                    isBriefSelected={Boolean(isBriefSelected || selectedInspiration)}
-                    requestStatus={requestStatus}
-                    onCompleteData={() =>
-                        toast.error("Silakan lengkapi bagian yang masih kosong pada form.")
-                    }
-                    onSaveDraft={handleSaveDraft}
-                    onSubmitRequest={handleSubmitRequest}
-                />
-            </section>
+            {showConfirmModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-2xl">
+                        <h3 className="font-serif text-[22px] font-semibold text-[#31332C]">
+                            Konfirmasi Request
+                        </h3>
+                        <p className="mt-3 text-[13px] leading-6 text-[#7B756E]">
+                            Brief kamu sudah siap! Apakah kamu ingin menyimpannya sebagai draft untuk dilanjutkan nanti, atau langsung mengirim request proyek sekarang?
+                        </p>
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                }}
+                                className="h-11 rounded-xl border border-[#E4D8CD] px-5 text-[12px] font-semibold text-[#725F54] transition hover:bg-[#FCFBF9]"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    handleSaveDraft();
+                                }}
+                                disabled={isGenerating}
+                                className="h-11 rounded-xl border border-[#E4D8CD] px-5 text-[12px] font-semibold text-[#31332C] transition hover:bg-[#FCFBF9] disabled:opacity-50"
+                            >
+                                Simpan Draft
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    handleSubmitRequest();
+                                }}
+                                disabled={isGenerating}
+                                className="h-11 rounded-xl bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-50"
+                            >
+                                Kirim Request
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

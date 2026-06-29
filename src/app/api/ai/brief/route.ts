@@ -3,19 +3,21 @@ import { NextResponse } from "next/server";
 const GROQ_API_KEY = process.env.GROQ_API_KEY ?? "";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
 
-const SYSTEM_PROMPT = `Anda adalah VMatch Brief AI. Tugas Anda adalah menganalisis deskripsi proyek interior dari pengguna dan menghasilkan struktur data JSON yang valid.
+const SYSTEM_PROMPT = `Anda adalah VMatch Brief AI, seorang konsultan interior ahli. Tugas Anda adalah menganalisis deskripsi proyek dari pengguna dan menghasilkan struktur data JSON.
+PENTING: JANGAN PERNAH MENGOSONGKAN FIELD ATAU ARRAY APAPUN. Jika informasi dari pengguna sangat minim, Anda HARUS memberikan rekomendasi cerdas dan tebakan terbaik untuk semua bagian (chips, recommendations, validations) agar semua data terisi lengkap.
+
 Format JSON yang diharapkan HARUS sama persis dengan struktur ini:
 {
   "chips": {
-    "jenis": "string (contoh: Kitchen Set, Kamar Tidur Utama, dsb)",
-    "style": "string (contoh: Japandi, Modern minimalis, Industrial, dsb)",
-    "budget": "string (contoh: Di bawah Rp30 juta, Rp30-60 juta, dsb)",
-    "timeline": "string (contoh: Fleksibel, Secepatnya, dsb)",
-    "prioritas": "string (contoh: Fungsi & Estetika, Storage maksimal, Durabilitas material, dsb)"
+    "jenis": "string (wajib diisi, tebak ruangan apa jika tidak spesifik, misal: Kitchen Set, Kamar Tidur, Ruang Tamu)",
+    "style": "string (WAJIB PILIH SALAH SATU: 'Modern minimalis', 'Japandi', 'Scandinavian', 'Industrial', atau 'Classic')",
+    "budget": "string (WAJIB PILIH SALAH SATU: 'Di bawah Rp30 juta', 'Rp30–60 juta', 'Rp60–100 juta', 'Rp100–150 juta', atau 'Di atas Rp150 juta')",
+    "timeline": "string (WAJIB PILIH SALAH SATU: 'Fleksibel', 'Secepatnya', 'Minggu depan', 'Bulan depan', atau '2–3 bulan')",
+    "prioritas": "string (wajib diisi, contoh: Fungsi & Estetika, Storage maksimal, Durabilitas material, dsb)"
   },
   "summary": "string (Ringkasan proyek profesional dalam 2-3 kalimat)",
-  "recommendations": ["string", "string", "string"],
-  "validations": ["Ukuran detail ruangan", "Lokasi proyek", "Pilihan material final", "Budget akhir", "Timeline pengerjaan"]
+  "recommendations": ["string", "string", "string"] (wajib berikan minimal 3 rekomendasi fitur/material terbaik),
+  "validations": ["Ukuran detail ruangan", "Lokasi proyek", "Pilihan material final", "Budget akhir", "Timeline pengerjaan"] (wajib berikan minimal 4-5 hal teknis yang perlu divalidasi)
 }
 HANYA kembalikan JSON raw, tanpa format markdown backticks.`;
 
@@ -44,7 +46,7 @@ export async function POST(request: Request) {
           Authorization: `Bearer ${GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "openai/gpt-oss-120b", 
+          model: "llama-3.1-8b-instant", 
           messages: aiMessages,
           temperature: 0.3,
           response_format: { type: "json_object" }
@@ -69,7 +71,7 @@ export async function POST(request: Request) {
           "X-Title": "Vmatch Brainstorm",
         },
         body: JSON.stringify({
-          model: "openai/gpt-oss-120b:free",
+          model: "google/gemma-2-9b-it:free",
           messages: aiMessages,
           temperature: 0.3,
           response_format: { type: "json_object" }

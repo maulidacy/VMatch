@@ -45,6 +45,7 @@ import type {
   WarrantyClaim as DBWarrantyClaim,
   Rab as DBRab,
 } from "@/lib/supabase/types";
+import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -87,6 +88,10 @@ type ProjectItem = {
   nextStep: string;
   solution: string;
   createdAt: string;
+  uploadedFiles?: string[];
+  notes?: string | null;
+  aiDescription?: string | null;
+  aiBriefSummary?: string | null;
 };
 
 type Invoice = {
@@ -189,6 +194,10 @@ function mapDbProjectRequestToItem(r: DBProjectRequest): ProjectItem {
     nextStep: r.status === "Draft" ? "Lengkapi form dan kirim request." : "Menunggu update dari tim VMatch.",
     solution: r.ai_brief_summary || "Solusi akan ditampilkan setelah brief disetujui.",
     createdAt: r.submitted_at || new Date().toISOString(),
+    uploadedFiles: (r as any).uploaded_files || [],
+    notes: r.notes,
+    aiDescription: r.ai_description,
+    aiBriefSummary: r.ai_brief_summary,
   };
 }
 
@@ -585,6 +594,21 @@ function ProjectDetail({
     }
   };
 
+  const handleSubmitDraft = async () => {
+    if (submitting) return;
+    try {
+      setSubmitting(true);
+      const supabase = createClient();
+      await supabase.from("project_requests").update({ status: "Baru Masuk", submitted_at: new Date().toISOString() }).eq("id", projectData.id);
+      setCurrentProject((prev) => ({ ...prev, status: "Baru Masuk", filter: "menunggu" }));
+      toast.success("Request proyek berhasil dikirim!");
+    } catch {
+      toast.error("Gagal mengirim request.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="w-full space-y-6">
       <button
@@ -612,7 +636,19 @@ function ProjectDetail({
             </p>
           </div>
 
-          <StatusPill label={projectDone ? "Selesai" : projectData.status} />
+          <div className="flex items-center gap-3">
+            {projectData.status === "Draft" && (
+              <button
+                type="button"
+                onClick={handleSubmitDraft}
+                disabled={submitting}
+                className="h-9 rounded-[14px] bg-[#725F54] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42] disabled:opacity-50"
+              >
+                Kirim Request
+              </button>
+            )}
+            <StatusPill label={projectDone ? "Selesai" : projectData.status} />
+          </div>
         </div>
 
         <div className="mt-6">
@@ -2359,15 +2395,27 @@ function DocumentPreviewModal({
                 <DetailRow label="Lokasi Proyek" value={projectData.location} />
                 <DetailRow label="Ukuran Ruangan" value={projectData.roomSize} />
                 <DetailRow label="Estimasi Anggaran" value={projectData.estimatedCost} />
-                <DetailRow label="Partner Vendor" value={projectData.vendorPartner} />
                 <DetailRow label="Status Saat Ini" value={projectData.status} />
               </div>
               <div className="mt-4 pt-3 border-t border-[#E8E2D9]">
-                <h5 className="text-[12px] font-semibold text-[#725F54] mb-1">Deskripsi Kebutuhan Customer:</h5>
+                <h5 className="text-[12px] font-semibold text-[#725F54] mb-1">Catatan / Deskripsi Tambahan:</h5>
                 <p className="text-[13px] leading-6 text-[#6F6860] bg-[#FCFBF9] p-3 rounded-xl border border-[#E8E2D9] whitespace-pre-wrap">
-                  {projectData.solution}
+                  {projectData.notes || projectData.aiDescription || projectData.aiBriefSummary || projectData.solution || "Tidak ada catatan atau deskripsi."}
                 </p>
               </div>
+              {projectData.uploadedFiles && projectData.uploadedFiles.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-[#E8E2D9]">
+                  <h5 className="text-[12px] font-semibold text-[#725F54] mb-3">Foto / Referensi yang Diunggah:</h5>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {projectData.uploadedFiles.map((url, i) => (
+                      <div key={i} className="aspect-square rounded-xl border border-[#E8E2D9] overflow-hidden bg-black/5 relative group cursor-pointer hover:border-[#31332C] transition-colors" onClick={() => window.open(url, '_blank')}>
+                         {/* eslint-disable-next-line @next/next/no-img-element */}
+                         <img src={url} alt={`Referensi ${i+1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -3054,7 +3102,7 @@ function createDocuments(
       id: "doc-2",
       title: "Solusi Awal VMatch",
       category: "Solusi Proyek",
-      status: "Tersedia",
+      status: ["Baru Masuk", "Draft", "Review", "Estimasi"].includes(projectData.status) ? "Belum tersedia" : "Tersedia",
       date: dateStr,
       description:
         "Berisi solusi awal, estimasi, material rekomendasi, dan langkah pengerjaan.",

@@ -9,6 +9,7 @@ export async function getProjectRequests() {
   const { data, error } = await supabase()
     .from("project_requests")
     .select("*, customer:profiles!customer_id(*), vendor:profiles!selected_vendor_id(*)")
+    .neq("status", "Draft")
     .order("submitted_at", { ascending: false });
   if (error) throw error;
   return data as ProjectRequest[];
