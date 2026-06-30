@@ -1,8 +1,12 @@
 import { NextRequest } from "next/server";
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY ?? "";
+const ALIBABA_API_KEY  = process.env.ALIBABA_API_KEY ?? "";
+const ALIBABA_API_KEYS = (process.env.ALIBABA_API_KEYS ?? ALIBABA_API_KEY)
+  .split(",")
+  .filter(Boolean);
+const GROQ_API_KEY       = process.env.GROQ_API_KEY ?? "";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const APP_URL            = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const SYSTEM_PROMPT = `Kamu adalah VMatch AI - konsultan & perancang interior senior dari VMatch Interior. Kamu cerdas, berpengalaman puluhan proyek (rumah, apartemen, kos, hotel, kantor), dan bicara seperti partner brainstorming yang enak diajak diskusi, bukan bot template.
 
@@ -13,9 +17,10 @@ PERAN UTAMA
 - Penyiap brief: bantu user merapikan kebutuhan supaya siap dibawa ke tim VMatch.
 
 CARA BERPIKIR
-- Jawab langsung dan substansial. JANGAN cuma balik bertanya. Kalau detail kurang, ambil asumsi wajar (sebutkan asumsinya), beri jawaban, lalu boleh tanya maksimal 1-2 pertanyaan lanjutan yang benar-benar penting.
-- Kasih angka kalau relevan (kisaran harga, dimensi, persentase budget). Hindari jawaban mengambang.
+- Jawab langsung dan substansial. JANGAN PERNAH menggunakan kalimat awalan/boilerplate AI seperti "Tentu, mari kita bahas", "Sebagai AI", atau "Saya siap membantu". Langsung masuk ke inti jawaban.
+- Kasih angka kalau relevan (kisaran harga, dimensi, persentase budget). Hindari jawaban mengambang. Gunakan standar ukuran metrik (Meter/Centimeter) dan sebutkan material yang umum tersedia di pasaran Indonesia (misal HPL Taco, granit Roman) agar realistis.
 - Adaptif: untuk pertanyaan ringan jawab ringkas; untuk perencanaan besar jawab terstruktur dan mendalam.
+- Jika kamu merasa diskusi desain dan budget sudah cukup matang, arahkan user secara halus untuk menekan tombol "Simpan ke Brief" agar tim VMatch bisa segera memprosesnya.
 - Bahasa Indonesia yang natural, hangat, dan profesional. Boleh sedikit santai, tapi tetap berisi.
 
 FORMAT (output kamu dirender sebagai Markdown yang rapi)
@@ -44,22 +49,117 @@ CONTOH KEPUTUSAN
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
+// ---- Provider definitions ---------------------------------------------------
+
+type Provider =
+  | { type: "alibaba"; model: string }
+  | { type: "groq"; model: string }
+  | { type: "openrouter"; model: string };
+
+/**
+ * Fallback chain — model ID eksak dari context.md, diurutkan terbaik ke kurang baik.
+ *
+ * Urutan tier:
+ *   MAX (latest snapshot) > MAX (older snapshot) > MAX preview
+ *   > PLUS versioned > PLUS > PLUS (newer gen)
+ *   > GLM > DeepSeek flash > MoE 35B > FLASH
+ *   > Groq gpt-oss-120b > OpenRouter gpt-oss-120b
+ */
+const PROVIDER_CHAIN: Provider[] = [
+  // ── Alibaba Cloud DashScope — terbaik ke kurang baik ─────────────────────
+  { type: "alibaba", model: "qwen3.7-max-2026-06-08" },   // 1 — MAX, snapshot terbaru
+  { type: "alibaba", model: "qwen3.7-max-2026-05-17" },   // 2 — MAX, snapshot sebelumnya
+  { type: "alibaba", model: "qwen3.7-max-preview" },      // 3 — MAX preview
+  { type: "alibaba", model: "qwen3.6-plus-2026-04-02" },  // 4 — PLUS versioned
+  { type: "alibaba", model: "qwen3.6-plus" },             // 5 — PLUS
+  { type: "alibaba", model: "qwen3.7-plus" },             // 6 — PLUS generasi baru
+  { type: "alibaba", model: "glm-5.1" },                  // 7 — GLM
+  { type: "alibaba", model: "deepseek-v4-flash" },        // 8 — DeepSeek flash
+  { type: "alibaba", model: "qwen3.6-35b-a3b" },          // 9 — MoE 35B
+  { type: "alibaba", model: "qwen3.6-flash-2026-04-16" }, // 10 — FLASH (tercepat/teringan)
+  // ── Groq ─────────────────────────────────────────────────────────────────
+  { type: "groq", model: "openai/gpt-oss-120b" },
+  // ── OpenRouter ───────────────────────────────────────────────────────────
+  { type: "openrouter", model: "openai/gpt-oss-120b:free" },
+];
+
+// ---- HTTP helpers ----------------------------------------------------------
+
 function buildBody(model: string, messages: ChatMessage[]) {
-  return JSON.stringify({
-    model,
-    messages,
-    temperature: 0.7,
-    stream: true,
+  return JSON.stringify({ model, messages, temperature: 0.7, stream: true });
+}
+
+function headersAlibaba() {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${ALIBABA_API_KEY}`,
+  };
+}
+
+function headersGroq(): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${GROQ_API_KEY}`,
+  };
+}
+
+function headersOpenRouter(): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+    "HTTP-Referer": APP_URL,
+    "X-Title": "VMatch AI Advisor",
+  };
+}
+
+function endpointFor(provider: Provider, isQwenCloud = false): string {
+  switch (provider.type) {
+    case "alibaba":
+      return isQwenCloud
+        ? "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
+        : "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+    case "groq":       return "https://api.groq.com/openai/v1/chat/completions";
+    case "openrouter": return "https://openrouter.ai/api/v1/chat/completions";
+  }
+}
+
+function headersFor(provider: Provider, alibabaKey?: string): Record<string, string> {
+  switch (provider.type) {
+    case "alibaba":
+      return { "Content-Type": "application/json", Authorization: `Bearer ${alibabaKey ?? ALIBABA_API_KEYS[0] ?? ""}` };
+    case "groq":       return headersGroq();
+    case "openrouter": return headersOpenRouter();
+  }
+}
+
+function isAvailable(provider: Provider): boolean {
+  switch (provider.type) {
+    case "alibaba":    return ALIBABA_API_KEYS.length > 0;
+    case "groq":       return !!GROQ_API_KEY;
+    case "openrouter": return !!OPENROUTER_API_KEY;
+  }
+}
+
+async function callProvider(
+  provider: Provider,
+  messages: ChatMessage[],
+  alibabaKey?: string,
+): Promise<Response> {
+  const isQwenCloud = alibabaKey?.startsWith("sk-ws-"); // ws keys → QwenCloud intl endpoint
+  return fetch(endpointFor(provider, isQwenCloud), {
+    method: "POST",
+    headers: headersFor(provider, alibabaKey),
+    body: buildBody(provider.model, messages),
   });
 }
 
+// ---- Stream transformer ----------------------------------------------------
+
 /**
- * Mengubah stream SSE provider (format OpenAI: choices[].delta.content)
- * menjadi stream sederhana `data: {"content": "..."}` yang dibaca frontend.
+ * Converts OpenAI-compatible SSE (choices[].delta.content) to
+ * simplified `data: {"content": "..."}` stream for the frontend.
  */
-function transformProviderStream(
-  upstream: ReadableStream<Uint8Array>,
-): ReadableStream<Uint8Array> {
+function transformProviderStream(upstream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let buffer = "";
@@ -70,18 +170,15 @@ function transformProviderStream(
 
       const flushLine = (line: string) => {
         const trimmed = line.replace(/^data:\s?/, "").trim();
-        if (!trimmed) return;
-        if (trimmed === "[DONE]") {
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        if (!trimmed || trimmed === "[DONE]") {
+          if (trimmed === "[DONE]") controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           return;
         }
         try {
           const json = JSON.parse(trimmed);
           const delta: string = json.choices?.[0]?.delta?.content ?? "";
           if (delta) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ content: delta })}\n\n`),
-            );
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: delta })}\n\n`));
           }
         } catch {
           // Abaikan baris yang bukan JSON valid.
@@ -118,29 +215,7 @@ function transformProviderStream(
   });
 }
 
-async function callGroq(messages: ChatMessage[]): Promise<Response> {
-  return fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-    },
-    body: buildBody("openai/gpt-oss-120b", messages),
-  });
-}
-
-async function callOpenRouter(messages: ChatMessage[]): Promise<Response> {
-  return fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-      "HTTP-Referer": APP_URL,
-      "X-Title": "VMatch AI Advisor",
-    },
-    body: buildBody("openai/gpt-oss-120b:free", messages),
-  });
-}
+// ---- Main handler ----------------------------------------------------------
 
 export async function POST(req: NextRequest) {
   try {
@@ -155,14 +230,17 @@ export async function POST(req: NextRequest) {
 
     let modeInstruction = "";
     if (mode === "reasoning") {
-      modeInstruction = "INSTRUKSI MODE (REASONING): Sebelum menjawab, lakukan penalaran logis secara mendalam (Chain of Thought). WAJIB bagi jawabanmu ke dalam beberapa blok HEADING pendek (misalnya: ### 1. Analisis, ### 2. Pertimbangan, ### 3. Solusi/Rekomendasi). Pecah masalah menjadi langkah-langkah terstruktur, pertimbangkan pro dan kontra dari beberapa alternatif, dan berikan penjelasan rasional di balik setiap saran.";
+      modeInstruction =
+        "INSTRUKSI MODE (REASONING): Sebelum menjawab, lakukan penalaran logis secara mendalam (Chain of Thought). WAJIB bagi jawabanmu ke dalam beberapa blok HEADING pendek (misalnya: ### 1. Analisis, ### 2. Pertimbangan, ### 3. Solusi/Rekomendasi). Pecah masalah menjadi langkah-langkah terstruktur, pertimbangkan pro dan kontra dari beberapa alternatif, dan berikan penjelasan rasional di balik setiap saran.";
     } else if (mode === "instant") {
-      modeInstruction = "INSTRUKSI MODE (INSTANT): Jawab secepat mungkin, sangat ringkas, padat, dan langsung pada intinya tanpa basa-basi.";
+      modeInstruction =
+        "INSTRUKSI MODE (INSTANT): Jawab secepat mungkin, sangat ringkas, padat, dan langsung pada intinya tanpa basa-basi.";
     } else if (mode === "image") {
-      modeInstruction = "INSTRUKSI KHUSUS MODE GAMBAR: Abaikan aturan 'JANGAN buat gambar untuk pertanyaan murni budget' di atas. Untuk mode ini, KAMU WAJIB SELALU MENGHASILKAN PENANDA [IMAGE: deskripsi bahasa inggris | caption] PADA AKHIR JAWABAN apa pun yang ditanyakan user. Teks pengantarnya jawab sesingkat mungkin.";
+      modeInstruction =
+        "INSTRUKSI KHUSUS MODE GAMBAR: Abaikan aturan 'JANGAN buat gambar untuk pertanyaan murni budget' di atas. Untuk mode ini, KAMU WAJIB SELALU MENGHASILKAN PENANDA [IMAGE: deskripsi bahasa inggris | caption] PADA AKHIR JAWABAN apa pun yang ditanyakan user. Teks pengantarnya jawab sesingkat mungkin.";
     }
 
-    const finalSystemPrompt = modeInstruction 
+    const finalSystemPrompt = modeInstruction
       ? `${SYSTEM_PROMPT}\n\n${modeInstruction}`
       : SYSTEM_PROMPT;
 
@@ -171,58 +249,65 @@ export async function POST(req: NextRequest) {
       ...messages,
     ];
 
-    // 1. Coba Groq (streaming). Jika gagal, fallback ke OpenRouter.
-    let providerResponse: Response | null = null;
+    // Iterate through fallback chain until one succeeds.
+    // For Alibaba providers, rotate through key pool on auth errors.
+    for (const provider of PROVIDER_CHAIN) {
+      if (!isAvailable(provider)) continue;
 
-    if (GROQ_API_KEY) {
-      try {
-        const res = await callGroq(aiMessages);
-        if (res.ok && res.body) {
-          providerResponse = res;
-        } else {
-          console.warn(`Groq returned ${res.status}, falling back to OpenRouter.`);
+      if (provider.type === "alibaba") {
+        let succeeded = false;
+        for (const apiKey of ALIBABA_API_KEYS) {
+          try {
+            const res = await callProvider(provider, aiMessages, apiKey);
+            if (res.ok && res.body) {
+              console.log(`[chat] OK — ${provider.model}, key ...${apiKey.slice(-6)}`);
+              const stream = transformProviderStream(res.body);
+              return new Response(stream, {
+                headers: {
+                  "Content-Type": "text/event-stream; charset=utf-8",
+                  "Cache-Control": "no-cache, no-transform",
+                  Connection: "keep-alive",
+                },
+              });
+            }
+            if (res.status === 401 || res.status === 403) {
+              console.warn(`[chat] Auth fail key ...${apiKey.slice(-6)}, trying next key.`);
+              continue; // next key
+            }
+            console.warn(`[chat] ${provider.model} returned ${res.status}, trying next model.`);
+            break; // non-auth error → skip to next model
+          } catch (err) {
+            console.warn(`[chat] key ...${apiKey.slice(-6)} threw:`, err);
+          }
         }
-      } catch (error) {
-        console.warn("Groq request failed, falling back to OpenRouter.", error);
+        if (succeeded) break;
+        continue;
+      }
+
+      // Groq / OpenRouter — single key
+      try {
+        const res = await callProvider(provider, aiMessages);
+        if (res.ok && res.body) {
+          console.log(`[chat] Using ${provider.type}/${provider.model}`);
+          const stream = transformProviderStream(res.body);
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "text/event-stream; charset=utf-8",
+              "Cache-Control": "no-cache, no-transform",
+              Connection: "keep-alive",
+            },
+          });
+        }
+        console.warn(`[chat] ${provider.type}/${provider.model} returned ${res.status}, trying next.`);
+      } catch (err) {
+        console.warn(`[chat] ${provider.type}/${provider.model} threw:`, err);
       }
     }
 
-    if (!providerResponse && OPENROUTER_API_KEY) {
-      try {
-        const res = await callOpenRouter(aiMessages);
-        if (res.ok && res.body) {
-          providerResponse = res;
-        } else {
-          const details = await res.text();
-          return new Response(
-            JSON.stringify({ error: `AI Provider Error: ${res.status}`, details }),
-            { status: 502, headers: { "Content-Type": "application/json" } },
-          );
-        }
-      } catch (error) {
-        return new Response(
-          JSON.stringify({ error: "AI provider unreachable", details: String(error) }),
-          { status: 502, headers: { "Content-Type": "application/json" } },
-        );
-      }
-    }
-
-    if (!providerResponse || !providerResponse.body) {
-      return new Response(
-        JSON.stringify({ error: "No AI provider available" }),
-        { status: 502, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    const stream = transformProviderStream(providerResponse.body);
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-      },
-    });
+    return new Response(
+      JSON.stringify({ error: "All AI providers exhausted" }),
+      { status: 502, headers: { "Content-Type": "application/json" } },
+    );
   } catch (error) {
     return new Response(
       JSON.stringify({ error: "Internal server error", details: String(error) }),

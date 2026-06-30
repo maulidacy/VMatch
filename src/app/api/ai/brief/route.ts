@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY ?? "";
+const ALIBABA_API_KEY  = process.env.ALIBABA_API_KEY ?? "";
+const ALIBABA_API_KEYS = (process.env.ALIBABA_API_KEYS ?? ALIBABA_API_KEY)
+  .split(",")
+  .filter(Boolean);
+const GROQ_API_KEY       = process.env.GROQ_API_KEY ?? "";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const SYSTEM_PROMPT = `Anda adalah VMatch Brief AI, seorang konsultan interior ahli. Tugas Anda adalah menganalisis deskripsi proyek dari pengguna dan menghasilkan struktur data JSON.
 PENTING: JANGAN PERNAH MENGOSONGKAN FIELD ATAU ARRAY APAPUN. Jika informasi dari pengguna sangat minim, Anda HARUS memberikan rekomendasi cerdas dan tebakan terbaik untuk semua bagian (chips, recommendations, validations) agar semua data terisi lengkap.
@@ -23,7 +28,87 @@ Format JSON yang diharapkan HARUS sama persis dengan struktur ini:
   "recommendations": ["string", "string", "string"] (wajib berikan minimal 3 rekomendasi fitur/material terbaik),
   "validations": ["Ukuran detail ruangan", "Lokasi proyek", "Pilihan material final", "Budget akhir", "Timeline pengerjaan"] (wajib berikan minimal 4-5 hal teknis yang perlu divalidasi)
 }
-HANYA kembalikan JSON raw, tanpa format markdown backticks.`;
+
+PENTING: KEMBALIKAN HANYA RAW VALID JSON. Jangan tambahkan teks pembuka/penutup apapun, dan JANGAN gunakan markdown backticks (\`\`\`json). Langsung mulai dengan tanda { dan akhiri dengan }.`;
+
+type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
+
+type Provider =
+  | { type: "alibaba"; model: string }
+  | { type: "groq"; model: string }
+  | { type: "openrouter"; model: string };
+
+/**
+ * Fallback chain — model ID eksak dari context.md, diurutkan terbaik ke kurang baik.
+ * Brief route menggunakan non-streaming JSON completion.
+ *
+ * Urutan tier:
+ *   MAX (latest snapshot) > MAX (older snapshot) > MAX preview
+ *   > PLUS versioned > PLUS > PLUS (newer gen)
+ *   > GLM > DeepSeek flash > MoE 35B > FLASH
+ *   > Groq gpt-oss-120b > OpenRouter gpt-oss-120b
+ */
+const PROVIDER_CHAIN: Provider[] = [
+  // ── Alibaba Cloud DashScope — terbaik ke kurang baik ─────────────────────
+  { type: "alibaba", model: "qwen3.7-max-2026-06-08" },   // 1 — MAX, snapshot terbaru
+  { type: "alibaba", model: "qwen3.7-max-2026-05-17" },   // 2 — MAX, snapshot sebelumnya
+  { type: "alibaba", model: "qwen3.7-max-preview" },      // 3 — MAX preview
+  { type: "alibaba", model: "qwen3.6-plus-2026-04-02" },  // 4 — PLUS versioned
+  { type: "alibaba", model: "qwen3.6-plus" },             // 5 — PLUS
+  { type: "alibaba", model: "qwen3.7-plus" },             // 6 — PLUS generasi baru
+  { type: "alibaba", model: "glm-5.1" },                  // 7 — GLM
+  { type: "alibaba", model: "deepseek-v4-flash" },        // 8 — DeepSeek flash
+  { type: "alibaba", model: "qwen3.6-35b-a3b" },          // 9 — MoE 35B
+  { type: "alibaba", model: "qwen3.6-flash-2026-04-16" }, // 10 — FLASH (tercepat/teringan)
+  // ── Groq ───────────────────────────────────────────────────────────────
+  { type: "groq", model: "openai/gpt-oss-120b" },
+  // ── OpenRouter ───────────────────────────────────────────────────────────
+  { type: "openrouter", model: "openai/gpt-oss-120b:free" },
+];
+
+function endpointFor(provider: Provider, isQwenCloud = false): string {
+  switch (provider.type) {
+    case "alibaba":
+      return isQwenCloud
+        ? "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
+        : "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+    case "groq":       return "https://api.groq.com/openai/v1/chat/completions";
+    case "openrouter": return "https://openrouter.ai/api/v1/chat/completions";
+  }
+}
+
+function headersFor(provider: Provider): Record<string, string> {
+  switch (provider.type) {
+    case "alibaba":
+      return { "Content-Type": "application/json", Authorization: `Bearer ${ALIBABA_API_KEY}` };
+    case "groq":
+      return { "Content-Type": "application/json", Authorization: `Bearer ${GROQ_API_KEY}` };
+    case "openrouter":
+      return {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": APP_URL,
+        "X-Title": "Vmatch Brainstorm",
+      };
+  }
+}
+
+function isAvailable(provider: Provider): boolean {
+  switch (provider.type) {
+    case "alibaba":    return ALIBABA_API_KEYS.length > 0;
+    case "groq":       return !!GROQ_API_KEY;
+    case "openrouter": return !!OPENROUTER_API_KEY;
+  }
+}
+
+/** Bersihkan markdown backticks dari respons model yang tidak patuh. */
+function stripMarkdownFences(text: string): string {
+  let clean = text.trim();
+  if (clean.startsWith("```json")) clean = clean.slice(7);
+  else if (clean.startsWith("```"))  clean = clean.slice(3);
+  if (clean.endsWith("```")) clean = clean.slice(0, -3);
+  return clean.trim();
+}
 
 export async function POST(request: Request) {
   try {
@@ -34,90 +119,100 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Description is required" }, { status: 400 });
     }
 
-    const aiMessages = [
+    const aiMessages: ChatMessage[] = [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `Analisis deskripsi ini dan berikan output JSON: ${description}` }
+      { role: "user", content: `Analisis deskripsi ini dan berikan output JSON: ${description}` },
     ];
 
     let content = "";
 
-    try {
-      // 1. Try Groq
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant", 
-          messages: aiMessages,
-          temperature: 0.3,
-          response_format: { type: "json_object" }
-        }),
-      });
+    for (const provider of PROVIDER_CHAIN) {
+      if (!isAvailable(provider)) continue;
 
-      if (response.ok) {
-        const data = await response.json();
-        content = data.choices[0]?.message?.content || "";
-      } else {
-        throw new Error(`Groq error: ${response.status}`);
+      if (provider.type === "alibaba") {
+        for (const apiKey of ALIBABA_API_KEYS) {
+          try {
+            const isQwenCloud = apiKey.startsWith("sk-ws-");
+            const res = await fetch(endpointFor(provider, isQwenCloud), {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: provider.model,
+                messages: aiMessages,
+                temperature: 0.3,
+                response_format: { type: "json_object" },
+              }),
+            });
+
+            if (res.status === 401 || res.status === 403) {
+              console.warn(`[brief] Auth fail key ...${apiKey.slice(-6)}, trying next key.`);
+              continue;
+            }
+
+            if (res.ok) {
+              const data = await res.json();
+              const raw = data.choices?.[0]?.message?.content ?? "";
+              if (raw) {
+                content = raw;
+                console.log(`[brief] OK — ${provider.model}, key ...${apiKey.slice(-6)}`);
+                break;
+              }
+            }
+
+            console.warn(`[brief] ${provider.model} returned ${res.status}`);
+            break; // non-auth error → next model
+          } catch (err) {
+            console.warn(`[brief] key ...${apiKey.slice(-6)} threw:`, err);
+          }
+        }
+        if (content) break;
+        continue;
       }
-    } catch (error) {
-      console.warn("Groq failed, attempting OpenRouter...", error);
-      // 2. Fallback to OpenRouter
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-          "X-Title": "Vmatch Brainstorm",
-        },
-        body: JSON.stringify({
-          model: "google/gemma-2-9b-it:free",
-          messages: aiMessages,
-          temperature: 0.3,
-          response_format: { type: "json_object" }
-        }),
-      });
 
-      if (response.ok) {
-        const data = await response.json();
-        content = data.choices[0]?.message?.content || "";
-      } else {
-        return NextResponse.json({ error: `AI Provider Error: ${response.status}` }, { status: 502 });
+      // Groq / OpenRouter — single key
+      try {
+        const res = await fetch(endpointFor(provider), {
+          method: "POST",
+          headers: headersFor(provider),
+          body: JSON.stringify({
+            model: provider.model,
+            messages: aiMessages,
+            temperature: 0.3,
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const raw = data.choices?.[0]?.message?.content ?? "";
+          if (raw) {
+            content = raw;
+            console.log(`[brief] Using ${provider.type}/${provider.model}`);
+            break;
+          }
+        }
+        console.warn(`[brief] ${provider.type}/${provider.model} returned ${res.status}`);
+      } catch (err) {
+        console.warn(`[brief] ${provider.type}/${provider.model} threw:`, err);
       }
     }
 
+    if (!content) {
+      return NextResponse.json({ error: "All AI providers failed" }, { status: 502 });
+    }
+
     try {
-      // Bersihkan jika model mengembalikan dengan backticks markdown
-      let cleanContent = content.trim();
-      if (cleanContent.startsWith("\`\`\`json")) {
-        cleanContent = cleanContent.substring(7);
-      }
-      if (cleanContent.startsWith("\`\`\`")) {
-        cleanContent = cleanContent.substring(3);
-      }
-      if (cleanContent.endsWith("\`\`\`")) {
-        cleanContent = cleanContent.slice(0, -3);
-      }
-      
-      const parsedData = JSON.parse(cleanContent.trim());
-      
-      return NextResponse.json({
-        data: parsedData
-      });
-    } catch (parseError) {
-      console.error("Failed to parse JSON from AI response", content);
+      const parsedData = JSON.parse(stripMarkdownFences(content));
+      return NextResponse.json({ data: parsedData });
+    } catch {
+      console.error("[brief] Failed to parse JSON from AI response:", content);
       return NextResponse.json({ error: "Failed to parse AI response" }, { status: 500 });
     }
-
   } catch (error) {
-    console.error("Brief API route error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("[brief] Unexpected error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -18,26 +18,7 @@ import { uploadFileToStorage } from "@/lib/api/storage";
 import type { ChatMessage as DBChatMessage, ChatSession } from "@/lib/supabase/types";
 import { Markdown } from "./chat-markdown";
 
-// Puter.js global type (loaded via script tag, free image generation)
-// txt2img resolves to an HTMLImageElement; .src is already a data URL.
-declare global {
-  interface Window {
-    puter?: {
-      ai: {
-        txt2img: (options: {
-          prompt: string;
-          provider?: string;
-          model?: string;
-          testMode?: boolean;
-        }) => Promise<HTMLImageElement>;
-      };
-      auth: {
-        isSignedIn: () => boolean;
-        signIn: () => Promise<void>;
-      };
-    };
-  }
-}
+// (No client-side AI SDK declarations needed — image generation is server-side)
 
 type ChatImage = {
   src: string;
@@ -154,7 +135,6 @@ export function AiChatView({ userId }: { userId: string }) {
   const messageIdRef = useRef(0);
   // Track activeSessionId synchronously to avoid stale-closure bugs in async flows.
   const activeSessionIdRef = useRef<string | null>(null);
-  const puterReadyRef = useRef(false);
   const greeting = useMemo(() => getJakartaGreeting(), []);
   // Saat true, effect pemuat pesan tidak boleh menimpa pesan optimistik
   // yang sedang dikirim (mencegah jawaban AI terhapus saat sesi baru dibuat).
@@ -245,21 +225,7 @@ export function AiChatView({ userId }: { userId: string }) {
     loadMessages();
   }, [activeSessionId]);
 
-  // Load Puter.js script once on mount for free image generation.
-  useEffect(() => {
-    if (typeof window === "undefined" || window.puter) {
-      puterReadyRef.current = !!window.puter;
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://js.puter.com/v2/";
-    script.async = true;
-    script.onload = () => { puterReadyRef.current = true; };
-    document.head.appendChild(script);
-    return () => {
-      // Don't remove — puter may be used across re-renders.
-    };
-  }, []);
+
 
   useEffect(() => {
     if (!textareaRef.current) return;
@@ -355,69 +321,23 @@ export function AiChatView({ userId }: { userId: string }) {
     return fullText;
   };
 
-  // ---- Image generation (via Puter.js — free, client-side) -------------------
-
-
-  const waitForPuterReady = async () => {
-    if (typeof window === "undefined") {
-      throw new Error("Puter hanya bisa berjalan di browser.");
-    }
-
-    if (window.puter?.ai?.txt2img) {
-      puterReadyRef.current = true;
-      return;
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      let attempts = 0;
-
-      const timer = window.setInterval(() => {
-        if (window.puter?.ai?.txt2img) {
-          puterReadyRef.current = true;
-          window.clearInterval(timer);
-          resolve();
-          return;
-        }
-
-        attempts += 1;
-
-        if (attempts >= 75) {
-          window.clearInterval(timer);
-          reject(new Error("Puter.js belum siap. Coba beberapa saat lagi."));
-        }
-      }, 200);
-    });
-  };
+  // ---- Image generation (via server-side /api/ai/image — Alibaba Wanx) --------
 
   const requestImage = async (prompt: string): Promise<string> => {
-    const fullPrompt = [
-      "Photorealistic interior design visualization.",
-      "High quality architectural render, realistic lighting, natural materials, clean composition.",
-      "No text, watermark, people, or logos.",
-      `Scene: ${prompt}`,
-    ].join(" ");
-
-    await waitForPuterReady();
-
-    if (!window.puter?.ai?.txt2img || !window.puter?.auth) {
-      throw new Error("Puter.js tidak tersedia di browser.");
-    }
-
-    if (!window.puter.auth.isSignedIn()) {
-      await window.puter.auth.signIn();
-    }
-
-    const imgEl = await window.puter.ai.txt2img({
-      prompt: fullPrompt,
-      provider: "openai-image-generation",
-      model: "gpt-image-1-mini",
+    const res = await fetch("/api/ai/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
     });
 
-    if (!imgEl?.src) {
-      throw new Error("Tidak ada gambar yang dikembalikan dari Puter.");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(err.error ?? `Image API error ${res.status}`);
     }
 
-    return imgEl.src;
+    const data = await res.json() as { imageUrl?: string };
+    if (!data.imageUrl) throw new Error("Tidak ada URL gambar dari server.");
+    return data.imageUrl;
   };
 
   const persistImage = async (dataUrl: string, sessionId: string): Promise<string> => {
