@@ -244,14 +244,27 @@ export async function POST(req: NextRequest) {
       ? `${SYSTEM_PROMPT}\n\n${modeInstruction}`
       : SYSTEM_PROMPT;
 
+    // Membatasi context memory agar tidak boros token (ambil maksimal 12 pesan terakhir)
+    const recentMessages = messages.slice(-12);
+
     const aiMessages: ChatMessage[] = [
       { role: "system", content: finalSystemPrompt },
-      ...messages,
+      ...recentMessages,
     ];
+
+    // Dynamic Provider Routing berdasarkan mode
+    let activeChain = [...PROVIDER_CHAIN];
+    if (mode === "instant") {
+      // Instant mode memprioritaskan model tercepat (Groq & OpenRouter), lalu Qwen
+      activeChain = [
+        ...PROVIDER_CHAIN.filter((p) => p.type === "groq" || p.type === "openrouter"),
+        ...PROVIDER_CHAIN.filter((p) => p.type === "alibaba"),
+      ];
+    }
 
     // Iterate through fallback chain until one succeeds.
     // For Alibaba providers, rotate through key pool on auth errors.
-    for (const provider of PROVIDER_CHAIN) {
+    for (const provider of activeChain) {
       if (!isAvailable(provider)) continue;
 
       if (provider.type === "alibaba") {
