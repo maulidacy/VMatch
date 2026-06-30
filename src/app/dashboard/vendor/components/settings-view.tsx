@@ -36,8 +36,7 @@ export function SettingsView({ vendorId, profile: vendorProfile2, userEmail }: {
     router.refresh();
   };
 
-    // @ts-ignore
-    const userSettings = vendorProfile2.settings || {};
+    const userSettings = (vendorProfile2.settings as { notificationWhatsapp?: boolean; notificationEmail?: boolean; notificationProject?: boolean } | null) || {};
 
   const [form, setForm] = useState({
     name: vendorProfile2.full_name || "",
@@ -72,12 +71,11 @@ export function SettingsView({ vendorId, profile: vendorProfile2, userEmail }: {
         skills: form.skill,
         bank_name: form.bankName,
         bank_account: form.bankAccount,
-        // @ts-ignore
         settings: {
           notificationWhatsapp: form.notificationWhatsapp,
           notificationEmail: form.notificationEmail,
           notificationProject: form.notificationProject,
-        }
+        } as unknown as undefined
       });
       setSaved(true);
     } catch {

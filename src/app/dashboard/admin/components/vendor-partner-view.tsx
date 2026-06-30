@@ -19,7 +19,9 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getVendors } from "@/lib/api/profiles";
+import { updateProfile } from "@/lib/api/profiles";
 import { getProjects } from "@/lib/api/projects";
+import { toast } from "sonner";
 import type { Profile as DBProfile } from "@/lib/supabase/types";
 
 import type { AdminPageId } from "../types";
@@ -79,7 +81,7 @@ function mapDbToLocalVendor(p: DBProfile): VendorPartner {
     id: p.id,
     name: p.full_name || "Vendor",
     ownerName: p.full_name || "-",
-    email: "",
+    email: p.email || "-",
     phone: p.phone || "-",
     city: p.address || "-",
     serviceArea: p.service_area || "-",
@@ -198,11 +200,17 @@ export function VendorPartnerView({
     );
   };
 
-  const updateStatus = (id: string, status: VendorStatus) => {
+  const updateStatus = async (id: string, status: VendorStatus) => {
     updateVendor(id, (vendor) => ({
       ...vendor,
       status,
     }));
+
+    try {
+      await updateProfile(id, { status });
+    } catch {
+      toast.error("Gagal menyimpan status vendor.");
+    }
 
     if (status === "Aktif") setActiveTab("Aktif");
     if (status === "Menunggu Review") setActiveTab("Review");
@@ -210,7 +218,7 @@ export function VendorPartnerView({
     if (status === "Nonaktif") setActiveTab("Nonaktif");
   };
 
-  const saveVendorChanges = () => {
+  const saveVendorChanges = async () => {
     if (!selectedVendor) return;
 
     updateVendor(selectedVendor.id, (vendor) => ({
@@ -219,6 +227,17 @@ export function VendorPartnerView({
       serviceArea: serviceAreaDraft,
       adminNote: adminNoteDraft,
     }));
+
+    try {
+      await updateProfile(selectedVendor.id, {
+        full_name: vendorNameDraft,
+        service_area: serviceAreaDraft,
+        notes: adminNoteDraft,
+      });
+      toast.success("Data vendor berhasil disimpan.");
+    } catch {
+      toast.error("Gagal menyimpan data vendor.");
+    }
 
     setIsVendorSaved(true);
   };

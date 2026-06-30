@@ -20,8 +20,9 @@ import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { getInvoices, updateInvoice as updateInvoiceRecord, createInvoice, getProjects, createVendorPayout } from "@/lib/api/projects";
+import { getAllProfiles } from "@/lib/api/profiles";
 import { createNotification } from "@/lib/api/notifications";
-import type { Invoice as DBInvoice, Project as DBProject } from "@/lib/supabase/types";
+import type { Invoice as DBInvoice, Project as DBProject, Profile } from "@/lib/supabase/types";
 
 type PaymentStatus =
   | "Draft"
@@ -91,15 +92,18 @@ const statusOptions: PaymentStatus[] = [
 
 const initialInvoices: InvoicePayment[] = [];
 
-function mapDbToLocalInvoice(inv: DBInvoice): InvoicePayment {
+function mapDbToLocalInvoice(inv: DBInvoice, profileMap: Map<string, Profile>, projectMap: Map<string, DBProject>): InvoicePayment {
+  const proj = inv.project_id ? projectMap.get(inv.project_id) : undefined;
+  const customerName = proj?.customer?.full_name || profileMap.get(inv.customer_id)?.full_name || "-";
+  const vendorName = proj?.vendor?.full_name || "-";
   return {
     id: inv.id,
     projectId: inv.project_id || "",
     invoiceNumber: inv.invoice_number,
     projectTitle: inv.project_title,
     customerId: inv.customer_id,
-    customerName: "-",
-    vendorName: "-",
+    customerName,
+    vendorName,
     status: (inv.status as PaymentStatus) || "Draft",
     totalAmount: inv.total_amount,
     paidAmount: inv.paid_amount || "Rp0",
@@ -137,8 +141,14 @@ export function InvoicePaymentsView() {
 
   const loadInvoices = useCallback(async () => {
     try {
-      const data = await getInvoices();
-      setInvoices(data.map(mapDbToLocalInvoice));
+      const [data, projects, profiles] = await Promise.all([
+        getInvoices(),
+        getProjects(),
+        getAllProfiles(),
+      ]);
+      const profileMap = new Map(profiles.map((p: Profile) => [p.id, p]));
+      const projectMap = new Map(projects.map((p: DBProject) => [p.id, p]));
+      setInvoices(data.map((inv) => mapDbToLocalInvoice(inv, profileMap, projectMap)));
     } catch (error) {
       toast.error("Gagal memuat invoice dari database.");
     }

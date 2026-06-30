@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getAllVendorBonuses, updateVendorBonus } from "@/lib/api/projects";
+import { getAllVendorBonuses, updateVendorBonus, getProjects } from "@/lib/api/projects";
 import { toast } from "sonner";
 import { getAllProfiles } from "@/lib/api/profiles";
 import type { Profile, VendorBonus as DBVendorBonus } from "@/lib/supabase/types";
@@ -141,8 +141,38 @@ export function VendorBonusView() {
 
   const loadBonuses = useCallback(async () => {
     try {
-      const [bonusRows, profiles] = await Promise.all([getAllVendorBonuses(), getAllProfiles()]);
+      const [bonusRows, profiles, projects] = await Promise.all([
+        getAllVendorBonuses(),
+        getAllProfiles(),
+        getProjects(),
+      ]);
       const profileMap = new Map(profiles.map((profile: Profile) => [profile.id, profile]));
+      const projectMap = new Map(projects.map((p: { id: string; title: string }) => [p.id, p.title]));
+
+      // Map DB status values → UI BonusStatus
+      const dbStatusToUi = (dbStatus: string): BonusStatus => {
+        const map: Record<string, BonusStatus> = {
+          "Berpotensi Aktif": "Menunggu Review",
+          "Menunggu QC": "Menunggu Review",
+          "Belum Memenuhi Syarat": "Menunggu Review",
+          "Bonus Aktif": "Disetujui",
+          "Sudah Dibayarkan": "Dibayarkan",
+          // UI-side statuses (jika sudah diupdate via updateVendorBonus)
+          "Disetujui": "Disetujui",
+          "Ditolak": "Ditolak",
+          "Masuk Payout": "Masuk Payout",
+          "Dibayarkan": "Dibayarkan",
+          "Menunggu Review": "Menunggu Review",
+        };
+        return map[dbStatus] || "Menunggu Review";
+      };
+
+      const dbStatusToPayoutStatus = (dbStatus: string): PayoutStatus => {
+        if (dbStatus === "Sudah Dibayarkan" || dbStatus === "Dibayarkan") return "Dibayarkan";
+        if (dbStatus === "Masuk Payout") return "Masuk Payout";
+        if (dbStatus === "Ditolak") return "Tidak Ada Bonus";
+        return "Belum Masuk Payout";
+      };
 
       setBonuses(
         bonusRows.map((bonus: DBVendorBonus) => {
@@ -150,18 +180,19 @@ export function VendorBonusView() {
           const profile = profileMap.get(bonus.vendor_id);
           const vendorServiceFee = Number.parseInt(bonus.amount.replace(/[^\d]/g, ""), 10) || 0;
           const recommendedBonus = getRecommendedBonus(vendorServiceFee);
+          const uiStatus = dbStatusToUi(bonus.status);
           const mapped: VendorBonus = {
             id: bonus.id,
             vendorId: bonus.vendor_id,
             vendorName: profile?.full_name || "Vendor",
             projectId: bonus.project_id,
-            projectName: `Project ${bonus.project_id.slice(0, 8)}`,
+            projectName: projectMap.get(bonus.project_id) || `Project ${bonus.project_id.slice(0, 8)}`,
             category: "Vendor Bonus",
             vendorServiceFee,
             recommendedBonus,
             finalBonus: vendorServiceFee,
-            bonusRate: vendorServiceFee > 0 ? Math.round((vendorServiceFee / Math.max(vendorServiceFee, 1)) * 100) : 0,
-            status: (bonus.status as BonusStatus) || "Menunggu Review",
+            bonusRate: vendorServiceFee > 0 ? 2 : 0,
+            status: uiStatus,
             qcPassed: requirements.find((item) => item.label.toLowerCase().includes("qc"))?.completed ?? true,
             onTime: requirements.find((item) => item.label.toLowerCase().includes("waktu"))?.completed ?? true,
             documentationComplete:
@@ -175,14 +206,7 @@ export function VendorBonusView() {
             vendorResponsive: true,
             recommendation: "Perlu Review Admin",
             adminNote: bonus.admin_note || "",
-            payoutStatus:
-              bonus.status === "Dibayarkan"
-                ? "Dibayarkan"
-                : bonus.status === "Masuk Payout"
-                  ? "Masuk Payout"
-                  : bonus.status === "Ditolak"
-                    ? "Tidak Ada Bonus"
-                    : "Belum Masuk Payout",
+            payoutStatus: dbStatusToPayoutStatus(bonus.status),
             createdAt: bonus.created_at,
           };
 

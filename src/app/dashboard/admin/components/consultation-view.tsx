@@ -95,8 +95,9 @@ function mapDbToLocal(c: DBConsultation): ConsultationItem {
   return {
     id: c.id,
     customerName: c.customer?.full_name || "Customer",
-    customerEmail: c.customer?.phone || "",
-    customerPhone: c.customer?.phone || "",
+    // profiles tidak menyimpan email (ada di auth.users). Tampilkan phone sebagai kontak.
+    customerEmail: c.customer?.phone ? `HP: ${c.customer.phone}` : "-",
+    customerPhone: c.customer?.phone || "-",
     projectTitle: c.project_name || "-",
     projectType: c.topic || "-",
     consultationDate: c.consultation_date || "-",

@@ -82,8 +82,16 @@ export function SettingsView({ userEmail, userName, profile }: { userEmail: stri
   const [adminRole, setAdminRole] = useState("Super Admin");
   const [adminPhone, setAdminPhone] = useState(profile.phone || "0812-0000-0000");
   
-  // @ts-ignore
-  const userSettings = profile.settings || {};
+  const userSettings = (profile.settings as {
+    profileNote?: string;
+    projectNotification?: boolean;
+    paymentNotification?: boolean;
+    vendorNotification?: boolean;
+    systemNotification?: boolean;
+    autoBackup?: boolean;
+    maintenanceMode?: boolean;
+    publicRegistration?: boolean;
+  } | null) || {};
   
   const [profileNote, setProfileNote] = useState(
     userSettings.profileNote || "Akun ini digunakan untuk mengelola operasional utama VMatch, mulai dari request proyek, vendor partner, konsultasi, hingga pembayaran.",
@@ -104,7 +112,6 @@ export function SettingsView({ userEmail, userName, profile }: { userEmail: stri
       await updateProfile(profile.id, {
         full_name: adminName,
         phone: adminPhone,
-        // @ts-ignore
         settings: {
           profileNote,
           projectNotification,
@@ -114,7 +121,7 @@ export function SettingsView({ userEmail, userName, profile }: { userEmail: stri
           autoBackup,
           maintenanceMode,
           publicRegistration
-        }
+        } as unknown as undefined
       });
       toast.success("Pengaturan berhasil disimpan");
     } catch {

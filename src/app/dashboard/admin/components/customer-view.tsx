@@ -76,7 +76,7 @@ function mapDbToLocalCustomer(p: DBProfile): CustomerItem {
     return {
         id: p.id,
         name: p.full_name || "Customer",
-        email: "",
+        email: p.email || "-",
         phone: p.phone || "-",
         city: p.address || "-",
         source: p.source || "-",

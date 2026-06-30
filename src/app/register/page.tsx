@@ -65,6 +65,14 @@ export default function RegisterPage() {
 
       // Jika konfirmasi email dimatikan, session langsung tersedia → masuk dashboard.
       if (data.session) {
+        // Simpan email ke profiles agar admin bisa melihatnya di dashboard
+        if (data.user) {
+          const supabaseClient = createClient();
+          await supabaseClient
+            .from("profiles")
+            .update({ email: email.trim() })
+            .eq("id", data.user.id);
+        }
         router.push("/dashboard/user");
         router.refresh();
         return;

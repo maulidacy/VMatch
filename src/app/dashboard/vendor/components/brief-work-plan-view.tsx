@@ -100,8 +100,8 @@ export function BriefWorkPlanView({
         requestId: b.request_id || "",
         projectName: b.project_title,
         customerId: b.customer_id,
-        projectType: "-", // Will be updated by Admin
-        location: "-", // Will be updated by Admin
+        projectType: b.project_type || "-",
+        location: b.location || "-",
         scope: b.scope ? [b.scope] : [],
         materialApproved: (b.materials as string[]) || [],
         timeline: (b.timeline as { label: string; date: string }[]) || [],

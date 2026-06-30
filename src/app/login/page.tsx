@@ -44,10 +44,10 @@ export default function LoginPage() {
         return;
       }
 
-      // Ambil role dari profiles. Pakai maybeSingle agar tidak error saat baris belum ada.
+      // Ambil role dan email dari profiles. Pakai maybeSingle agar tidak error saat baris belum ada.
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, email")
         .eq("id", data.user.id)
         .maybeSingle();
 
@@ -68,11 +68,20 @@ export default function LoginPage() {
             id: data.user.id,
             role: fallbackRole,
             full_name: meta.full_name ?? null,
+            email: data.user.email ?? null,
           })
           .select("role")
           .maybeSingle();
 
         role = (created?.role as string | undefined) ?? "user";
+      } else if (profile) {
+        // Jika profil sudah ada tapi email belum tersimpan, backfill sekarang
+        if (!profile.email && data.user.email) {
+          await supabase
+            .from("profiles")
+            .update({ email: data.user.email })
+            .eq("id", data.user.id);
+        }
       }
 
       // Redirect based on role

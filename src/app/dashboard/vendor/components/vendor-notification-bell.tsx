@@ -37,7 +37,7 @@ type VendorNotificationItem = {
   targetPage: VendorPageId;
 };
 
-const mockVendorNotifications: VendorNotificationItem[] = [];
+
 
 function mapDbToVendorNotification(n: DBNotification): VendorNotificationItem {
   const categoryToType: Record<string, VendorNotificationType> = {
