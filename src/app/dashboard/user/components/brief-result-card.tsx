@@ -36,35 +36,6 @@ export type BriefResultData = {
     validations: string[];
 };
 
-export const mockBriefResult: BriefResultData = {
-    chips: {
-        jenis: "Interior custom",
-        style: "Modern minimalis",
-        budget: "Rp30–60 juta",
-        timeline: "Fleksibel",
-        prioritas: "Storage maksimal",
-        lokasi: "Belum ditentukan",
-        ukuran: "-",
-        referensi: "-",
-        material: "-",
-    },
-    summary:
-        "Customer ingin membuat wardrobe custom untuk kamar utama dengan konsep modern minimalis, hemat tempat, dan memiliki banyak ruang penyimpanan seperti area gantungan baju, laci, rak lipat, dan tempat barang kecil.",
-    recommendations: [
-        "Gunakan konsep modern minimalis dengan layout rapi.",
-        "Maksimalkan penyimpanan vertikal.",
-        "Gunakan material yang mudah dirawat.",
-        "Prioritaskan kombinasi gantungan, laci, dan rak lipat.",
-    ],
-    validations: [
-        "Ukuran detail ruangan",
-        "Lokasi proyek",
-        "Pilihan material final",
-        "Budget akhir",
-        "Timeline pengerjaan",
-    ],
-};
-
 const inputClass =
     "h-11 w-full rounded-xl border border-[#E4D8CD] bg-white px-4 text-[13px] text-[#31332C] outline-none transition focus:border-[#725F54]";
 

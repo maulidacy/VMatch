@@ -459,13 +459,13 @@ export function VendorChecklistItem({
   );
 }
 
-export function VendorMockPhoto({ label }: { label: string }) {
+export function VendorPhotoPlaceholder({ label }: { label: string }) {
   return (
     <div className="flex aspect-[4/3] items-center justify-center rounded-xl border border-[#E8E2D9] bg-[#FCFBF9] p-4 text-center">
       <div>
         <p className="text-[12px] font-semibold text-[#31332C]">{label}</p>
         <p className="mt-1 text-[11px] text-[#7B756E]">
-          Mock foto progress
+          Foto tidak tersedia
         </p>
       </div>
     </div>

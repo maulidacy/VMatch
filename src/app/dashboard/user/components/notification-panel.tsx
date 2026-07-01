@@ -31,7 +31,7 @@ type NotificationItem = {
   targetTab?: string;
 };
 
-const mockNotifications: NotificationItem[] = [];
+
 
 function mapDbNotification(n: DBNotification): NotificationItem {
   const categoryToType: Record<string, NotificationType> = {

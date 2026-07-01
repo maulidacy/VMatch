@@ -2138,7 +2138,6 @@ function VendorPhoto({ label, path }: { label: string; path: string }) {
         <p className="text-[12px] font-semibold text-white drop-shadow-md">
           {label}
         </p>
-        <p className="mt-1 text-[11px] text-[#7B756E]">Mock image</p>
       </div>
     </div>
   );
@@ -2316,7 +2315,7 @@ function ReceiptModal({
             </h3>
 
             <p className="mt-1 text-[13px] text-[#7B756E]">
-              Nomor kuitansi: {invoice.receiptNo || "VMR-2026-MOCK"}
+              Nomor kuitansi: {invoice.receiptNo || "Belum ada kuitansi"}
             </p>
           </div>
         </div>
@@ -2346,7 +2345,7 @@ function ReceiptModal({
           className="inline-flex h-11 items-center justify-center gap-2 rounded-[16px] bg-[#725F54] px-5 text-[12px] font-semibold text-white transition hover:bg-[#5A4A42]"
         >
           <Download size={14} />
-          Download Mock
+          Download Kuitansi
         </button>
       </div>
     </BaseModal>
