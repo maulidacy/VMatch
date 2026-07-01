@@ -4,49 +4,52 @@
 
 Dengan pendekatan *managed marketplace*, VMatch bertindak sebagai penghubung profesional antara customer yang membutuhkan jasa interior dengan vendor yang menyediakan layanan tersebut. Admin VMatch berperan sebagai orchestrator yang memastikan kualitas, transparansi, dan kelancaran setiap proyek dari awal hingga akhir.
 
----
-
-## 🎯 Status Kesiapan Sistem (Production-Ready)
-Sistem ini telah melewati fase audit dan pembersihan secara menyeluruh untuk keperluan penilaian akademis dan terbukti siap *deploy*:
-- **100% Database Driven**: Seluruh fitur (seperti Request Proyek, RAB, Invoice, Progress Log, dan QC Checklist) terhubung langsung dan bekerja secara dinamis ke **Supabase**.
-- **Zero Mock Data**: Tidak ada lagi penggunaan *hardcoded/mock data* (seperti ID palsu, data tiruan, atau gambar statis palsu). Seluruh antarmuka di sisi **User**, **Admin**, dan **Vendor** merender dan memproses data aktual dari *backend*.
-- **Role Integration Berjalan Penuh**: Alur operasional dari pengguna yang mengajukan proyek, kemudian direviu oleh admin, dikerjakan oleh vendor, hingga disetujui (QC) saling terhubung sempurna lintas otorisasi tanpa terputus.
-- **Admin Placeholder Architecture**: Pada modul Admin Dashboard, beberapa halaman menggunakan `AdminPlaceholder`. Hal ini adalah rancangan desain arsitektur yang disengaja (*scalable design*) untuk ruang pengembangan modul analitik lanjutan, dan sama sekali bukan menandakan malfungsi aliran aplikasi.
+Secara sederhana alurnya: **User mengajukan proyek → Admin meninjau, menyusun RAB, dan menugaskan → Vendor mengeksekusi dan melaporkan progres → Admin mengontrol QC & Pembayaran → User melacak semuanya secara transparan.** Semua terintegrasi ke backend database tanpa variabel palsu.
 
 ---
 
-## 🚀 Ringkasan Fitur Utama
+## 🚀 Fitur Lengkap per Role
 
-### Sisi Customer (User)
-- Katalog inspirasi desain interior dengan filter berdasarkan gaya, tipe properti, dan material.
-- Formulir pengajuan proyek lengkap dengan **AI Brief Generator** yang menganalisis input teks kebutuhan pelanggan secara otomatis.
-- Dashboard pelacakan proyek *real-time* (status, progres, timeline, dan dokumen kontrak/RAB).
-- Penjadwalan konsultasi online (Google Meet, WhatsApp Call, Chat WhatsApp, atau Offline).
-- **VMatch AI** — asisten virtual berbasis *Large Language Model* untuk *brainstorming* ide desain, estimasi budget, dan rekomendasi material.
-- Sistem notifikasi *database* terintegrasi untuk setiap update proyek yang masuk.
-- Riwayat invoice dan status pelunasan pembayaran.
-- Klaim garansi pasca-proyek.
-- Tombol kontak WhatsApp mengambang (*floating*) untuk komunikasi cepat.
+### 1. User Role (Customer Dashboard)
 
-### Sisi Admin
-- Dashboard operasional dengan ringkasan *request* baru, proyek aktif, antrean QC, dan pembayaran yang menunggu verifikasi.
-- Manajemen *request* proyek masuk (review persyaratan, penetapan *vendor*, ubah status operasional).
-- Pembuatan dan pengelolaan *Brief Dokumen* untuk diotorisasi oleh vendor.
-- **RAB Builder** — alat dinamis untuk menyusun Rancangan Anggaran Biaya final dari rancangan estimasi vendor.
-- Pelacakan progres vendor harian dan manajemen persetujuan kualitas (*QC Checklist*).
-- Manajemen *invoice* (tagihan) dan verifikasi bukti pembayaran customer.
-- Manajemen *payout* (pencairan dana) dan kalkulasi bonus target untuk vendor.
-- Manajemen *database* vendor partner dan customer profil.
-- Sistem promo dan *campaign* (CMS) untuk mengelola spanduk promosi *landing page*.
-- Panel notifikasi admin lintas-*role* dan penjadwalan *meeting* konsultasi.
+- **Inspirasi Desain**: Katalog visual bagi pengguna untuk mencari ide desain interior.
+- **Ajukan Proyek**: Formulir lengkap untuk mengirimkan proyek baru beserta lampiran spesifikasinya.
+- **Proyek Saya**: *Tracking* proyek secara komprehensif. Di dalamnya terdapat tab turunan:
+  - **Ringkasan**: Detail proyek dan spesifikasi material.
+  - **RAB & Estimasi**: Persetujuan dan rincian Rencana Anggaran Biaya.
+  - **Progress**: *Timeline* masa pengerjaan dan foto *update*.
+  - **Pembayaran**: Daftar invoice digital dan riwayat pelunasan (dengan nomor kuitansi dinamis).
+  - **Dokumen**: Penyimpanan kesepakatan dan klaim garansi.
+- **Konsultasi**: Penjadwalan pertemuan/diskusi.
+- **VMatch AI**: Asisten obrolan cerdas (*AI Chat*) untuk membantu *brainstorming* konsep ruang.
+- **Pengaturan**: Profil akun pengguna.
+- **Notifikasi & Floating WhatsApp**: Panel lonceng notifikasi (terkoneksi database) dan widget chat langsung ke layanan pelanggan.
 
-### Sisi Vendor
-- Workspace proyek (*Dashboard Proyek*) untuk melihat daftar pekerjaan yang ditugaskan oleh admin.
-- Penerimaan dan respons operasional terhadap *Brief Kerja* dari admin.
-- Pengisian *Formulir Estimasi Terstruktur* (estimasi biaya produksi dan durasi pengerjaan).
-- Pencatatan *Progress Log* harian (unggah foto lapangan, ringkasan kerja, pelaporan kendala, dan rencana tugas esok hari).
-- Manajemen tim lapangan (*field team*) per proyek.
-- Pemantauan pencairan pembayaran (milestone *payout*) dan target pencapaian bonus kinerja.
+---
+
+### 2. Admin Role (Operational Dashboard)
+
+- **Dashboard Overview**: Menampilkan ringkasan analitik seperti jumlah *request* baru, proyek aktif, antrean QC, dan pembayaran, serta status Promo.
+- **Promo & Campaign**: Fitur untuk menambah dan mengatur spanduk promo/kampanye yang tampil di *landing page*.
+- **Request Proyek**: Menerima pengajuan baru dari User, membuat estimasi awal, dan menilaikan Vendor.
+- **Proyek Aktif**: Memantau proyek yang berstatus produksi.
+- **Brief & Dokumen**: Mengelola dokumen *timeline*, form spesifikasi material, dan penyusunan *check-list* QC.
+- **Progress & QC**: Memantau laporan kerja harian/mingguan dari Vendor dan melakukan *Quality Control*.
+- **Invoice & Pembayaran**: Manajemen penagihan dana ke User dan *payout* ke Vendor.
+- **RAB Builder**: Antarmuka pembuat RAB interaktif untuk menghitung estimasi biaya proyek secara akurat.
+- **Bonus Vendor**: Menentukan standar dan pencapaian insentif bagi vendor dengan kinerja baik.
+- **Manajemen Relasi (Customer & Vendor)**: Halaman untuk melihat detail profil pelanggan dan mitra pemborong.
+- **Konsultasi & Analytics**: Jadwal pertemuan lintas pihak dan metrik wawasan bisnis.
+
+---
+
+### 3. Vendor Role (Partner Dashboard)
+
+- **Proyek Aktif**: Menerima penugasan (*assignment*) proyek dari Admin VMatch beserta status utamanya.
+- **Brief & Work Plan**: Membaca dokumen *brief* pekerjaan, spesifikasi material, dan jadwal kerja yang sudah disusun oleh Tim Admin.
+- **Progress Log**: Area bagi Vendor untuk mengunggah foto progres nyata dan menulis catatan pengerjaan (komponen foto siap produksi, tidak ada teks "Mock" lagi).
+- **Pembayaran & Bonus**: Menelusuri keuangan vendor untuk melacak *payout* dari VMatch dan status bonus pencapaian QC.
+- **Pengaturan & Notifikasi**: Manajemen akun vendor dan notifikasi status (*assignment* baru, status pencairan dana, dll.).
 
 ---
 
@@ -194,8 +197,6 @@ Sistem memiliki integrasi dua mesin berbasis Groq API / OpenRouter (LLM):
 ---
 
 ## 🧪 Skrip Utilitas (Scripts)
-
-Sistem kompilasi dikembangkan bebas hambatan *(zero-compile error)*.
 
 | Perintah Terminal | Fungsi |
 |---|---|
