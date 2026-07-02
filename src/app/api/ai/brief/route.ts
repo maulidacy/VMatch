@@ -61,7 +61,7 @@ const PROVIDER_CHAIN: Provider[] = [
   { type: "alibaba", model: "qwen3.6-35b-a3b" },          // 9 — MoE 35B
   { type: "alibaba", model: "qwen3.6-flash-2026-04-16" }, // 10 — FLASH (tercepat/teringan)
   // ── Groq ───────────────────────────────────────────────────────────────
-  { type: "groq", model: "openai/gpt-oss-120b" },
+  { type: "groq", model: "llama-3.3-70b-versatile" },
   // ── OpenRouter ───────────────────────────────────────────────────────────
   { type: "openrouter", model: "openai/gpt-oss-120b:free" },
 ];
