@@ -1206,8 +1206,8 @@ function RabTab({
 
           <div className="mt-5">
             <h3 className="text-[15px] font-semibold text-[#31332C]">Rincian Anggaran Transparan</h3>
-            <div className="mt-3 overflow-hidden rounded-xl border border-[#E8E2D9]">
-              <table className="w-full text-left border-collapse text-[13px]">
+            <div className="mt-3 overflow-x-auto rounded-xl border border-[#E8E2D9]">
+              <table className="w-full text-left border-collapse text-[13px] min-w-[400px]">
                 <thead>
                   <tr className="bg-[#FCFBF9] border-b border-[#E8E2D9] text-[#7B756E] font-medium">
                     <th className="p-3">Komponen Biaya</th>
@@ -2488,8 +2488,8 @@ function DocumentPreviewModal({
             <div className="space-y-4">
               <h4 className="text-[13px] font-semibold uppercase tracking-wider text-[#725F54] border-b border-[#E8E2D9] pb-1">Daftar Invoice Pembayaran</h4>
               {invoices.length > 0 ? (
-                <div className="overflow-hidden rounded-xl border border-[#E8E2D9]">
-                  <table className="w-full text-left border-collapse text-[13px]">
+                <div className="overflow-x-auto rounded-xl border border-[#E8E2D9]">
+                  <table className="w-full text-left border-collapse text-[13px] min-w-[500px]">
                     <thead>
                       <tr className="bg-[#FCFBF9] border-b border-[#E8E2D9] text-[#7B756E] font-medium">
                         <th className="p-3">Deskripsi Tagihan</th>

@@ -164,7 +164,7 @@ export function ProjectView({
           className={`space-y-4 ${isMobileDetailOpen ? "hidden lg:block" : "block"
             }`}
         >
-          <div className="grid grid-cols-4 gap-1 rounded-2xl border border-[#E8E2D9] bg-white p-1.5">
+          <div className="flex flex-nowrap overflow-x-auto gap-1 rounded-2xl border border-[#E8E2D9] bg-white p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {projectFilters.map((filter) => {
               const active = activeFilter === filter.id;
 
@@ -173,7 +173,7 @@ export function ProjectView({
                   key={filter.id}
                   type="button"
                   onClick={() => setActiveFilter(filter.id)}
-                  className={`h-9 rounded-xl px-2 text-[11px] font-semibold transition ${active
+                  className={`h-9 shrink-0 flex-1 whitespace-nowrap rounded-xl px-4 text-[11px] font-semibold transition sm:px-2 ${active
                       ? "bg-[#725F54] text-white"
                       : "text-[#725F54] hover:bg-[#FCFBF9]"
                     }`}

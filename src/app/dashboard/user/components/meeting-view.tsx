@@ -371,7 +371,7 @@ export function MeetingView({ userId }: { userId: string }) {
       </section>
 
       <section className="rounded-[24px] border border-[#E8E2D9] bg-white p-2">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="flex flex-nowrap overflow-x-auto gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {consultationTabs.map((tab) => {
             const active = activeTab === tab;
 

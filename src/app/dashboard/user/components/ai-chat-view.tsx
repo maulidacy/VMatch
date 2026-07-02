@@ -130,6 +130,12 @@ export function AiChatView({ userId }: { userId: string }) {
   const [chatMode, setChatMode] = useState<"instant" | "reasoning" | "image">("instant");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  }, []);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageIdRef = useRef(0);
@@ -512,7 +518,16 @@ export function AiChatView({ userId }: { userId: string }) {
   return (
     <div className={`grid min-h-0 flex-1 bg-[#F8F6F2] transition-all duration-300 ${isSidebarOpen ? "lg:grid-cols-[300px_minmax(0,1fr)]" : "grid-cols-1"}`}>
       {isSidebarOpen && (
-        <aside className="flex flex-col border-b border-[#E8E2D9] bg-white lg:min-h-0 lg:border-b-0 lg:border-r">
+        <button
+          type="button"
+          aria-label="Tutup sidebar"
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/35 backdrop-blur-sm lg:hidden"
+        />
+      )}
+      
+      {isSidebarOpen && (
+        <aside className="fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-[#E8E2D9] bg-white shadow-xl lg:static lg:w-auto lg:border-b-0 lg:shadow-none">
           <div className="flex items-center justify-between border-b border-[#E8E2D9] p-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7A7067]">
