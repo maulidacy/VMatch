@@ -4,15 +4,16 @@ const IMAGE_API_KEYS = (process.env.ALIBABA_API_KEYS ?? "").split(",").filter(Bo
 
 const DASHSCOPE_BASE = "https://dashscope-intl.aliyuncs.com/api/v1";
 
+// Hanya model TEXT-TO-IMAGE yang benar-benar ada di katalog akun (GET /models).
+// Model *-edit-* dikecualikan karena butuh gambar input, bukan t2i murni.
 const IMAGE_MODELS: string[] = [
   "wan2.7-image-pro",
   "qwen-image-2.0-pro",
-  "qwen-image-edit-max",
   "qwen-image-max",
   "qwen-image-2.0",
   "qwen-image-plus",
   "z-image-turbo",
-  "wan2.6-t2i",
+  "wan2.7-image",
 ];
 
 const INTERIOR_PREFIX =
@@ -23,6 +24,8 @@ const POLL_INTERVAL_MS  = 2500;
 const POLL_MAX_ATTEMPTS = 24;
 
 class AuthError extends Error {}
+/** Akun menunggak / billing belum aktif (DashScope code "Arrearage"). Sama untuk semua key → hentikan lebih awal. */
+class BillingError extends Error {}
 
 interface TaskResponse {
   output?: {
@@ -63,7 +66,12 @@ async function submitTask(apiKey: string, modelId: string, prompt: string): Prom
   }
 
   const data = await res.json() as TaskResponse;
-  
+
+  // Arrearage = akun menunggak. Berlaku untuk SEMUA key, jadi percuma dirotasi/di-fallback.
+  if (data.code === "Arrearage") {
+    throw new BillingError(data.message ?? "Account arrearage / billing not active");
+  }
+
   if (!res.ok || data.code) {
     throw new Error(`[${modelId}] Submit failed: ${data.message ?? data.code ?? "unknown"}`);
   }
@@ -132,6 +140,20 @@ export async function POST(request: Request) {
           const msg = err instanceof Error ? err.message : String(err);
           lastError = msg;
           console.warn(`[image] key ...${apiKey.slice(-6)} / ${model}: ${msg}`);
+
+          // Arrearage berlaku ke semua key → langsung berhenti, jangan buang-buang 20×8 percobaan.
+          if (err instanceof BillingError) {
+            return NextResponse.json(
+              {
+                error: "billing_inactive",
+                message:
+                  "QwenCloud/DashScope menolak request: akun dalam status menunggak (Arrearage). " +
+                  "Aktifkan billing atau isi saldo di Model Studio; API key valid tapi belum bisa dipakai.",
+                details: msg,
+              },
+              { status: 402 },
+            );
+          }
 
           if (err instanceof AuthError || msg.includes("AccessDenied") || msg.includes("DataCenterError")) {
             skipKey = true;

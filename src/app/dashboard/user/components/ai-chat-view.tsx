@@ -127,7 +127,7 @@ export function AiChatView({ userId }: { userId: string }) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const [chatMode, setChatMode] = useState<"instant" | "reasoning" | "image">("instant");
+  const [chatMode, setChatMode] = useState<"instant" | "reasoning">("instant");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
@@ -710,8 +710,8 @@ function ChatInputBox({
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   variant: "large" | "compact";
-  chatMode: "instant" | "reasoning" | "image";
-  setChatMode: (mode: "instant" | "reasoning" | "image") => void;
+  chatMode: "instant" | "reasoning";
+  setChatMode: (mode: "instant" | "reasoning") => void;
 }) {
   const isLarge = variant === "large";
 
@@ -757,16 +757,6 @@ function ChatInputBox({
               }`}
           >
             Reasoning
-          </button>
-          <button
-            type="button"
-            onClick={() => setChatMode("image")}
-            className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${chatMode === "image"
-              ? "bg-white text-[#3D3530] shadow-sm"
-              : "text-[#8B8179] hover:text-[#6B5B52]"
-              }`}
-          >
-            Image
           </button>
         </div>
 

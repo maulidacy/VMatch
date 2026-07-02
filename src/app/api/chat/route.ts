@@ -235,9 +235,6 @@ export async function POST(req: NextRequest) {
     } else if (mode === "instant") {
       modeInstruction =
         "INSTRUKSI MODE (INSTANT): Jawab secepat mungkin, sangat ringkas, padat, dan langsung pada intinya tanpa basa-basi.";
-    } else if (mode === "image") {
-      modeInstruction =
-        "INSTRUKSI KHUSUS MODE GAMBAR: Abaikan aturan 'JANGAN buat gambar untuk pertanyaan murni budget' di atas. Untuk mode ini, KAMU WAJIB SELALU MENGHASILKAN PENANDA [IMAGE: deskripsi bahasa inggris | caption] PADA AKHIR JAWABAN apa pun yang ditanyakan user. Teks pengantarnya jawab sesingkat mungkin.";
     }
 
     const finalSystemPrompt = modeInstruction
@@ -286,6 +283,21 @@ export async function POST(req: NextRequest) {
             if (res.status === 401 || res.status === 403) {
               console.warn(`[chat] Auth fail key ...${apiKey.slice(-6)}, trying next key.`);
               continue; // next key
+            }
+            // Baca body error non-ok untuk mendeteksi Arrearage (billing menunggak).
+            // Arrearage berlaku ke semua key sekaligus → hentikan, jangan fallback sia-sia.
+            const errText = await res.text().catch(() => "");
+            if (errText.includes("Arrearage")) {
+              console.warn(`[chat] Arrearage detected — billing not active.`);
+              return new Response(
+                JSON.stringify({
+                  error: "billing_inactive",
+                  message:
+                    "QwenCloud/DashScope menolak request: akun dalam status menunggak (Arrearage). " +
+                    "Aktifkan billing atau isi saldo di Model Studio; API key valid tapi belum bisa dipakai.",
+                }),
+                { status: 402, headers: { "Content-Type": "application/json" } },
+              );
             }
             console.warn(`[chat] ${provider.model} returned ${res.status}, trying next model.`);
             break; // non-auth error → skip to next model

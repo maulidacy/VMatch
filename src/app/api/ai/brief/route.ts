@@ -162,6 +162,21 @@ export async function POST(request: Request) {
               }
             }
 
+            // Deteksi Arrearage (billing menunggak) — berlaku ke semua key, hentikan lebih awal.
+            const errText = await res.text().catch(() => "");
+            if (errText.includes("Arrearage")) {
+              console.warn(`[brief] Arrearage detected — billing not active.`);
+              return NextResponse.json(
+                {
+                  error: "billing_inactive",
+                  message:
+                    "QwenCloud/DashScope menolak request: akun dalam status menunggak (Arrearage). " +
+                    "Aktifkan billing atau isi saldo di Model Studio; API key valid tapi belum bisa dipakai.",
+                },
+                { status: 402 },
+              );
+            }
+
             console.warn(`[brief] ${provider.model} returned ${res.status}`);
             break; // non-auth error → next model
           } catch (err) {
