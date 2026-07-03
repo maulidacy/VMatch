@@ -1,9 +1,5 @@
 import { NextRequest } from "next/server";
 
-const ALIBABA_API_KEY  = process.env.ALIBABA_API_KEY ?? "";
-const ALIBABA_API_KEYS = (process.env.ALIBABA_API_KEYS ?? ALIBABA_API_KEY)
-  .split(",")
-  .filter(Boolean);
 const GROQ_API_KEY       = process.env.GROQ_API_KEY ?? "";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
 const APP_URL            = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -52,31 +48,13 @@ type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 // ---- Provider definitions ---------------------------------------------------
 
 type Provider =
-  | { type: "alibaba"; model: string }
   | { type: "groq"; model: string }
   | { type: "openrouter"; model: string };
 
 /**
- * Fallback chain — model ID eksak dari context.md, diurutkan terbaik ke kurang baik.
- *
- * Urutan tier:
- *   MAX (latest snapshot) > MAX (older snapshot) > MAX preview
- *   > PLUS versioned > PLUS > PLUS (newer gen)
- *   > GLM > DeepSeek flash > MoE 35B > FLASH
- *   > Groq gpt-oss-120b > OpenRouter gpt-oss-120b
+ * Fallback chain — Groq (utama) → OpenRouter (fallback).
  */
 const PROVIDER_CHAIN: Provider[] = [
-  // ── Alibaba Cloud DashScope — terbaik ke kurang baik ─────────────────────
-  { type: "alibaba", model: "qwen3.7-max-2026-06-08" },   // 1 — MAX, snapshot terbaru
-  { type: "alibaba", model: "qwen3.7-max-2026-05-17" },   // 2 — MAX, snapshot sebelumnya
-  { type: "alibaba", model: "qwen3.7-max-preview" },      // 3 — MAX preview
-  { type: "alibaba", model: "qwen3.6-plus-2026-04-02" },  // 4 — PLUS versioned
-  { type: "alibaba", model: "qwen3.6-plus" },             // 5 — PLUS
-  { type: "alibaba", model: "qwen3.7-plus" },             // 6 — PLUS generasi baru
-  { type: "alibaba", model: "glm-5.1" },                  // 7 — GLM
-  { type: "alibaba", model: "deepseek-v4-flash" },        // 8 — DeepSeek flash
-  { type: "alibaba", model: "qwen3.6-35b-a3b" },          // 9 — MoE 35B
-  { type: "alibaba", model: "qwen3.6-flash-2026-04-16" }, // 10 — FLASH (tercepat/teringan)
   // ── Groq ─────────────────────────────────────────────────────────────────
   { type: "groq", model: "llama-3.3-70b-versatile" },
   // ── OpenRouter ───────────────────────────────────────────────────────────
@@ -87,13 +65,6 @@ const PROVIDER_CHAIN: Provider[] = [
 
 function buildBody(model: string, messages: ChatMessage[]) {
   return JSON.stringify({ model, messages, temperature: 0.7, stream: true });
-}
-
-function headersAlibaba() {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${ALIBABA_API_KEY}`,
-  };
 }
 
 function headersGroq(): Record<string, string> {
@@ -112,21 +83,15 @@ function headersOpenRouter(): Record<string, string> {
   };
 }
 
-function endpointFor(provider: Provider, isQwenCloud = false): string {
+function endpointFor(provider: Provider): string {
   switch (provider.type) {
-    case "alibaba":
-      return isQwenCloud
-        ? "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
-        : "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
     case "groq":       return "https://api.groq.com/openai/v1/chat/completions";
     case "openrouter": return "https://openrouter.ai/api/v1/chat/completions";
   }
 }
 
-function headersFor(provider: Provider, alibabaKey?: string): Record<string, string> {
+function headersFor(provider: Provider): Record<string, string> {
   switch (provider.type) {
-    case "alibaba":
-      return { "Content-Type": "application/json", Authorization: `Bearer ${alibabaKey ?? ALIBABA_API_KEYS[0] ?? ""}` };
     case "groq":       return headersGroq();
     case "openrouter": return headersOpenRouter();
   }
@@ -134,7 +99,6 @@ function headersFor(provider: Provider, alibabaKey?: string): Record<string, str
 
 function isAvailable(provider: Provider): boolean {
   switch (provider.type) {
-    case "alibaba":    return ALIBABA_API_KEYS.length > 0;
     case "groq":       return !!GROQ_API_KEY;
     case "openrouter": return !!OPENROUTER_API_KEY;
   }
@@ -143,12 +107,10 @@ function isAvailable(provider: Provider): boolean {
 async function callProvider(
   provider: Provider,
   messages: ChatMessage[],
-  alibabaKey?: string,
 ): Promise<Response> {
-  const isQwenCloud = alibabaKey?.startsWith("sk-ws-"); // ws keys → QwenCloud intl endpoint
-  return fetch(endpointFor(provider, isQwenCloud), {
+  return fetch(endpointFor(provider), {
     method: "POST",
-    headers: headersFor(provider, alibabaKey),
+    headers: headersFor(provider),
     body: buildBody(provider.model, messages),
   });
 }
@@ -249,74 +211,10 @@ export async function POST(req: NextRequest) {
       ...recentMessages,
     ];
 
-    // Dynamic Provider Routing berdasarkan mode
-    let activeChain = [...PROVIDER_CHAIN];
-    if (mode === "instant") {
-      // Instant mode memprioritaskan model tercepat (Groq & OpenRouter), lalu Qwen
-      activeChain = [
-        ...PROVIDER_CHAIN.filter((p) => p.type === "groq" || p.type === "openrouter"),
-        ...PROVIDER_CHAIN.filter((p) => p.type === "alibaba"),
-      ];
-    } else if (mode === "reasoning") {
-      // Reasoning mode fallback menggunakan model reasoning dari Groq dan OpenRouter
-      activeChain = [
-        ...PROVIDER_CHAIN.filter((p) => p.type === "alibaba"),
-        { type: "groq", model: "llama-3.3-70b-versatile" },
-        { type: "openrouter", model: "openai/gpt-oss-120b:free" },
-      ];
-    }
-
-    // Iterate through fallback chain until one succeeds.
-    // For Alibaba providers, rotate through key pool on auth errors.
-    for (const provider of activeChain) {
+    // Kedua mode menggunakan chain yang sama: Groq → OpenRouter
+    for (const provider of PROVIDER_CHAIN) {
       if (!isAvailable(provider)) continue;
 
-      if (provider.type === "alibaba") {
-        let succeeded = false;
-        for (const apiKey of ALIBABA_API_KEYS) {
-          try {
-            const res = await callProvider(provider, aiMessages, apiKey);
-            if (res.ok && res.body) {
-              console.log(`[chat] OK — ${provider.model}, key ...${apiKey.slice(-6)}`);
-              const stream = transformProviderStream(res.body);
-              return new Response(stream, {
-                headers: {
-                  "Content-Type": "text/event-stream; charset=utf-8",
-                  "Cache-Control": "no-cache, no-transform",
-                  Connection: "keep-alive",
-                },
-              });
-            }
-            if (res.status === 401 || res.status === 403) {
-              console.warn(`[chat] Auth fail key ...${apiKey.slice(-6)}, trying next key.`);
-              continue; // next key
-            }
-            // Baca body error non-ok untuk mendeteksi Arrearage (billing menunggak).
-            // Arrearage berlaku ke semua key sekaligus → hentikan, jangan fallback sia-sia.
-            const errText = await res.text().catch(() => "");
-            if (errText.includes("Arrearage")) {
-              console.warn(`[chat] Arrearage detected — billing not active.`);
-              return new Response(
-                JSON.stringify({
-                  error: "billing_inactive",
-                  message:
-                    "QwenCloud/DashScope menolak request: akun dalam status menunggak (Arrearage). " +
-                    "Aktifkan billing atau isi saldo di Model Studio; API key valid tapi belum bisa dipakai.",
-                }),
-                { status: 402, headers: { "Content-Type": "application/json" } },
-              );
-            }
-            console.warn(`[chat] ${provider.model} returned ${res.status}, trying next model.`);
-            break; // non-auth error → skip to next model
-          } catch (err) {
-            console.warn(`[chat] key ...${apiKey.slice(-6)} threw:`, err);
-          }
-        }
-        if (succeeded) break;
-        continue;
-      }
-
-      // Groq / OpenRouter — single key
       try {
         const res = await callProvider(provider, aiMessages);
         if (res.ok && res.body) {
