@@ -74,32 +74,52 @@ Secara sederhana alurnya: **User mengajukan proyek → Admin meninjau, menyusun 
 ```text
 VMatch/
 ├── DATABASE/
-│   └── schema.sql                      # Skema lengkap database PostgreSQL (17 tabel + RLS + trigger)
+│   ├── schema.sql                          # Skema lengkap PostgreSQL (17 tabel + RLS + trigger)
+│   ├── fix_auth_profiles.sql               # Patch trigger handle_new_user() / sinkronisasi profiles
+│   └── 2026-06-24_sync_project_requests_to_projects.sql  # Migrasi trigger request → projects
 ├── public/
-│   └── figma/                          # Aset gambar landing page (.webp)
+│   ├── figma/                              # Aset gambar landing page (.webp)
+│   ├── inspirations/                       # Aset galeri inspirasi per kategori (rumah, apartment, hotel, boarding)
+│   └── testimonials/                       # Foto klien pada section testimoni
 ├── src/
+│   ├── proxy.ts                            # Proxy Next.js 16 → updateSession() Supabase + proteksi rute per role
 │   ├── app/
-│   │   ├── page.tsx                    # Landing page utama
-│   │   ├── layout.tsx                  # Root layout + metadata SEO
-│   │   ├── globals.css                 # Stylesheet global
-│   │   ├── login/ & register/          # Halaman otentikasi
+│   │   ├── page.tsx                        # Landing page utama
+│   │   ├── layout.tsx                      # Root layout + metadata SEO
+│   │   ├── globals.css                     # Stylesheet global (Tailwind 4)
+│   │   ├── icon.webp / apple-icon.webp     # Favicon & ikon PWA
+│   │   ├── login/ & register/              # Halaman otentikasi
+│   │   ├── portfolio/
+│   │   │   ├── page.tsx                    # Indeks portofolio publik
+│   │   │   └── [slug]/page.tsx             # Detail satu proyek portofolio
+│   │   ├── inspirasi/
+│   │   │   └── [slug]/
+│   │   │       ├── page.tsx                # Kategori inspirasi
+│   │   │       └── [detailSlug]/page.tsx   # Detail item inspirasi
 │   │   ├── api/
-│   │   │   ├── ai/brief/route.ts       # API endpoint AI Brief Generator
-│   │   │   ├── ai/image/              # API endpoint AI Image Generation
-│   │   │   └── chat/route.ts           # API endpoint VMatch AI Chat (streaming)
+│   │   │   ├── chat/route.ts               # Endpoint VMatch AI Chat (streaming SSE)
+│   │   │   ├── ai/brief/route.ts           # Endpoint AI Brief Generator
+│   │   │   └── ai/image/route.ts           # Endpoint AI Image Generation
 │   │   └── dashboard/
-│   │       ├── admin/                  # Modul Dashboard Admin (21+ komponen)
-│   │       ├── user/                   # Modul Dashboard Customer (15+ komponen)
-│   │       └── vendor/                 # Modul Dashboard Vendor (10+ komponen)
+│   │       ├── layout.tsx                  # Layout bersama seluruh dashboard
+│   │       ├── admin/                      # Modul Dashboard Admin — page.tsx, types.ts, mock-data.ts, components/ (21 komponen)
+│   │       ├── user/                       # Modul Dashboard Customer — page.tsx, types.ts, components/ (16 komponen)
+│   │       └── vendor/                     # Modul Dashboard Vendor — page.tsx, types.ts, mock-data.ts, components/ (10 komponen)
 │   ├── components/
-│   │   ├── home/                       # Komponen arsitektur UI Landing Page (Navbar, Sections)
-│   │   └── shared/                     # Komponen antar-role (misal: Project Detail Viewer)
+│   │   ├── home/                           # Komponen UI Landing Page (navbar, carousel, helper) + sections/ (15 section)
+│   │   ├── shared/project-detail.tsx       # Viewer detail proyek lintas role
+│   │   └── ui/text-shimmer.tsx             # Primitif UI generik
 │   └── lib/
-│       ├── api/                        # Repositori operasi CRUD Supabase (Data Access Layer)
-│       │   ├── projects.ts             # Logika inti mutasi Request, Proyek, Brief, RAB, dll.
-│       │   ├── consultations.ts, notifications.ts, profiles.ts, promos.ts
-│       ├── hooks/                      # Custom hooks (Auth state & Query state)
-│       └── supabase/                   # Konfigurasi Supabase Client & Middleware Proteksi Role
+│       ├── home-content.ts                 # Sumber konten statis landing page, portofolio & inspirasi
+│       ├── api/                            # Data Access Layer Supabase (index.ts sebagai barrel)
+│       │   ├── projects.ts                 # Mutasi inti Request, Proyek, Brief, RAB, Invoice, QC, dll.
+│       │   ├── chat.ts                     # Persistensi sesi & pesan AI chat
+│       │   ├── storage.ts                  # Upload/URL aset ke Supabase Storage
+│       │   └── consultations.ts, inspirations.ts, notifications.ts, profiles.ts, promos.ts
+│       ├── auth/actions.ts                 # Server actions login, register, logout
+│       ├── hooks/                          # use-auth.ts (sesi & role), use-query.ts (fetch state)
+│       └── supabase/                       # client.ts, server.ts, middleware.ts, types.ts (tipe skema DB)
+├── next.config.ts, tsconfig.json, eslint.config.mjs, postcss.config.mjs
 └── package.json
 ```
 
@@ -145,7 +165,7 @@ Pengunjung disambut oleh *Landing Page Profesional* dinamis yang menampilkan **G
 
 ### 👤 Fase 2: Registrasi & Login (Middleware Routing)
 - **Registrasi**: Mendaftar membuat *instance* baru. Sistem *backend* memberikan *role* bawaan `user`.
-- **Proteksi Akses**: Saat masuk, Next.js *Middleware* mengarahkan pengguna ke *dashboard* yang sesuai (`/dashboard/user`, `/dashboard/admin`, atau `/dashboard/vendor`) dan menolak percobaan manipulasi URL antar-*role*.
+- **Proteksi Akses**: Saat masuk, *proxy* Next.js (`src/proxy.ts`) mengarahkan pengguna ke *dashboard* yang sesuai (`/dashboard/user`, `/dashboard/admin`, atau `/dashboard/vendor`) dan menolak percobaan manipulasi URL antar-*role*.
 
 ### 🛋️ Fase 3: Flow Customer (User)
 - Customer memanfaatkan **AI Brief Generator** untuk mempermudah spesifikasi desain hanya dengan mengetik deskripsi santai. AI menstrukturisasinya menjadi parameter proyek.
